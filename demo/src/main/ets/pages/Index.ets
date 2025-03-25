@@ -1,4 +1,4 @@
-import {initJim, connect,send} from 'jimsdk';
+import {JuggleIm} from 'jimsdk';
 
 @Entry
 @Component
@@ -96,9 +96,11 @@ struct Index {
   }
   //连接服务端
   connect2Server() {
-    initJim(this.wsServerUrl,"nsw3sue72begyv7y","ChBuc3czc3VlNzJiZWd5djd5GiAEjKM8NTdyzPyLBgNlHbLauqQLCf1jmgexbCUZUu4DmQ==");
-    connect();
-    this.msgHistory += 'connect'
+    JuggleIm.instance.init(this.wsServerUrl,"nsw3sue72begyv7y")
+    JuggleIm.instance.connectionManager().addConnectStatusListener((status,code)=>{
+      this.msgHistory += 'connect change. status:' + status +'\tcode:'+ code + '\r\n'
+    })
+    JuggleIm.instance.connectionManager().connect("ChBuc3czc3VlNzJiZWd5djd5GiAEjKM8NTdyzPyLBgNlHbLauqQLCf1jmgexbCUZUu4DmQ==")
     // wsSocket.connect(this.wsServerUrl)
     //   .then((value) => {
     //     this.msgHistory += 'connect success :'+JSON.stringify(value) + "\r\n";
@@ -109,6 +111,8 @@ struct Index {
     //   })
   }
   send2Server(){
-    send()
+    JuggleIm.instance.messageManager().send(1,"userid2",(code:number,msgId:string,sendTime:number,msgSeqNo:number)=>{
+      console.log("jimsdk_sendack",code,"\t",msgId)
+    })
   }
 }
