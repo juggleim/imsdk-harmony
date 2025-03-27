@@ -21,15 +21,26 @@ function newImWsMsg(cmd:number):imconnect.ImWebsocketMsg{
   return msg
 }
 
-export function newConnectMessage(body:imconnect.ConnectMsgBody):Uint8Array{
+export function newConnectMessage(body:imconnect.ConnectMsgBody):imconnect.ImWebsocketMsg{
   let wsMsg = newImWsMsg(Cmd.connect)
   wsMsg.connectMsgBody = body
-  return imconnect.ImWebsocketMsg.encode(wsMsg).finish()
+  return wsMsg
 }
 
-export function newUserPublishMessage(body:imconnect.PublishMsgBody):Uint8Array{
+export function newUserPublishMessage(body:imconnect.PublishMsgBody):imconnect.ImWebsocketMsg{
   let wsMsg = newImWsMsg(Cmd.publish)
   wsMsg.publishMsgBody = body
-  let data:Uint8Array = imconnect.ImWebsocketMsg.encode(wsMsg).finish()
-  return data
+  return wsMsg
+}
+
+export function newUserPubAckMessage(body:imconnect.PublishAckMsgBody):imconnect.ImWebsocketMsg{
+  let wsMsg = newImWsMsg(Cmd.publishAck)
+  wsMsg.pubAckMsgBody = body
+  return wsMsg
+}
+
+export function newQueryMessage(body:imconnect.QueryMsgBody):imconnect.ImWebsocketMsg{
+  let wsMsg = newImWsMsg(Cmd.query)
+  wsMsg.qryMsgBody = body
+  return wsMsg
 }

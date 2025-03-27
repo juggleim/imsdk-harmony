@@ -1,13 +1,11 @@
 import webSocket from '@ohos.net.webSocket'
 import {JuggleIm} from '../juggleim'
 import {JimUtil} from '../commons/jimutil'
-import json from '@ohos.util.json';
 import { HashMap } from '@kit.ArkTS';
 import { BusinessError } from '@kit.BasicServicesKit';
 import { JSON } from '@kit.ArkTS';
 import {imconnect} from '../improto/imconnect.js'
-import {Cmd,newConnectMessage, newUserPublishMessage} from '../improto/connectmsg'
-import call from '@ohos.telephony.call';
+import {Cmd,newConnectMessage, newUserPublishMessage,newQueryMessage, newUserPubAckMessage} from '../improto/connectmsg'
 
 export class ConnStatus{
   static readonly unknown = 0
@@ -18,12 +16,23 @@ export class ConnStatus{
 }
 
 export type ConnStatusListener = (status:number,reasonCode:number)=>void
-export type PublishCallback = (code:number,msgId:string,sendTime:number,msgSeq:number)=>void
+export type PublishCallback = (code:number,pubAck:imconnect.IPublishAckMsgBody)=>void
+export type QueryCallback = (code:number,qryAck:imconnect.IQueryAckMsgBody)=>void
+export type PublishListener = (index:number,data:Uint8Array)=>void
 
 class PublishCallbackWrap{
   callback:PublishCallback
   timeoutId:number
   constructor(callback:PublishCallback,timeoutId:number) {
+    this.callback = callback
+    this.timeoutId = timeoutId
+  }
+}
+
+class QueryCallbackWrap{
+  callback:QueryCallback
+  timeoutId:number
+  constructor(callback:QueryCallback,timeoutId:number) {
     this.callback = callback
     this.timeoutId = timeoutId
   }
@@ -37,7 +46,8 @@ export class ConnectionManager {
   private connectStatusListeners:ConnStatusListener[]
   private connectTimeoutId:number = 0
   private publishCache: HashMap<number, PublishCallbackWrap> = new HashMap()
-  private queryCache:HashMap<number,PublishCallback> = new HashMap()
+  private queryCache:HashMap<number,QueryCallbackWrap> = new HashMap()
+  private publishListenerMap:HashMap<string,PublishListener> = new HashMap()
 
   constructor() {
     this.connectStatusListeners = new Array()
@@ -60,13 +70,13 @@ export class ConnectionManager {
     this.wsSocket = webSocket.createWebSocket()
     this.wsSocket.on('open',(err,value)=>{
       console.log("jimsdk_open:",JSON.stringify(err),JSON.stringify(value))
-      let data:Uint8Array = newConnectMessage(imconnect.ConnectMsgBody.create({
+      let wsMsg = newConnectMessage(imconnect.ConnectMsgBody.create({
         "protoId":JuggleIm.instance.config.protoId,
         "appkey":JuggleIm.instance.config.appkey,
         "token":token,
         "platform":JuggleIm.instance.config.platform
       }))
-      this.writeMessage(data)
+      this.writeImWsMessage(wsMsg)
       console.log("jimsdk_after_send")
     })
     this.wsSocket.on('error',(err)=>{
@@ -116,8 +126,9 @@ export class ConnectionManager {
     this.wsSocket?.off('error')
   }
 
-  writeMessage(data:Uint8Array){
+  writeImWsMessage(wsMsg:imconnect.ImWebsocketMsg){
     console.log("jimsdk_begin_send")
+    let data = imconnect.ImWebsocketMsg.encode(wsMsg).finish()
     this.wsSocket?.send(data.buffer)
       .then((value)=>{
         console.log("jimsdk_send_succ:",JSON.stringify(value))
@@ -136,6 +147,7 @@ export class ConnectionManager {
       if(typeof code == 'number'){
         if (code === 0){
           this.status = ConnStatus.connected
+          JuggleIm.instance.userInfo.userId = wsMsg.ConnectAckMsgBody?.userId as string
         }else{
           this.status = ConnStatus.fail
         }
@@ -151,27 +163,39 @@ export class ConnectionManager {
         this.setConnectStatus(this.status,code)
       }
     }else if(wsMsg.cmd == Cmd.publish){
-
+      let body = wsMsg.publishMsgBody
+      if(body!=null&&body!=undefined){
+        console.log("jimsdk_onpublish",body)
+        this.triggerPublish(body)
+      }
     }else if(wsMsg.cmd == Cmd.publishAck){
       let body = wsMsg.pubAckMsgBody
-      if (body!=undefined && body!=null){
+      if (body!=null&&body!=undefined){
         let code = body.code
         console.log("jimsdk_puback code:",code)
         let index = body.index
         if (this.publishCache.hasKey(index)){
           clearTimeout(index)
-          let wrap  = this.publishCache.get(index)
-          if (typeof code == 'number'
-            && typeof index == 'number'
-            && typeof body.msgId == 'string'
-            && typeof body.timestamp == 'number'
-            && typeof body.msgSeqNo == 'number'){
-            wrap.callback(code,body.msgId,body.timestamp,body.msgSeqNo)
+          if(typeof code == 'number'){
+            let wrap = this.publishCache.get(index)
+            wrap.callback(code,body)
           }
         }
       }
     }else if(wsMsg.cmd == Cmd.queryAck){
-
+      let body = wsMsg.qryAckMsgBody
+      if(body!=null&&body!=undefined){
+        let code = body.code
+        console.log("jimsdk_qryack code:",code)
+        let index = body.index
+        if(this.queryCache.hasKey(index)){
+          clearTimeout(index)
+          if(typeof code == 'number'){
+            let wrap = this.queryCache.get(index)
+            wrap.callback(code,body)
+          }
+        }
+      }
     }
   }
 
@@ -183,6 +207,7 @@ export class ConnectionManager {
   addConnectStatusListener(l:ConnStatusListener){
     this.connectStatusListeners.push(l)
   }
+
   removeConnectStatusListener(l:ConnStatusListener){
     for (let i=0;i<this.connectStatusListeners.length;i++){
       if(this.connectStatusListeners[i]===l){
@@ -198,10 +223,28 @@ export class ConnectionManager {
     })
   }
 
+  registePublishListener(topic:string,l:PublishListener){
+    this.publishListenerMap.set(topic,l)
+  }
+
+  unregistePublishListener(topic:string){
+    this.publishListenerMap.remove(topic)
+  }
+
+  private triggerPublish(pubBody:imconnect.IPublishMsgBody){
+    let topic = pubBody.topic as string
+    if(this.publishListenerMap.hasKey(topic)){
+      let listener = this.publishListenerMap.get(topic)
+      listener(pubBody.index as number,pubBody.data as Uint8Array)
+    }else{
+      console.log("un support topic:",topic)
+    }
+  }
+
   publish(method:string,targetId:string,data:Uint8Array,callback:PublishCallback){
     if(this.status === ConnStatus.connected){
       let index = this.getIndex()
-      let msg = newUserPublishMessage(imconnect.PublishMsgBody.create({
+      let wsMsg = newUserPublishMessage(imconnect.PublishMsgBody.create({
         "index":index,
         "topic":method,
         "targetId":targetId,
@@ -209,14 +252,44 @@ export class ConnectionManager {
       }))
       let timeoutId = setTimeout(()=>{
         if(this.publishCache.hasKey(index)){
-          callback(-2,"",0,0)
+          callback(-2,new imconnect.PublishAckMsgBody())
           this.publishCache.remove(index)
         }
       },5000)
       this.publishCache.set(index,new PublishCallbackWrap(callback,timeoutId))
-      this.writeMessage(msg)
+      this.writeImWsMessage(wsMsg)
     }else{
-      callback(-1,"",0,0)
+      callback(-1,new imconnect.PublishAckMsgBody())
     }
   }
+
+  query(method:string,targetId:string,data:Uint8Array,callback:QueryCallback){
+    if(this.status === ConnStatus.connected){
+      let index = this.getIndex()
+      let wsMsg = newQueryMessage(imconnect.QueryMsgBody.create({
+        "index":index,
+        "topic":method,
+        "targetId":targetId,
+        "data":data
+      }))
+      let timeoutId = setTimeout(()=>{
+        if(this.queryCache.hasKey(index)){
+          callback(-2,new imconnect.QueryAckMsgBody())
+          this.queryCache.remove(index)
+        }
+      },5000)
+      this.queryCache.set(index,new QueryCallbackWrap(callback,timeoutId))
+      this.writeImWsMessage(wsMsg)
+    }else{
+      callback(-1,new imconnect.QueryAckMsgBody())
+    }
+  }
+
+  pubAck(index:number){
+    let wsMsg = newUserPubAckMessage(imconnect.PublishAckMsgBody.create({
+      "index":index
+    }))
+    this.writeImWsMessage(wsMsg)
+  }
+
 }

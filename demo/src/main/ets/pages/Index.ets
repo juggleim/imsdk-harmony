@@ -1,4 +1,6 @@
 import {JuggleIm} from 'jimsdk';
+import { Conversation } from 'jimsdk/src/main/ets/entries/conversation';
+import { TextMessage } from 'jimsdk/src/main/ets/entries/message';
 
 @Entry
 @Component
@@ -101,6 +103,12 @@ struct Index {
       this.msgHistory += 'connect change. status:' + status +'\tcode:'+ code + '\r\n'
     })
     JuggleIm.instance.connectionManager().connect("ChBuc3czc3VlNzJiZWd5djd5GiAEjKM8NTdyzPyLBgNlHbLauqQLCf1jmgexbCUZUu4DmQ==")
+
+    JuggleIm.instance.messageManager().setMessageListener((message)=>{
+      console.log("jimsdk_receive_msg\t",message.messageId,"\t",message.msgType,"\t",message.msgContent)
+      let txtMsg = message.msgContent as TextMessage
+      console.log("jimsdk_txtmsg",txtMsg.content,"\t:",txtMsg.extra)
+    })
     // wsSocket.connect(this.wsServerUrl)
     //   .then((value) => {
     //     this.msgHistory += 'connect success :'+JSON.stringify(value) + "\r\n";
@@ -111,8 +119,9 @@ struct Index {
     //   })
   }
   send2Server(){
-    JuggleIm.instance.messageManager().send(1,"userid2",(code:number,msgId:string,sendTime:number,msgSeqNo:number)=>{
-      console.log("jimsdk_sendack",code,"\t",msgId)
+    let textMsg = new TextMessage(this.sendMsg,"")
+    JuggleIm.instance.messageManager().sendMessage(textMsg,new Conversation("xl51g96TDBG",1),(isSucc,message,code)=>{
+      console.log("jimsdk_sendack",isSucc,"\t",code,"\t",message.messageId,"\t",message.msgType)
     })
   }
 }
