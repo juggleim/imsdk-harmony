@@ -44,3 +44,8 @@ export function newQueryMessage(body:imconnect.QueryMsgBody):imconnect.ImWebsock
   wsMsg.qryMsgBody = body
   return wsMsg
 }
+
+export function newPingMessag():imconnect.ImWebsocketMsg{
+  let wsMsg = newImWsMsg(Cmd.ping)
+  return wsMsg
+}

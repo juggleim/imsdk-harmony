@@ -1,11 +1,14 @@
 import webSocket from '@ohos.net.webSocket'
+import { systemDateTime } from '@kit.BasicServicesKit';
 import {JuggleIm} from '../juggleim'
 import {JimUtil} from '../commons/jimutil'
 import { HashMap } from '@kit.ArkTS';
 import { BusinessError } from '@kit.BasicServicesKit';
 import { JSON } from '@kit.ArkTS';
 import {imconnect} from '../improto/imconnect.js'
-import {Cmd,newConnectMessage, newUserPublishMessage,newQueryMessage, newUserPubAckMessage} from '../improto/connectmsg'
+import {Cmd,newConnectMessage, newUserPublishMessage,newQueryMessage, newUserPubAckMessage,
+  newPingMessag} from '../improto/connectmsg'
+import { MessageManager } from './messagemanager';
 
 export class ConnStatus{
   static readonly unknown = 0
@@ -18,6 +21,7 @@ export class ConnStatus{
 export type ConnStatusListener = (status:number,reasonCode:number)=>void
 export type PublishCallback = (code:number,pubAck:imconnect.IPublishAckMsgBody)=>void
 export type QueryCallback = (code:number,qryAck:imconnect.IQueryAckMsgBody)=>void
+type PingCallback = (index:number)=>void
 export type PublishListener = (index:number,data:Uint8Array)=>void
 
 class PublishCallbackWrap{
@@ -43,14 +47,23 @@ export class ConnectionManager {
   index:number = 0
   status:number = ConnStatus.unknown;
   wsSocket?: webSocket.WebSocket;
-  private connectStatusListeners:ConnStatusListener[]
+  private connectStatusListeners:ConnStatusListener[] = new Array()
   private connectTimeoutId:number = 0
   private publishCache: HashMap<number, PublishCallbackWrap> = new HashMap()
   private queryCache:HashMap<number,QueryCallbackWrap> = new HashMap()
   private publishListenerMap:HashMap<string,PublishListener> = new HashMap()
 
+  private pingTaskId:number = 0
+  private latestPingTime:number = 0
+  private latestPongTime:number = 0
+
   constructor() {
-    this.connectStatusListeners = new Array()
+    this.registePublishListener("msg",(index,data)=>{
+      MessageManager.instance.onDirectMsgReceived(index,data)
+    })
+    this.registePublishListener("ntf",(index,data)=>{
+      MessageManager.instance.onMsgNotify(index,data)
+    })
   }
 
   connect(token:string){
@@ -117,13 +130,23 @@ export class ConnectionManager {
   }
 
   disconnect(isLogout:boolean){
-
+    if(this.pingTaskId>0) {
+      clearInterval(this.pingTaskId)
+    }
+    this.close()
   }
 
-  close(){
+  private close(){
     this.wsSocket?.off('open')
     this.wsSocket?.off('message')
     this.wsSocket?.off('error')
+    this.wsSocket?.close((err)=>{
+      if(err){
+        console.log("jimsdk_close_failed",err.code,"\t",err.message)
+      }
+      this.status = ConnStatus.disconnected
+      this.wsSocket = undefined
+    })
   }
 
   writeImWsMessage(wsMsg:imconnect.ImWebsocketMsg){
@@ -148,6 +171,12 @@ export class ConnectionManager {
         if (code === 0){
           this.status = ConnStatus.connected
           JuggleIm.instance.userInfo.userId = wsMsg.ConnectAckMsgBody?.userId as string
+          //start ping
+          this.pingTaskId = setInterval(()=>{
+            this.ping()
+          },30000)
+          //sync offline msg
+          MessageManager.instance.syncMsgs(0)
         }else{
           this.status = ConnStatus.fail
         }
@@ -175,9 +204,9 @@ export class ConnectionManager {
         console.log("jimsdk_puback code:",code)
         let index = body.index
         if (this.publishCache.hasKey(index)){
-          clearTimeout(index)
           if(typeof code == 'number'){
             let wrap = this.publishCache.get(index)
+            clearTimeout(wrap.timeoutId)
             wrap.callback(code,body)
           }
         }
@@ -189,13 +218,16 @@ export class ConnectionManager {
         console.log("jimsdk_qryack code:",code)
         let index = body.index
         if(this.queryCache.hasKey(index)){
-          clearTimeout(index)
           if(typeof code == 'number'){
             let wrap = this.queryCache.get(index)
+            clearTimeout(wrap.timeoutId)
             wrap.callback(code,body)
           }
         }
       }
+    }else if(wsMsg.cmd == Cmd.pong){
+      this.latestPongTime = systemDateTime.getTime(false)
+      console.log("jimsdk_pong:",this.latestPongTime)
     }
   }
 
@@ -286,10 +318,20 @@ export class ConnectionManager {
   }
 
   pubAck(index:number){
-    let wsMsg = newUserPubAckMessage(imconnect.PublishAckMsgBody.create({
-      "index":index
-    }))
-    this.writeImWsMessage(wsMsg)
+    if(this.status === ConnStatus.connected) {
+      let wsMsg = newUserPubAckMessage(imconnect.PublishAckMsgBody.create({
+        "index": index
+      }))
+      this.writeImWsMessage(wsMsg)
+    }
   }
 
+  ping(){
+    if(this.status === ConnStatus.connected){
+      this.latestPingTime = systemDateTime.getTime(false)
+      let wsMsg = newPingMessag()
+      this.writeImWsMessage(wsMsg)
+      console.log("jimsdk_ping:",this.latestPingTime)
+    }
+  }
 }

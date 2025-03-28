@@ -84,7 +84,6 @@ export class TextMessage extends MessageContent{
   }
 
   decode(data:Uint8Array):TextMessage{
-    let txtMsg = new TextMessage("","")
     let str = JimUtil.uint8ArrayToString(data)
     let t = JSON.parse(str) as TextMessage
     return t

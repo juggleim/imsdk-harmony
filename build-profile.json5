@@ -48,6 +48,18 @@
           ]
         }
       ]
+    },
+    {
+      "name": "base",
+      "srcPath": "./jugglechat/base",
+    },
+    {
+      "name": "home",
+      "srcPath": "./jugglechat/home",
+    },
+    {
+      "name": "socialCircle",
+      "srcPath": "./jugglechat/socialCircle",
     }
   ]
 }

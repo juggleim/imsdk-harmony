@@ -2,9 +2,9 @@ import {JuggleIm} from '../juggleim'
 import {immessage} from  '../improto/immessage'
 import { Message, MessageContent,MessageSentState,TextMessage} from '../entries/message'
 import {imconnect} from '../improto/imconnect'
-import {ConnectionManager} from './connectionmanager'
 import { Conversation } from '../entries/conversation'
 import { MsgFlagTool } from '../improto/msgflag'
+import { ConnectionManager } from './connectionmanager'
 
 export type MsgSendCallback = (isSucc:boolean,msg:Message,code:number)=>void
 export type MsgReceivedListener = (msg:Message)=>void
@@ -17,12 +17,12 @@ export class MessageManager{
   private isSyncing:boolean = false
 
   constructor() {
-    ConnectionManager.instance.registePublishListener("msg",(index,data)=>{
-      this.onDirectMsgReceived(index,data)
-    })
-    ConnectionManager.instance.registePublishListener("ntf",(index,data)=>{
-      this.onMsgNotify(index,data)
-    })
+    // ConnectionManager.instance.registePublishListener("msg",(index,data)=>{
+    //   this.onDirectMsgReceived(index,data)
+    // })
+    // ConnectionManager.instance.registePublishListener("ntf",(index,data)=>{
+    //   this.onMsgNotify(index,data)
+    // })
   }
 
   private msgReceivedListener:MsgReceivedListener = (msg)=>{}
@@ -91,6 +91,8 @@ export class MessageManager{
       let notify = immessage.Notify.decode(data)
       if(notify.type == immessage.NotifyType.Msg) {
         this.syncMsgs(notify.syncTime as number)
+      }else if(notify.type == immessage.NotifyType.ChatroomMsg){
+        //TODO
       }
     }
   }
@@ -144,10 +146,12 @@ export class MessageManager{
   }
 
   private msgAck(index:number,flags:number){
-    JuggleIm.instance.connectionManager().pubAck(index)
+    ConnectionManager.instance.pubAck(index)
+    // JuggleIm.instance.connectionManager().pubAck(index)
   }
 
-  private syncMsgs(ntfTime:number){
+  public syncMsgs(ntfTime:number){
+    console.log("jimsdk_syncmsg_exetue")
     this.isSyncing = true
     let syncReq = immessage.SyncMsgReq.create({
       "syncTime":this.latestInboxMsgTime,
@@ -167,7 +171,7 @@ export class MessageManager{
         })
         this.isSyncing = false
       }else{
-       console.log("jimsdk_syncmsg_failed")
+       console.log("jimsdk_syncmsg_failed:",code)
       }
     })
   }

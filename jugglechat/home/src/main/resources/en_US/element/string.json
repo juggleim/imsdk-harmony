@@ -1,0 +1,116 @@
+{
+  "string": [
+    {
+      "name": "shared_desc",
+      "value": "description"
+    },
+    {
+      "name": "Message",
+      "value": "Message"
+    },
+    {
+      "name": "Contacts",
+      "value": "Contacts"
+    },
+    {
+      "name": "SocialCircle",
+      "value": "SocialCircle"
+    },
+    {
+      "name": "Me",
+      "value": "Me"
+    },
+    {
+      "name": "news",
+      "value": "Latest news"
+    },
+    {
+      "name": "group",
+      "value": "group"
+    },
+    {
+      "name": "card",
+      "value": "name card holder"
+    },
+    {
+      "name": "Alan",
+      "value": "Alan"
+    },
+    {
+      "name": "AQin",
+      "value": "AQin"
+    },
+    {
+      "name": "CaiLan",
+      "value": "CaiLan"
+    },
+    {
+      "name": "Deng",
+      "value": "Deng"
+    },
+    {
+      "name": "excel",
+      "value": "excel"
+    },
+    {
+      "name": "FanYi",
+      "value": "FanYi"
+    },
+    {
+      "name": "FenFen",
+      "value": "FenFen"
+    },
+    {
+      "name": "ge",
+      "value": "ge"
+    },
+    {
+      "name": "LiX",
+      "value": "LiX"
+    },
+    {
+      "name": "Ma",
+      "value": "Ma"
+    },
+    {
+      "name": "milk",
+      "value": "Fen-fen invited you for milk tea"
+    },
+    {
+      "name": "Speed",
+      "value": "Please drink milk tea, quickly order it!! Speed, speed, all that's missing is you"
+    },
+    {
+      "name": "happy",
+      "value": "Ha-ha, what's the happy news today"
+    },
+    {
+      "name": "plan",
+      "value": "Marketing Department 2023 new product promotion plan"
+    },
+    {
+      "name": "jack",
+      "value": "This is the material for tomorrow's meeting. Please send it to Jack for his confirmation"
+    },
+    {
+      "name": "ok",
+      "value": "Ok, copy that"
+    },
+    {
+      "name": "okay",
+      "value": "Okay, I'll be there tomorrow"
+    },
+    {
+      "name": "yesterday",
+      "value": "yesterday"
+    },
+    {
+      "name": "document",
+      "value": "document"
+    },
+    {
+      "name": "search",
+      "value": "Search..."
+    }
+  ]
+}

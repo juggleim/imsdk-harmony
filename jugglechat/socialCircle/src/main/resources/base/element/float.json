@@ -1,0 +1,52 @@
+{
+  "float": [
+    {
+      "name": "icon_height",
+      "value": "40vp"
+    },
+    {
+      "name": "icon_width",
+      "value": "40vp"
+    },
+    {
+      "name": "icon_right",
+      "value": "8vp"
+    },
+    {
+      "name": "user_name_bottom",
+      "value": "6vp"
+    },
+    {
+      "name": "user_message_bottom",
+      "value": "8vp"
+    },
+    {
+      "name": "header_top",
+      "value": "16vp"
+    },
+    {
+      "name": "header_right",
+      "value": "20vp"
+    },
+    {
+      "name": "header_bottom",
+      "value": "16vp"
+    },
+    {
+      "name": "header_left",
+      "value": "24vp"
+    },
+    {
+      "name": "picture_gap",
+      "value": "2vp"
+    },
+    {
+      "name": "zero",
+      "value": "0vp"
+    },
+    {
+      "name": "device_padding_top",
+      "value": "36vp"
+    }
+  ]
+}

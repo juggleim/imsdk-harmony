@@ -6,6 +6,8 @@
   "author": "",
   "license": "",
   "dependencies": {
+    "base": "file:../jugglechat/base",
+    "home": "file:../jugglechat/home",
     "jimsdk": "file:../jimsdk"
   }
 }
