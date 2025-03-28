@@ -15,12 +15,12 @@
 
 import { BaseConstants, BreakpointConstants, IntroduceText, NormalText } from 'base'
 import { HomeConstants } from '../constants/HomeConstants';
-import { ConversationDataInterface, ConversationListData } from '../viewmodel/ConversationViewModel';
+import { ConversationDataInterface } from '../viewmodel/ConversationViewModel';
 
 @Component
 export struct MessageBubble {
   @StorageProp('currentBreakpoint') currentBreakpoint: string = BreakpointConstants.BREAKPOINT_SM;
-  @Link receivedName: Resource;
+  @Link receivedName: string;
   @Link currentFeatureIndex: number;
   private isReceived: boolean = !HomeConstants.IS_RECEIVED;
   private content: ResourceStr = "";
@@ -33,10 +33,10 @@ export struct MessageBubble {
     Column() {
       Flex({ justifyContent: this.isReceived ? FlexAlign.Start : FlexAlign.End, direction: FlexDirection.Row }) {
         if (this.isReceived) {
-          Image(ConversationListData.find((item) => item.name === this.receivedName)?.icon || this.avatar1)
-            .width($r('app.float.avatar_image_size'))
-            .height($r('app.float.avatar_image_size'))
-            .flexShrink(BaseConstants.FLEX_SHRINK_ZERO)
+          // Image(ConversationListData.find((item) => item.name === this.receivedName)?.icon || this.avatar1)
+          //   .width($r('app.float.avatar_image_size'))
+          //   .height($r('app.float.avatar_image_size'))
+          //   .flexShrink(BaseConstants.FLEX_SHRINK_ZERO)
         }
         Column() {
           Stack({ alignContent: this.isReceived ? Alignment.TopStart : Alignment.TopEnd }) {

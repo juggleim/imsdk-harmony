@@ -19,10 +19,10 @@ import { HomeConstants } from '../../constants/HomeConstants';
 @Component
 export struct ConversationItem {
   @StorageProp('currentBreakpoint') currentBreakpoint: string = BreakpointConstants.BREAKPOINT_SM;
-  private name?: Resource;
-  private msg?: Resource;
+  private name?: ResourceStr;
+  private msg?: ResourceStr;
   private time?: ResourceStr;
-  private icon?: Resource;
+  private icon?: ResourceStr;
 
   build() {
     Flex({ alignItems: ItemAlign.Center, justifyContent: FlexAlign.SpaceBetween }) {

@@ -23,6 +23,7 @@ import { HomeConstants } from '../constants/HomeConstants';
 import { HomeTab } from '../views/HomeTab';
 import { SocialCircle } from 'socialcircle';
 import { deviceInfo } from '@kit.BasicServicesKit';
+import { initJuggleIm } from '../jim/JimService';
 
 @Entry
 @Component
@@ -42,6 +43,9 @@ export struct Index {
       this.pageInfo.getParamByName('ConversationDetailNone').length === 1 && this.pageInfo.size() === 1) {
       this.pageInfo.pop();
     }
+  }
+
+  aboutToAppear(): void {
   }
 
   @Builder

@@ -17,28 +17,42 @@ import { Want, common } from '@kit.AbilityKit';
 import { BusinessError } from '@kit.BasicServicesKit';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { Logger } from 'base';
+import { Conversation } from 'jimsdk/src/main/ets/entries/conversation';
+import { Message } from 'jimsdk/src/main/ets/entries/message';
 
-interface ConversationDataInterface {
-  name: Resource
-  msg: Resource
+@Observed
+class ConversationDataInterface {
+  conversation: Conversation
+  lastMsg:Message
+  name: ResourceStr
+  msg: ResourceStr
   time: ResourceStr
-  icon: Resource
+  icon: ResourceStr
+  constructor(conver:Conversation,lastMsg:Message,name:ResourceStr,msg:ResourceStr,time:ResourceStr,icon:ResourceStr) {
+    this.conversation = conver
+    this.lastMsg = lastMsg
+    this.name = name
+    this.msg = msg
+    this.time = time
+    this.icon = icon
+  }
 };
 
-const ConversationListData: ConversationDataInterface[] = [
-  { name: $r('app.string.Alan'), msg: $r('app.string.okay'), time: '13:55', icon: $r('app.media.avatar1') },
-  { name: $r('app.string.CaiLan'), msg: $r('app.string.okay'), time: '13:55', icon: $r('app.media.avatar2') },
-  { name: $r('app.string.FenFen'), msg: $r('app.string.okay'), time: '12:00', icon: $r('app.media.avatar11') },
-  { name: $r('app.string.FenFen'), msg: $r('app.string.okay'), time: '08:00', icon: $r('app.media.avatar4') },
-  { name: $r('app.string.FanYi'), msg: $r('app.string.okay'), time: $r('app.string.yesterday'), icon: $r('app.media.avatar5') },
-  { name: $r('app.string.Deng'), msg: $r('app.string.okay'), time: $r('app.string.yesterday'), icon: $r('app.media.avatar6') },
-  { name: $r('app.string.CaiLan'), msg: $r('app.string.okay'), time: $r('app.string.yesterday'), icon: $r('app.media.avatar7') },
-  { name: $r('app.string.Alan'), msg: $r('app.string.okay'), time: $r('app.string.yesterday'), icon: $r('app.media.avatar8') },
-  { name: $r('app.string.Alan'), msg: $r('app.string.okay'), time: $r('app.string.yesterday'), icon: $r('app.media.avatar9') },
-  { name: $r('app.string.FanYi'), msg: $r('app.string.okay'), time: $r('app.string.yesterday'), icon: $r('app.media.avatar10') },
-  { name: $r('app.string.Deng'), msg: $r('app.string.okay'), time: $r('app.string.yesterday'), icon: $r('app.media.avatar11') },
-  { name: $r('app.string.ge'), msg: $r('app.string.okay'), time: $r('app.string.yesterday'), icon: $r('app.media.avatar1') },
-];
+//const ConversationListData: ConversationDataInterface[] = [
+  // { name: $r('app.string.Alan'), msg: $r('app.string.okay'), time: '13:55', icon: $r('app.media.avatar1') },
+  // { name: $r('app.string.CaiLan'), msg: $r('app.string.okay'), time: '13:55', icon: $r('app.media.avatar2') },
+  // { name: $r('app.string.FenFen'), msg: $r('app.string.okay'), time: '12:00', icon: $r('app.media.avatar11') },
+  // { name: $r('app.string.FenFen'), msg: $r('app.string.okay'), time: '08:00', icon: $r('app.media.avatar4') },
+  // { name: $r('app.string.FanYi'), msg: $r('app.string.okay'), time: $r('app.string.yesterday'), icon: $r('app.media.avatar5') },
+  // { name: $r('app.string.Deng'), msg: $r('app.string.okay'), time: $r('app.string.yesterday'), icon: $r('app.media.avatar6') },
+  // { name: $r('app.string.CaiLan'), msg: $r('app.string.okay'), time: $r('app.string.yesterday'), icon: $r('app.media.avatar7') },
+  // { name: $r('app.string.Alan'), msg: $r('app.string.okay'), time: $r('app.string.yesterday'), icon: $r('app.media.avatar8') },
+  // { name: $r('app.string.Alan'), msg: $r('app.string.okay'), time: $r('app.string.yesterday'), icon: $r('app.media.avatar9') },
+  // { name: $r('app.string.FanYi'), msg: $r('app.string.okay'), time: $r('app.string.yesterday'), icon: $r('app.media.avatar10') },
+  // { name: $r('app.string.Deng'), msg: $r('app.string.okay'), time: $r('app.string.yesterday'), icon: $r('app.media.avatar11') },
+  // { name: $r('app.string.ge'), msg: $r('app.string.okay'), time: $r('app.string.yesterday'), icon: $r('app.media.avatar1') },
+// ];
+
 
 class ConversationViewModel {
   public startAppletAbility(context: common.UIAbilityContext, index: number): void {
@@ -80,4 +94,4 @@ class ConversationViewModel {
   }
 }
 
-export { ConversationDataInterface, ConversationListData, ConversationViewModel };
+export { ConversationDataInterface, ConversationViewModel };

@@ -7,6 +7,7 @@
   "license": "Apache-2.0",
   "dependencies": {
     "base": "file:../base",
-    "socialcircle": "file:../socialCircle"
+    "socialcircle": "file:../socialCircle",
+    "jimsdk": "file:../../jimsdk"
   }
 }

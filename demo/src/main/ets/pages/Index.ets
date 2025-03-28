@@ -1,8 +1,5 @@
-import {JuggleIm} from 'jimsdk';
-import { TextMessage } from 'jimsdk/src/main/ets/entries/message';
 import { Home } from 'home';
 import { BaseConstants, BreakpointConstants } from 'base';
-
 
 @Entry
 @Component

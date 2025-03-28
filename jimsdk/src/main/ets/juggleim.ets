@@ -1,5 +1,6 @@
 import {UserInfo} from './entries/user'
 import { ConnectionManager } from './managers/connectionmanager';
+import { ConversationManager } from './managers/conversationmanager';
 import { MessageManager } from './managers/messagemanager';
 
 export class JimConfig{
@@ -31,6 +32,10 @@ export class JuggleIm{
 
   messageManager():MessageManager{
     return MessageManager.instance
+  }
+
+  conversationManager():ConversationManager{
+    return ConversationManager.instance
   }
 }
 
