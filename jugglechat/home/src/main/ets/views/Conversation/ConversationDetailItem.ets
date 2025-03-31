@@ -17,19 +17,17 @@ import { HomeConstants } from '../../constants/HomeConstants';
 import { MessageBubble } from '../MessageBubble';
 
 @Component
-export default struct ConversationDetailItem {
-  @Link currentFeatureIndex: number;
-  @Link receivedName: string;
-  private isReceived: boolean = !HomeConstants.IS_RECEIVED;
-  private content: ResourceStr = '';
+export struct ConversationDetailItem {
+  private receivedName?: string = '';
+  private isReceived?: boolean = false;
+  private content?: ResourceStr = '';
   private isAppletMsg?: boolean;
   private isDocumentMsg?: boolean;
 
   build() {
     Flex({ justifyContent: FlexAlign.End, alignItems: ItemAlign.End }) {
       MessageBubble({
-        receivedName: $receivedName,
-        currentFeatureIndex: $currentFeatureIndex,
+        receivedName: this.receivedName,
         isReceived: this.isReceived,
         content: this.content,
         isAppletMsg: this.isAppletMsg,

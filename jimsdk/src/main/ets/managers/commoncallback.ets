@@ -1,0 +1,1 @@
+export type CommonCallback = (code:number)=>void

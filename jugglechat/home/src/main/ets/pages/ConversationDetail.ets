@@ -15,10 +15,17 @@
 
 import { Adaptive, BaseConstants, BreakpointConstants } from 'base';
 import { ConversationDetailBottom } from '../views/Conversation/ConversationDetailBottom';
-import ConversationDetailItem from '../views/Conversation/ConversationDetailItem';
+import {ConversationDetailItem} from '../views/Conversation/ConversationDetailItem';
 import { ConversationDetailTopSearch } from '../views/Conversation/ConversationDetailTopSearch';
 import { HomeConstants } from '../constants/HomeConstants';
 import { deviceInfo } from '@kit.BasicServicesKit';
+import { router } from '@kit.ArkUI';
+import { ConversationDetailParams } from '../viewmodel/ConversationViewModel';
+import {MessageViewItem} from '../viewmodel/MessageViewModel'
+import { ObservedArray } from '../jim/common';
+import { JuggleIm } from 'jimsdk';
+import { Conversation } from 'jimsdk/src/main/ets/entries/conversation';
+import { TextMessage } from 'jimsdk/src/main/ets/entries/message'
 
 @Component
 export struct ConversationDetail {
@@ -26,51 +33,40 @@ export struct ConversationDetail {
   @Prop currentConversationUserName: string;
   @Prop currentFeatureIndex: number;
   @Consume('pageInfo') pageInfo: NavPathStack;
+  @State msgList:ObservedArray<MessageViewItem>=[]
+
+  aboutToAppear(): void {
+    let param = this.pageInfo.getParamByIndex(0) as ConversationDetailParams
+    console.log("jimsdk_param:",param.conversationId)
+    JuggleIm.instance.getMessageManager().queryHistoryMsgs(new Conversation(param.conversationId,param.channelType),10,0,false,(msgs)=>{
+
+      let currentUserId = JuggleIm.instance.userInfo.userId
+      console.log("jimsdk_hismsgs:",msgs.length,currentUserId)
+      msgs.forEach((msg)=>{
+        let viewMsg = new MessageViewItem("","Unknown")
+        if(msg.sender!=undefined&&currentUserId==msg.sender.userId){
+          viewMsg.isReceived = false
+        }
+        console.log("jimsdk_his converId:",msg.conversation.conversationId,"\tcur:",currentUserId,"\tsender:",msg.sender?.userId,"\tisRec:",viewMsg.isReceived)
+        if(msg.msgType=="jg:text") {
+          let txtMsg = msg.msgContent as TextMessage
+          viewMsg.content = txtMsg.content
+        }
+        this.msgList.push(viewMsg)
+      })
+    })
+  }
 
   build() {
     NavDestination() {
       Flex({ direction: FlexDirection.Column }) {
         ConversationDetailTopSearch({ currentConversationUserName: $currentConversationUserName, })
           .height(Adaptive.ContactItemHeight(this.currentBreakpoint))
-        if (this.currentConversationUserName.length === HomeConstants.CONVERSATION_DEFAULT_SIZE) {
-          ConversationDetailItem({
-            receivedName: $currentConversationUserName,
-            isReceived: HomeConstants.IS_RECEIVED,
-            content: HomeConstants.CONVERSATION_LIST_APPLET[0],
-            isAppletMsg: HomeConstants.IS_APPLET_CONVERSATION,
-            currentFeatureIndex: $currentFeatureIndex
-          })
-          ConversationDetailItem({
-            receivedName: $currentConversationUserName,
-            isReceived: HomeConstants.IS_RECEIVED,
-            content: HomeConstants.CONVERSATION_LIST_APPLET[1],
-            currentFeatureIndex: $currentFeatureIndex
-          })
-          ConversationDetailItem({
-            receivedName: $currentConversationUserName,
-            isReceived: !HomeConstants.IS_RECEIVED,
-            content: HomeConstants.CONVERSATION_LIST_APPLET[2],
-            currentFeatureIndex: $currentFeatureIndex
-          })
-        } else {
-          ConversationDetailItem({
-            receivedName: $currentConversationUserName,
-            isReceived: HomeConstants.IS_RECEIVED,
-            content: HomeConstants.CONVERSATION_LIST_DOCUMENT[0],
-            isDocumentMsg: HomeConstants.IS_DOCUMENT_CONVERSATION,
-            currentFeatureIndex: $currentFeatureIndex
-          })
-          ConversationDetailItem({
-            receivedName: $currentConversationUserName,
-            isReceived: HomeConstants.IS_RECEIVED,
-            content: HomeConstants.CONVERSATION_LIST_DOCUMENT[1],
-            currentFeatureIndex: $currentFeatureIndex
-          })
-          ConversationDetailItem({
-            receivedName: $currentConversationUserName,
-            isReceived: !HomeConstants.IS_RECEIVED,
-            content: HomeConstants.CONVERSATION_LIST_DOCUMENT[2],
-            currentFeatureIndex: $currentFeatureIndex
+        List(){
+          ForEach(this.msgList,(item:MessageViewItem,index:number)=>{
+            ListItem(){
+              ConversationDetailItem(item)
+            }
           })
         }
         Blank()

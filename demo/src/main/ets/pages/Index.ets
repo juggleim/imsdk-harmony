@@ -3,7 +3,7 @@ import { BaseConstants, BreakpointConstants } from 'base';
 
 @Entry
 @Component
-struct Index {
+struct Index{
   @StorageLink('currentBreakpoint') currentBreakpoint: string = BreakpointConstants.BREAKPOINT_SM;
 
   build() {

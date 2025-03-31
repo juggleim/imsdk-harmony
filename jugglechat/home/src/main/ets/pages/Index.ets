@@ -46,6 +46,10 @@ export struct Index {
   }
 
   aboutToAppear(): void {
+    //init juggleim
+    initJuggleIm((status,code)=>{
+      console.log("jimsdk_init_sdk. status:",status,"\tcode:",code)
+    })
   }
 
   @Builder

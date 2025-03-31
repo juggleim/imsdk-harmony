@@ -14,7 +14,7 @@
  */
 
 import { Adaptive, BaseConstants, BreakpointConstants } from 'base';
-import { ConversationDataInterface } from '../viewmodel/ConversationViewModel';
+import { ConversationViewItem,ConversationDetailParams } from '../viewmodel/ConversationViewModel';
 import { ConversationItem } from '../views/Conversation/ConversationItem';
 import { HomeTopSearch } from '../views/common/HomeTopSearch';
 import { HomeConstants } from '../constants/HomeConstants';
@@ -22,10 +22,7 @@ import { deviceInfo } from '@kit.BasicServicesKit';
 import { CommonUtil, ObservedArray} from '../jim/common'
 import {JuggleIm} from 'jimsdk'
 import { TextMessage } from 'jimsdk/src/main/ets/entries/message'
-import { initJuggleIm } from '../jim/JimService';
-import { Conversation } from 'jimsdk/src/main/ets/entries/conversation';
-import { Message } from 'jimsdk/src/main/ets/entries/message';
-import { ConnStatus } from 'jimsdk/src/main/ets/managers/connectionmanager';
+import { ConnStatus } from 'jimsdk/src/main/ets/imclients/imclient';
 
 @Component
 export struct ConversationList {
@@ -33,52 +30,52 @@ export struct ConversationList {
   @Link currentConversationUserName: ResourceStr;
   @Link currentContactUserName: string;
   @State private currentIndex: number = 0;
-  @State conversationList:ObservedArray<ConversationDataInterface>=[]
+  @State conversationList:ObservedArray<ConversationViewItem>=[]
   @Consume('pageInfo') pageInfo: NavPathStack;
   private scroller: ListScroller = new ListScroller()
 
   aboutToAppear(): void {
-    //init juggleim
-    initJuggleIm((status,code)=>{
-      if(status==ConnStatus.connected){
-        // conversation list
-        JuggleIm.instance.conversationManager().queryConversations(100,0,false,(convers)=>{
-          console.log("jinsdk_apper_len:",convers.length)
-          let converListTmp:ObservedArray<ConversationDataInterface> = []
-          convers.forEach((conver)=>{
-            //portrait
-            let iconUrl:ResourceStr = $r('app.media.avatar2')
-            if(conver.conversation.conversationType==2){
-              iconUrl = $r('app.media.img')
-            }
-            if(conver.conversation.conversationPortrait!=''){
-              iconUrl = conver.conversation.conversationPortrait
-            }
-            //latest msg content
-            let msgStr = ""
-            if(conver.lastMessage.msgType == 'jg:text') {
-              let txtMsg = conver.lastMessage.msgContent as TextMessage
-              msgStr = txtMsg.content
-            }
-            //time str
-            let timeStr = CommonUtil.getTimeToYYYYDDMMHHMMSS(conver.sortTime)
-            // this.conversationList.push(new ConversationDataInterface(conver.conversation,conver.lastMessage,conver.conversation.conversationTitle,msgStr,timeStr,iconUrl))
-            converListTmp.push(new ConversationDataInterface(conver.conversation,conver.lastMessage,conver.conversation.conversationTitle,msgStr,timeStr,iconUrl))
+    if(JuggleIm.instance.getConnStatus() == ConnStatus.connecting){
+      JuggleIm.instance.getConnectionManager().addConnectStatusListener((status,code)=>{
+        if(status==ConnStatus.connected){
+          JuggleIm.instance.getConversationManager().queryConversations(10,0,false,(convers)=>{
+            console.log("jinsdk_apper_len:",convers.length)
+            let converListTmp:ObservedArray<ConversationViewItem> = new Array()
+            convers.forEach((conver)=>{
+              //portrait
+              let iconUrl:ResourceStr = $r('app.media.avatar2')
+              if(conver.conversation.conversationType==2){
+                iconUrl = $r('app.media.img')
+              }
+              if(conver.conversation.conversationPortrait!=''){
+                iconUrl = conver.conversation.conversationPortrait
+              }
+              //latest msg content
+              let msgStr = ""
+              if(conver.lastMessage.msgType == 'jg:text') {
+                let txtMsg = conver.lastMessage.msgContent as TextMessage
+                msgStr = txtMsg.content
+              }
+              //time str
+              let timeStr = CommonUtil.getTimeToYYYYDDMMHHMMSS(conver.sortTime)
+              converListTmp.push(new ConversationViewItem("",conver.conversation.conversationId,conver.conversation.conversationType,conver.lastMessage.sentTime,conver.conversation.conversationTitle,msgStr,timeStr,iconUrl))
+            })
+            this.conversationList = converListTmp
+            console.log("jimsdk_qry_conversations:",convers.length)
           })
-          this.conversationList = converListTmp
-          console.log("jimsdk_qry_conversations:",convers.length)
-        })
-      }
-    })
-    JuggleIm.instance.messageManager().setMessageListener((message)=>{
+        }
+      })
+    }
+
+    JuggleIm.instance.getMessageManager().addMessageListener((message)=>{
       let conversation = message.conversation
       if(this.conversationList.length === 0){
         return
       }
 
       for(let i=0;i<this.conversationList.length;i++){
-        if(this.conversationList[i].conversation.conversationId===conversation.conversationId
-          &&this.conversationList[i].conversation.conversationType===conversation.conversationType){
+        if(this.conversationList[i].converId===conversation.conversationId
+          &&this.conversationList[i].channelType===conversation.conversationType){
           if(message.msgType == 'jg:text') {
             let txtMsg = message.msgContent as TextMessage
             this.conversationList[i].msg = txtMsg.content
@@ -89,7 +86,7 @@ export struct ConversationList {
           this.conversationList[i].msg = 'nnnnnn'
         }
       }
-      let converList:ObservedArray<ConversationDataInterface>=[]
+      let converList:ObservedArray<ConversationViewItem>=[]
       for(let i=0;i<this.conversationList.length;i++){
         converList.push(this.conversationList[i])
       }
@@ -102,14 +99,14 @@ export struct ConversationList {
       HomeTopSearch({ title: HomeConstants.CONVERSATION_TITLE })
         .height('13%')
       List({scroller:this.scroller}) {
-        ForEach(this.conversationList, (item: ConversationDataInterface, index: number) => {
+        ForEach(this.conversationList, (item: ConversationViewItem, index: number) => {
           ListItem() {
             ConversationItem(item)
               .onClick(() => {
                 if (this.pageInfo.size() > 1) {
                   this.pageInfo.pop();
                 }
-                this.pageInfo.pushPath({ name: 'ConversationDetail' });
+                this.pageInfo.pushPath({ name: 'ConversationDetail',param:new ConversationDetailParams(item.userId,item.converId,item.channelType)});
                 this.currentConversationUserName = item.name;
                 this.currentContactUserName = '';
                 this.currentIndex = index;
@@ -118,8 +115,11 @@ export struct ConversationList {
           }
           .height(Adaptive.ContactItemHeight(this.currentBreakpoint))
 
-        }, (item: ConversationDataInterface, index: number) => index + JSON.stringify(item))
+        }, (item: ConversationViewItem, index: number) => index + JSON.stringify(item))
       }
+      .onReachEnd(()=>{
+        console.log("jimsdk_end, load more")
+      })
       .padding({
         bottom: deviceInfo.deviceType !== BaseConstants.DEVICE_2IN1 &&
           this.currentBreakpoint === BreakpointConstants.BREAKPOINT_LG ?

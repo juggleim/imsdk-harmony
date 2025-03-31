@@ -21,16 +21,20 @@ import { Conversation } from 'jimsdk/src/main/ets/entries/conversation';
 import { Message } from 'jimsdk/src/main/ets/entries/message';
 
 @Observed
-class ConversationDataInterface {
-  conversation: Conversation
-  lastMsg:Message
+class ConversationViewItem {
+  userId:string
+  converId:string
+  channelType:number
+  lastMsgTime:number
   name: ResourceStr
   msg: ResourceStr
   time: ResourceStr
   icon: ResourceStr
-  constructor(conver:Conversation,lastMsg:Message,name:ResourceStr,msg:ResourceStr,time:ResourceStr,icon:ResourceStr) {
-    this.conversation = conver
-    this.lastMsg = lastMsg
+  constructor(userId:string,converId:string,channelType:number,lastMsgTime:number,name:ResourceStr,msg:ResourceStr,time:ResourceStr,icon:ResourceStr) {
+    this.userId = userId
+    this.converId = converId
+    this.channelType = channelType
+    this.lastMsgTime = lastMsgTime
     this.name = name
     this.msg = msg
     this.time = time
@@ -53,6 +57,16 @@ class ConversationDataInterface {
   // { name: $r('app.string.ge'), msg: $r('app.string.okay'), time: $r('app.string.yesterday'), icon: $r('app.media.avatar1') },
 // ];
 
+class ConversationDetailParams{
+  channelType:number
+  conversationId:string
+  userId:string
+  constructor(userId:string,converId:string,channelType:number) {
+    this.userId = userId
+    this.conversationId = converId
+    this.channelType = channelType
+  }
+}
 
 class ConversationViewModel {
   public startAppletAbility(context: common.UIAbilityContext, index: number): void {
@@ -94,4 +108,4 @@ class ConversationViewModel {
   }
 }
 
-export { ConversationDataInterface, ConversationViewModel };
+export { ConversationViewItem, ConversationViewModel, ConversationDetailParams };

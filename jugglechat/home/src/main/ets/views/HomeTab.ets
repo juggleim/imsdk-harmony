@@ -24,7 +24,7 @@ export struct HomeTab {
   @Link currentPageIndex: number;
 
   build() {
-    Column() {
+    Column(){
       Tabs({
         barPosition: this.currentBreakpoint === BreakpointConstants.BREAKPOINT_LG ? BarPosition.Start : BarPosition.End
       }) {

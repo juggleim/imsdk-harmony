@@ -27,4 +27,9 @@ export class CommonUtil{
     }
     return time;
   }
+
+  static sleepSync(ms:number){
+    const end = Date.now()+ms
+    while(Date.now()<end){}
+  }
 }
