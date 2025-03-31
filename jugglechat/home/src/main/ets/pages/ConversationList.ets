@@ -33,36 +33,18 @@ export struct ConversationList {
   @State conversationList:ObservedArray<ConversationViewItem>=[]
   @Consume('pageInfo') pageInfo: NavPathStack;
   private scroller: ListScroller = new ListScroller()
+  private maxConverSortTime:number = 0
+  private minConverSortTime:number = Number.MAX_SAFE_INTEGER
 
   aboutToAppear(): void {
+    this.maxConverSortTime = 0
+    this.minConverSortTime = new Date().getTime()
+
     if(JuggleIm.instance.getConnStatus() == ConnStatus.connecting){
       JuggleIm.instance.getConnectionManager().addConnectStatusListener((status,code)=>{
         if(status==ConnStatus.connected){
-          JuggleIm.instance.getConversationManager().queryConversations(10,0,false,(convers)=>{
-            console.log("jinsdk_apper_len:",convers.length)
-            let converListTmp:ObservedArray<ConversationViewItem> = new Array()
-            convers.forEach((conver)=>{
-              //portrait
-              let iconUrl:ResourceStr = $r('app.media.avatar2')
-              if(conver.conversation.conversationType==2){
-                iconUrl = $r('app.media.img')
-              }
-              if(conver.conversation.conversationPortrait!=''){
-                iconUrl = conver.conversation.conversationPortrait
-              }
-              //latest msg content
-              let msgStr = ""
-              if(conver.lastMessage.msgType == 'jg:text') {
-                let txtMsg = conver.lastMessage.msgContent as TextMessage
-                msgStr = txtMsg.content
-              }
-              //time str
-              let timeStr = CommonUtil.getTimeToYYYYDDMMHHMMSS(conver.sortTime)
-              converListTmp.push(new ConversationViewItem("",conver.conversation.conversationId,conver.conversation.conversationType,conver.lastMessage.sentTime,conver.conversation.conversationTitle,msgStr,timeStr,iconUrl))
-            })
-            this.conversationList = converListTmp
-            console.log("jimsdk_qry_conversations:",convers.length)
-          })
+          this.loadMoreConvers()
+          console.log("jimsdk_reload_connected:",this.conversationList.length)
         }
       })
     }
@@ -94,6 +76,42 @@ export struct ConversationList {
     })
   }
 
+  loadMoreConvers(){
+    if(JuggleIm.instance.getConnStatus()==ConnStatus.connected) {
+      console.log("jimsdk_load", "\tmin:", this.minConverSortTime)
+      JuggleIm.instance.getConversationManager()
+        .queryConversations(10, this.minConverSortTime, false, (code, convers) => {
+          convers.forEach((conver) => {
+            //portrait
+            let iconUrl: ResourceStr = $r('app.media.avatar2')
+            if (conver.conversation.conversationType == 2) {
+              iconUrl = $r('app.media.img')
+            }
+            if (conver.conversation.conversationPortrait != '') {
+              iconUrl = conver.conversation.conversationPortrait
+            }
+            //latest msg content
+            let msgStr = ""
+            if (conver.lastMessage.msgType == 'jg:text') {
+              let txtMsg = conver.lastMessage.msgContent as TextMessage
+              msgStr = txtMsg.content
+            }
+            //time str
+            let timeStr = CommonUtil.getTimeToYYYYDDMMHHMMSS(conver.sortTime)
+            this.conversationList.push(new ConversationViewItem("", conver.conversation.conversationId,
+              conver.conversation.conversationType, conver.lastMessage.sentTime, conver.conversation.conversationTitle,
+              msgStr, timeStr, iconUrl))
+            if (this.maxConverSortTime < conver.sortTime) {
+              this.maxConverSortTime = conver.sortTime
+            }
+            if (this.minConverSortTime > conver.sortTime) {
+              this.minConverSortTime = conver.sortTime
+            }
+          })
+        })
+    }
+  }
+
   build() {
     Flex({ direction: FlexDirection.Column }) {
       HomeTopSearch({ title: HomeConstants.CONVERSATION_TITLE })
@@ -119,6 +137,8 @@ export struct ConversationList {
       }
       .onReachEnd(()=>{
         console.log("jimsdk_end, load more")
+        this.loadMoreConvers()
+        console.log("jimsdk_reload_onend:",this.conversationList.length)
       })
       .padding({
         bottom: deviceInfo.deviceType !== BaseConstants.DEVICE_2IN1 &&

@@ -38,8 +38,23 @@ export struct ConversationDetail {
   aboutToAppear(): void {
     let param = this.pageInfo.getParamByIndex(0) as ConversationDetailParams
     console.log("jimsdk_param:",param.conversationId)
+    JuggleIm.instance.getMessageManager().addMessageListener((message)=>{
+      let conver = message.conversation
+      let currentUserId = JuggleIm.instance.userInfo.userId
+      if(conver.conversationId===param.conversationId){
+        let viewMsg = new MessageViewItem("","Unknown")
+        if(message.sender!=undefined&&currentUserId==message.sender.userId){
+          viewMsg.isReceived = false
+        }
+        console.log("jimsdk_his converId:",message.conversation.conversationId,"\tcur:",currentUserId,"\tsender:",message.sender?.userId,"\tisRec:",viewMsg.isReceived)
+        if(message.msgType=="jg:text") {
+          let txtMsg = message.msgContent as TextMessage
+          viewMsg.content = txtMsg.content
+        }
+        this.msgList.push(viewMsg)
+      }
+    })
     JuggleIm.instance.getMessageManager().queryHistoryMsgs(new Conversation(param.conversationId,param.channelType),10,0,false,(msgs)=>{
-
       let currentUserId = JuggleIm.instance.userInfo.userId
       console.log("jimsdk_hismsgs:",msgs.length,currentUserId)
       msgs.forEach((msg)=>{
