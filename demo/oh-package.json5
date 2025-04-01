@@ -8,7 +8,9 @@
   "dependencies": {
     "base": "file:../jugglechat/base",
     "home": "file:../jugglechat/home",
-    "jimsdk": "file:../jimsdk"
-  }
+    "juggleim": "file:../juggleim",
+    "long": "^5.2.1"
+  },
+  "devDependencies": {},
+  "dynamicDependencies": {}
 }
-

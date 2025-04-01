@@ -17,8 +17,6 @@ import { Want, common } from '@kit.AbilityKit';
 import { BusinessError } from '@kit.BasicServicesKit';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { Logger } from 'base';
-import { Conversation } from 'jimsdk/src/main/ets/entries/conversation';
-import { Message } from 'jimsdk/src/main/ets/entries/message';
 
 @Observed
 class ConversationViewItem {

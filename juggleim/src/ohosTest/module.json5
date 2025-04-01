@@ -1,9 +1,9 @@
 {
   "module": {
-    "name": "jimsdk_test",
+    "name": "juggleim_test",
     "type": "feature",
     "deviceTypes": [
-      "phone",
+      "default",
       "tablet",
       "2in1",
       "car"

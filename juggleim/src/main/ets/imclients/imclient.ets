@@ -79,7 +79,8 @@ export class ImClient{
         "protoId":JuggleIm.instance.config.protoId,
         "appkey":JuggleIm.instance.config.appkey,
         "token":token,
-        "platform":JuggleIm.instance.config.platform
+        "platform":JuggleIm.instance.config.platform,
+        "deviceId":JuggleIm.instance.config.deviceId
       }))
       this.writeImWsMessage(wsMsg)
       console.log("jimsdk_after_send")
@@ -153,7 +154,7 @@ export class ImClient{
       })
   }
 
-  onReceive(wsMsg:imconnect.ImWebsocketMsg){
+  async onReceive(wsMsg:imconnect.ImWebsocketMsg){
     if(wsMsg.cmd == Cmd.connectAck){
       clearTimeout(this.connectTimeoutId)
       this.connectTimeoutId = 0
@@ -162,7 +163,10 @@ export class ImClient{
       if(typeof code == 'number'){
         if (code === 0){
           this.status = ConnStatus.connected
-          JuggleIm.instance.userInfo.userId = wsMsg.ConnectAckMsgBody?.userId as string
+          let uid = wsMsg.ConnectAckMsgBody?.userId as string
+          JuggleIm.instance.userInfo.userId = uid
+          JuggleIm.instance.userId = uid
+          await JuggleIm.instance.initDb()
           //start ping
           this.pingTaskId = setInterval(()=>{
             this.ping()

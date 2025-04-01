@@ -8,6 +8,6 @@
   "dependencies": {
     "base": "file:../base",
     "socialcircle": "file:../socialCircle",
-    "jimsdk": "file:../../jimsdk"
+    "juggleim": "file:../../juggleim"
   }
 }

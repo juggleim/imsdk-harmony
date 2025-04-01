@@ -1,12 +1,12 @@
 {
-  "name": "jimsdk",
+  "name": "juggleim",
   "version": "1.0.0",
   "description": "Please describe the basic information.",
   "main": "Index.ets",
   "author": "",
   "license": "Apache-2.0",
-  "packageType": "InterfaceHar",
   "dependencies": {
+    "@ohos/protobufjs": "^2.1.0",
     "long": "^5.2.1"
   },
   "devDependencies": {},

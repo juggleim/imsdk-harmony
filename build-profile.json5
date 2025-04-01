@@ -38,18 +38,6 @@
       ]
     },
     {
-      "name": "jimsdk",
-      "srcPath": "./jimsdk",
-      "targets": [
-        {
-          "name": "default",
-          "applyToProducts": [
-            "default"
-          ]
-        }
-      ]
-    },
-    {
       "name": "base",
       "srcPath": "./jugglechat/base",
     },
@@ -60,6 +48,10 @@
     {
       "name": "socialCircle",
       "srcPath": "./jugglechat/socialCircle",
+    },
+    {
+      "name": "juggleim",
+      "srcPath": "./juggleim",
     }
   ]
 }

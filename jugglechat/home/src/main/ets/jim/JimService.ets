@@ -1,4 +1,4 @@
-import {JuggleIm} from 'jimsdk'
+import {JuggleIm} from 'juggleim'
 
 export function initJuggleIm(connectCallback:(status:number,code:number)=>void){
   JuggleIm.instance.init("ws://ws.juggleim.com/im","nsw3sue72begyv7y")

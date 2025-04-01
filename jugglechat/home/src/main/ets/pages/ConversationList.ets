@@ -20,9 +20,9 @@ import { HomeTopSearch } from '../views/common/HomeTopSearch';
 import { HomeConstants } from '../constants/HomeConstants';
 import { deviceInfo } from '@kit.BasicServicesKit';
 import { CommonUtil, ObservedArray} from '../jim/common'
-import {JuggleIm} from 'jimsdk'
-import { TextMessage } from 'jimsdk/src/main/ets/entries/message'
-import { ConnStatus } from 'jimsdk/src/main/ets/imclients/imclient';
+import {JuggleIm} from 'juggleim'
+import { TextMessage } from 'juggleim/src/main/ets/entries/message'
+import { ConnStatus } from 'juggleim/src/main/ets/imclients/imclient';
 
 @Component
 export struct ConversationList {

@@ -19,6 +19,7 @@ import { HomeConstants } from '../../constants/HomeConstants';
 
 @Component
 export struct ConversationDetailBottom {
+  @State private text:string = ''
   @Builder CustomKeyboardBuilder(){}
   build() {
     Flex({ alignItems: ItemAlign.Center }) {
@@ -33,7 +34,7 @@ export struct ConversationDetailBottom {
 
       Blank()
       Column() {
-        TextArea()
+        TextArea({text:this.text})
           .placeholderColor($r('app.color.text_input_default_color'))
           .caretColor($r('app.color.text_input_default_care_color'))
           .backgroundColor($r('app.color.text_input_default_background_color'))
@@ -41,7 +42,16 @@ export struct ConversationDetailBottom {
           .flexGrow(BaseConstants.FLEX_GROW_ONE)
           .padding({ right: $r('app.float.conversation_detail_bottom_text_padding') })
           .backgroundColor(Color.White)
-          .enableKeyboardOnFocus(false)
+          .onChange((v)=>{
+            this.text = v
+          })
+          .enableKeyboardOnFocus(false).onKeyEvent((key)=>{
+            console.log("jimsdk_submit_key",JSON.stringify(key))
+            if(key.type === KeyType.Up && key.keyText === 'KEYCODE_ENTER'){
+              console.log("jimsdk_submit_txt",this.text)
+              this.text = ''
+            }
+          })
           .customKeyboard(this.CustomKeyboardBuilder())
       }
 

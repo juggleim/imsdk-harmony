@@ -23,9 +23,9 @@ import { router } from '@kit.ArkUI';
 import { ConversationDetailParams } from '../viewmodel/ConversationViewModel';
 import {MessageViewItem} from '../viewmodel/MessageViewModel'
 import { ObservedArray } from '../jim/common';
-import { JuggleIm } from 'jimsdk';
-import { Conversation } from 'jimsdk/src/main/ets/entries/conversation';
-import { TextMessage } from 'jimsdk/src/main/ets/entries/message'
+import { JuggleIm } from 'juggleim';
+import { Conversation } from 'juggleim/src/main/ets/entries/conversation';
+import { TextMessage } from 'juggleim/src/main/ets/entries/message'
 
 @Component
 export struct ConversationDetail {

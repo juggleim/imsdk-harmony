@@ -3,12 +3,16 @@ import { ConnectionManager } from './managers/connectionmanager';
 import { ConversationManager } from './managers/conversationmanager';
 import { MessageManager } from './managers/messagemanager';
 import { ConnStatus, ImClient} from './imclients/imclient'
+import { PreferenceUtil } from './commons/preferenceutil';
+import { JimDbManager } from './dbs/dbmanager';
+import App from '@system.app';
 
 export class JimConfig{
   address:string = ''
   appkey:string = ''
-  platform:string = 'iOS'
+  platform:string = 'Harmony'
   protoId:string = 'jug9le1m'
+  deviceId:string = ''
 }
 
 export class JuggleIm{
@@ -16,6 +20,7 @@ export class JuggleIm{
 
   config:JimConfig
   userInfo:UserInfo
+  userId:string
   private imclient:ImClient
 
   private connectManager:ConnectionManager
@@ -25,6 +30,7 @@ export class JuggleIm{
   private constructor() {
     this.config = new JimConfig();
     this.userInfo = new UserInfo();
+    this.userId = ''
     this.imclient = new ImClient()
     this.connectManager = new ConnectionManager(this.imclient)
     this.messageManager = new MessageManager(this.imclient)
@@ -34,6 +40,17 @@ export class JuggleIm{
   async init(address:string, appkey:string):Promise<void>{
     this.config.address = address
     this.config.appkey = appkey
+    this.config.deviceId = PreferenceUtil.getDeviceId()
+  }
+
+  async initDb(){
+    let appkey = this.config.appkey
+    let userId = this.userId
+    console.log('jimsdk_max_sql_init:',appkey,"\t",userId)
+    if(userId!=''&&appkey!='') {
+      console.log("jimsdk_max_sql_jug",appkey,userId)
+      JimDbManager.instance.init(appkey,userId)
+    }
   }
 
   getConnStatus():ConnStatus{
