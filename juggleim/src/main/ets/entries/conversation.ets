@@ -15,7 +15,7 @@ export class Conversation{
 
 export class ConversationInfo{
   conversation:Conversation = new Conversation("",0)
-  lastMessage:Message = new Message(new Conversation("",0))
+  lastMessage:Message = new Message()
   unreadCount:number = 0
   sortTime:number = 0
   isTop:boolean = false

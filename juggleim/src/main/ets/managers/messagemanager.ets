@@ -8,8 +8,13 @@ import { ImClient } from '../imclients/imclient'
 import {MessageUtil} from '../commons/msgutil'
 
 export type MsgSendCallback = (code:number,msg:Message|null)=>void
+export type QryMessagesCallback = (msgs:Message[])=>void
+
 export type MsgReceivedListener = (msg:Message)=>void
-export type MessagesCallback = (msgs:Message[])=>void
+export type MsgRecalledListener = (msg:Message)=>void
+export type MsgModifiedListener = (msg:Message)=>void
+export type MsgDeletedListener = (conver:Conversation,msgIds:string[])=>void
+export type MsgCleanedListener = (conver:Conversation,cleanTime:number,senderId:string)=>void
 
 export class MessageManager{
 
@@ -30,6 +35,10 @@ export class MessageManager{
   }
 
   private msgReceivedListeners:MsgReceivedListener[] = new Array()
+  private msgRecalledListeners:MsgRecalledListener[] = new Array()
+  private msgModifiedListeners:MsgModifiedListener[] = new Array()
+  private msgDeletedListeners:MsgDeletedListener[] = new Array()
+  private msgCleanedListeners:MsgCleanedListener[] = new Array()
 
   sendMessage(msg:MessageContent,conver:Conversation,callback:MsgSendCallback){
     let targetId = conver.conversationId
@@ -45,7 +54,8 @@ export class MessageManager{
       "msgContent":msg.encode(),
       "flags": flags
     })
-    let message = new Message(conver)
+    let message = new Message()
+    message.conversation = conver
     message.msgContent = msg
     message.msgType = msg.getMsgType()
 
@@ -72,11 +82,11 @@ export class MessageManager{
     })
   }
 
-  addMessageListener(listener:MsgReceivedListener){
+  addMsgReceivedListener(listener:MsgReceivedListener){
     this.msgReceivedListeners.push(listener)
   }
 
-  removeMessageListener(listener:MsgReceivedListener){
+  removeMsgReceivedListener(listener:MsgReceivedListener){
     for(let i=0;i<this.msgReceivedListeners.length;i++){
       if(this.msgReceivedListeners[i]===listener){
         this.msgReceivedListeners.splice(i,1)
@@ -90,6 +100,59 @@ export class MessageManager{
       listener(msg)
     })
   }
+
+  addMsgRecalledListener(listener:MsgRecalledListener){
+    this.msgRecalledListeners.push(listener)
+  }
+
+  removeMsgRecalledListener(listener:MsgRecalledListener){
+    for(let i=0;i<this.msgRecalledListeners.length;i++){
+      if(this.msgRecalledListeners[i]===listener){
+        this.msgRecalledListeners.splice(i,1)
+        break
+      }
+    }
+  }
+
+  addMsgModifiedListener(listener:MsgModifiedListener){
+    this.msgModifiedListeners.push(listener)
+  }
+
+  removeMsgModifiedListener(listener:MsgModifiedListener){
+    for(let i=0;i<this.msgModifiedListeners.length;i++){
+      if(this.msgModifiedListeners[i]===listener){
+        this.msgModifiedListeners.splice(i,1)
+        break
+      }
+    }
+  }
+
+  addMsgDeletedListener(listener:MsgDeletedListener){
+    this.msgDeletedListeners.push(listener)
+  }
+
+  removeMsgDeletedListener(listener:MsgDeletedListener){
+    for(let i=0;i<this.msgDeletedListeners.length;i++){
+      if(this.msgDeletedListeners[i]===listener){
+        this.msgDeletedListeners.splice(i,1)
+        break
+      }
+    }
+  }
+
+  addMsgCleanedListener(listener:MsgCleanedListener){
+    this.msgCleanedListeners.push(listener)
+  }
+
+  removeMsgCleanedListener(listener:MsgCleanedListener){
+    for(let i=0;i<this.msgCleanedListeners.length;i++){
+      if(this.msgCleanedListeners[i]===listener){
+        this.msgCleanedListeners.splice(i,1)
+        break
+      }
+    }
+  }
+
 
   onDirectMsgReceived(index:number,data:Uint8Array){
     if(data!=null&&data!=undefined){
@@ -193,7 +256,7 @@ export class MessageManager{
     })
   }
 
-  queryHistoryMsgs(conver:Conversation,count:number,startTime:number,isPositive:boolean,callback:MessagesCallback){
+  queryHistoryMsgs(conver:Conversation,count:number,startTime:number,isPositive:boolean,callback:QryMessagesCallback){
     let order:number = 0
     if(isPositive){
       order = 1

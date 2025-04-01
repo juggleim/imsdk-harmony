@@ -5,7 +5,8 @@ import { UserInfo } from '../entries/user';
 
 export class MessageUtil{
   static downMsg2Message(downMsg:immessage.IDownMsg):Message{
-    let message = new Message(new Conversation(downMsg.targetId as string,downMsg.channelType as number))
+    let message = new Message()
+    message.conversation = new Conversation(downMsg.targetId as string,downMsg.channelType as number)
     if(downMsg.channelType === immessage.ChannelType.Private){
       message.conversation.conversationTitle = downMsg.targetUserInfo?.nickname as string
       message.conversation.conversationPortrait = downMsg.targetUserInfo?.userPortrait as string

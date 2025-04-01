@@ -13,10 +13,69 @@ export enum TopConverSortType{
   BySortTime
 }
 
+export type ConversationAddListener = (convers:ConversationInfo[])=>void
+export type ConversationUpdateListener = (convers:ConversationInfo[])=>void
+export type ConversationDeleteListener = (convers:ConversationInfo[])=>void
+export type TotalUnreadCountUpdateListener = (count:number)=>void
+
 export class ConversationManager{
   private imclient:ImClient
+
   constructor(imclient:ImClient) {
     this.imclient = imclient
+  }
+
+  private converAddListeners:ConversationAddListener[] = new Array()
+  private converUpdateListeners:ConversationUpdateListener[] = new Array()
+  private converDeleteListeners:ConversationDeleteListener[] = new Array()
+  private totalUnreadCountUpdateListeners:TotalUnreadCountUpdateListener[] = new Array()
+
+  addConversationAddListener(listener:ConversationAddListener){
+    this.converAddListeners.push(listener)
+  }
+  removeConversationAddListener(listener:ConversationAddListener){
+    for(let i=0;i<this.converAddListeners.length;i++){
+      if(this.converAddListeners[i]===listener){
+        this.converAddListeners.splice(i,1)
+        break
+      }
+    }
+  }
+
+  addConversationUpdateListener(listener:ConversationUpdateListener){
+    this.converUpdateListeners.push(listener)
+  }
+  removeConversationUpdateListener(listener:ConversationUpdateListener){
+    for(let i=0;i<this.converUpdateListeners.length;i++){
+      if(this.converUpdateListeners[i]===listener){
+        this.converUpdateListeners.splice(i,1)
+        break
+      }
+    }
+  }
+
+  addConversationDeleteListener(listener:ConversationDeleteListener){
+    this.converUpdateListeners.push(listener)
+  }
+  removeConversationDeleteListener(listener:ConversationDeleteListener){
+    for(let i=0;i<this.converDeleteListeners.length;i++){
+      if(this.converDeleteListeners[i]===listener){
+        this.converDeleteListeners.splice(i,1)
+        break
+      }
+    }
+  }
+
+  addTotalUnreadCountUpdateListener(listener:TotalUnreadCountUpdateListener){
+    this.totalUnreadCountUpdateListeners.push(listener)
+  }
+  removeTotalUnreadCountUpdateListener(listener:TotalUnreadCountUpdateListener){
+    for(let i=0;i<this.totalUnreadCountUpdateListeners.length;i++){
+      if(this.totalUnreadCountUpdateListeners[i]===listener){
+        this.totalUnreadCountUpdateListeners.splice(i,1)
+        break
+      }
+    }
   }
 
   queryConversations(count:number,startTime:number,isPositive:boolean,callback:ConversationsCallback){

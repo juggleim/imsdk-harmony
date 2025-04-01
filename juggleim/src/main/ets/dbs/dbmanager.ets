@@ -1,7 +1,7 @@
 import { relationalStore } from "@kit.ArkData";
 import { JimUtil } from "../commons/jimutil";
 import { PreferenceUtil } from "../commons/preferenceutil";
-import { JuggleIm } from "../juggleim";
+import { MessageDao } from "./messagedao";
 
 export class JimDbManager{
   static instance:JimDbManager = new JimDbManager()
@@ -18,7 +18,7 @@ export class JimDbManager{
       encrypt:false
     }
     this.db = await relationalStore.getRdbStore(getContext(),storeConfig)
-    this.onUpgrade()
+    this.onUpgrade(appkey,userId)
   }
 
   getDb():relationalStore.RdbStore|undefined{
@@ -32,25 +32,26 @@ export class JimDbManager{
     }
   }
 
-  private onUpgrade(){
+  getMessageDao():MessageDao{
+    return MessageDao.instance
+  }
+
+  private onUpgrade(appkey:string,userId:string){
     let data = getContext().resourceManager.getRawFileContentSync('sqllist.txt')
-    console.log("jimsdk_max_sql_after",data.length)
     let vals = JimUtil.uint8ArrayToString(data)
     let fileNames = vals.split(',')
-    console.log("jimsdk_max_sql_upgrad",fileNames)
-    let maxVersion = PreferenceUtil.getSqlMaxVersion()
-    console.log("jimsdk_max_sql_version:",maxVersion)
+    let maxVersion = PreferenceUtil.getSqlMaxVersion(appkey,userId)
+    let tmpMaxVersion = maxVersion
     fileNames.forEach((name:string)=>{
       let verStr:string = name.replaceAll('\n','')
       let version:number = new Number(verStr).valueOf()
-      if(version > maxVersion){
+      if(version > tmpMaxVersion){
         let list = this.getSqlList(verStr)
         list.forEach((sql)=>{
-          console.log("jimsdk_max_sql_list_item:",sql)
           try{
             this.getDb()?.executeSync(sql)
-            if(version>maxVersion){
-              maxVersion = version
+            if(version>tmpMaxVersion){
+              tmpMaxVersion = version
             }
           }catch (e) {
             console.error(`execute sql failed. code:${e.code},message:${e.message}}`)
@@ -58,8 +59,8 @@ export class JimDbManager{
         })
       }
     })
-    if(maxVersion>0){
-      PreferenceUtil.setSqlMaxVersion(maxVersion)
+    if(tmpMaxVersion>maxVersion){
+      PreferenceUtil.setSqlMaxVersion(appkey,userId,tmpMaxVersion)
     }
   }
 

@@ -2,7 +2,6 @@ import preferences from '@ohos.data.preferences';
 import util from '@ohos.util'
 
 let prefName = 'jim_preferences'
-let sqlVersionKey = 'jim_sql_max_version'
 
 export class PreferenceUtil{
   static getDeviceId():string{
@@ -19,18 +18,23 @@ export class PreferenceUtil{
     return deviceId.toString()
   }
 
-  static getSqlMaxVersion():number{
+  static getSqlMaxVersion(appkey:string,userId:string):number{
     let ctx = getContext()
     let options:preferences.Options={name:prefName}
     let pref = preferences.getPreferencesSync(ctx,options)
-    let version = pref.getSync(sqlVersionKey,0) as number
+    let sqlVerKey = `sql_max_version_${appkey}_${userId}`
+    let version = pref.getSync(sqlVerKey,0) as number
     return version
   }
 
-  static setSqlMaxVersion(version:number){
+  static setSqlMaxVersion(appkey:string,userId:string,version:number){
     let ctx = getContext()
     let options:preferences.Options = {name:prefName}
     let pref = preferences.getPreferencesSync(ctx,options)
-    pref.putSync(sqlVersionKey,version)
+    let sqlVerKey = `sql_max_version_${appkey}_${userId}`
+    pref.putSync(sqlVerKey,version)
+    pref.flush()
   }
+
+
 }
