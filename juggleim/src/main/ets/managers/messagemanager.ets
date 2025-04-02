@@ -251,7 +251,7 @@ export class MessageManager{
     message.msgContent = msg
     message.msgType = msg.getMsgType()
 
-    message.sentState = MessageSentState.sending
+    message.state = MessageSentState.sending
     let data = immessage.UpMsg.encode(upMsg).finish()
     this.imclient.publish(method,targetId,data,(code,pubAck)=>{
       if(code==0){
@@ -265,10 +265,10 @@ export class MessageManager{
         if(typeof pubAck.msgSeqNo == 'number'){
           message.msgSeqNo = pubAck.msgSeqNo
         }
-        message.sentState = MessageSentState.success
+        message.state = MessageSentState.success
         callback(code,message)
       }else{
-        message.sentState = MessageSentState.failed
+        message.state = MessageSentState.failed
         callback(code,message)
       }
     })

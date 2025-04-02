@@ -100,10 +100,10 @@ export class ConversationManager{
           let converInfo = new ConversationInfo()
           converInfo.lastMessage = MessageUtil.downMsg2Message(conver.msg as immessage.IDownMsg)
           converInfo.conversation = converInfo.lastMessage.conversation
-          converInfo.sortTime = conver.sortTime as number
+          converInfo.converTime = conver.sortTime as number
           converInfo.isTop = (conver.isTop as number)>0
           converInfo.topTime = conver.topUpdatedTime as number
-          converInfo.mute = (conver.undisturbType as number)>0
+          converInfo.isMute = (conver.undisturbType as number)>0
           convers.push(converInfo)
         })
         callback(code,convers)
@@ -127,10 +127,10 @@ export class ConversationManager{
         let converInfo = new ConversationInfo()
         converInfo.lastMessage = MessageUtil.downMsg2Message(resp.msg as immessage.DownMsg)
         converInfo.conversation = converInfo.lastMessage.conversation
-        converInfo.sortTime = resp.sortTime as number
+        converInfo.converTime = resp.sortTime as number
         converInfo.isTop = (resp.isTop as number)>0
         converInfo.topTime = resp.topUpdatedTime as number
-        converInfo.mute = (resp.undisturbType as number)>0
+        converInfo.isMute = (resp.undisturbType as number)>0
         callback(code,converInfo)
       }else{
         callback(code,null)
@@ -227,10 +227,10 @@ export class ConversationManager{
           let converInfo = new ConversationInfo()
           converInfo.lastMessage = MessageUtil.downMsg2Message(conver.msg as immessage.IDownMsg)
           converInfo.conversation = converInfo.lastMessage.conversation
-          converInfo.sortTime = conver.sortTime as number
+          converInfo.converTime = conver.sortTime as number
           converInfo.isTop = (conver.isTop as number)>0
           converInfo.topTime = conver.topUpdatedTime as number
-          converInfo.mute = (conver.undisturbType as number)>0
+          converInfo.isMute = (conver.undisturbType as number)>0
           convers.push(converInfo)
         })
         callback(code,convers)
