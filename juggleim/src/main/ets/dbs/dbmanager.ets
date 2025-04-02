@@ -1,7 +1,12 @@
 import { relationalStore } from "@kit.ArkData";
 import { JimUtil } from "../commons/jimutil";
 import { PreferenceUtil } from "../commons/preferenceutil";
+import { ConverTagDao } from "./convertagdao"
+import { ConversationDao } from "./conversationdao";
 import { MessageDao } from "./messagedao";
+import { UserDao } from "./userdao";
+import { GroupDao } from "./groupdao";
+import { GroupMemberDao } from "./groupmemberdao";
 
 export class JimDbManager{
   static instance:JimDbManager = new JimDbManager()
@@ -34,6 +39,26 @@ export class JimDbManager{
 
   getMessageDao():MessageDao{
     return MessageDao.instance
+  }
+
+  getConversationDao():ConversationDao{
+    return ConversationDao.instance
+  }
+
+  getConverTagDao():ConverTagDao{
+    return ConverTagDao.instance
+  }
+
+  getUserDao():UserDao{
+    return UserDao.instance
+  }
+
+  getGroupDao():GroupDao{
+    return GroupDao.instance
+  }
+
+  getGroupMemberDao():GroupMemberDao{
+    return GroupMemberDao.instance
   }
 
   private onUpgrade(appkey:string,userId:string){

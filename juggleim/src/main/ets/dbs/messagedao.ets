@@ -57,13 +57,18 @@ export class MessageDao{
       "sender_id":msg.senderId,
       "direction":msg.direction,
       "msg_id":msg.messageId,
-      "msg_seq":msg.msgSeqNo,
+      "msg_seq_no":msg.msgSeqNo,
       "msg_index":msg.msgIndex,
       "msg_type":msg.msgType,
       "sent_time":msg.sentTime,
       "msg_content": JimUtil.uint8ArrayToString(msg.msgContent.encode()),
-      "state":msg.sentState,
+      "state":msg.state,
       "flags":MsgFlagTool.toFlag(msg.msgContent.getFlag()),
+      "has_read":msg.hasRead?1:0,
+      "read_count":msg.readCount,
+      "member_count":msg.memberCount,
+      "search_content":msg.searchContent,
+      "refer_msg_id":msg.referMsgId
     }
     return valuesBucket
   }
@@ -77,13 +82,19 @@ export class MessageDao{
     message.senderId = JimDbUtil.toString(resultSet,'sender_id')
     message.direction = JimDbUtil.toNumber(resultSet,'direction')
     message.messageId = JimDbUtil.toString(resultSet,'msg_id')
-    message.msgSeqNo = JimDbUtil.toNumber(resultSet,'msg_seq')
+    message.msgSeqNo = JimDbUtil.toNumber(resultSet,'msg_seq_no')
     message.msgIndex = JimDbUtil.toNumber(resultSet,'msg_index')
     message.msgType = JimDbUtil.toString(resultSet,'msg_type')
     message.sentTime = JimDbUtil.toNumber(resultSet,'sent_time')
     //content
-    message.sentState = JimDbUtil.toNumber(resultSet,'state')
+    message.state = JimDbUtil.toNumber(resultSet,'state')
     message.flags = JimDbUtil.toNumber(resultSet,'flags')
+    message.hasRead = JimDbUtil.toNumber(resultSet,"has_read")>0
+    message.readCount = JimDbUtil.toNumber(resultSet,"read_count")
+    message.memberCount = JimDbUtil.toNumber(resultSet, "member_count")
+    message.isDeleted = JimDbUtil.toNumber(resultSet,"is_deleted")>0
+    message.searchContent = JimDbUtil.toString(resultSet,"search_content")
+    message.referMsgId = JimDbUtil.toString(resultSet, "refer_msg_id")
     return message
   }
 }

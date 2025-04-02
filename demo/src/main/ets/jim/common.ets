@@ -1,5 +1,5 @@
-import { Conversation } from 'jimsdk/src/main/ets/entries/conversation';
-import { Message } from 'jimsdk/src/main/ets/entries/message';
+import { Conversation } from 'juggleim/src/main/ets/entries/conversation';
+import { Message } from 'juggleim/src/main/ets/entries/message';
 
 @Observed
 export class ObservedArray<T> extends Array<T>{

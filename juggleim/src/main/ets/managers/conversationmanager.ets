@@ -7,6 +7,8 @@ import {CommonCallback} from './commoncallback'
 
 export type ConversationCallback = (code:number,conver:ConversationInfo|null)=>void
 export type ConversationsCallback = (code:number,convers:ConversationInfo[])=>void
+export type ConversationInsertCallback = (code:number,conver:ConversationInfo|null)=>void
+export type TotalUnreadCountCallback = (code:number,count:number)=>void
 
 export enum TopConverSortType{
   ByTopTime,
@@ -136,14 +138,26 @@ export class ConversationManager{
     })
   }
 
-  insertConversation(conver:Conversation,callback:CommonCallback){
+  setDraft(conver:Conversation,draft:string){
+
+  }
+
+  clearDraft(conver:Conversation){}
+
+  insertConversation(conver:Conversation,callback:ConversationInsertCallback){
     let req = immessage.Conversation.create({
       "targetId":conver.conversationId,
       "channelType":conver.conversationType
     })
     let data = immessage.Conversation.encode(req).finish()
     this.imclient.query("add_conver",JuggleIm.instance.userInfo.userId,data,(code,qryAck)=>{
-      callback(code)
+      if(code==0){
+        let converInfo = new ConversationInfo()
+        converInfo.conversation = conver
+        callback(code,converInfo)
+      }else{
+        callback(code,null)
+      }
     })
   }
 
@@ -225,5 +239,21 @@ export class ConversationManager{
         callback(code,convers)
       }
     })
+  }
+
+  setMute(conver:Conversation,isMute:boolean,callback:CommonCallback){
+
+  }
+
+  getTotalUnreadCount(callback:TotalUnreadCountCallback){
+
+  }
+
+  clearTotalUnreadCount(callback:CommonCallback){
+
+  }
+
+  clearUnreadCount(conver:Conversation,callback:CommonCallback){
+
   }
 }

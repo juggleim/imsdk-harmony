@@ -17,11 +17,21 @@ export class ConversationInfo{
   conversation:Conversation = new Conversation("",0)
   lastMessage:Message = new Message()
   unreadCount:number = 0
-  sortTime:number = 0
+  converTime:number = 0
+  syncTime:number = 0
   isTop:boolean = false
   topTime:number = 0
-  mute:boolean = false
+  isMute:boolean = false
   draft:string = ''
+  lastReadMsgIndex:number = 0
+  unreadTag:number = 0
+  constructor() {
+  }
+}
+
+export class ConversationTag{
+  conversation:Conversation = new Conversation("",0)
+  tagId:string = ''
   constructor() {
   }
 }

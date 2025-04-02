@@ -6,15 +6,33 @@ import { Conversation } from '../entries/conversation'
 import { MsgFlagTool } from '../improto/msgflag'
 import { ImClient } from '../imclients/imclient'
 import {MessageUtil} from '../commons/msgutil'
+import { CommonCallback } from './commoncallback'
+import { HashMap } from '@kit.ArkTS'
 
-export type MsgSendCallback = (code:number,msg:Message|null)=>void
-export type QryMessagesCallback = (msgs:Message[])=>void
+export type MessageCallback = (code:number,msg:Message|null)=>void
+export type QryMessagesCallback = (code:number,msgs:Message[],hasMore:boolean)=>void
 
 export type MsgReceivedListener = (msg:Message)=>void
 export type MsgRecalledListener = (msg:Message)=>void
 export type MsgModifiedListener = (msg:Message)=>void
 export type MsgDeletedListener = (conver:Conversation,msgIds:string[])=>void
 export type MsgCleanedListener = (conver:Conversation,cleanTime:number,senderId:string)=>void
+
+export class QueryMsgOptions{
+  count:number = 20
+  startTime:number = 0
+  isPositive:boolean = false
+  constructor() {
+  }
+}
+
+export class SearchParams{
+  conver?:Conversation
+  keywords:string = ""
+  msgTypes:string[] = []
+  startTime:number = 0
+  endTime:number = 0
+}
 
 export class MessageManager{
 
@@ -39,48 +57,6 @@ export class MessageManager{
   private msgModifiedListeners:MsgModifiedListener[] = new Array()
   private msgDeletedListeners:MsgDeletedListener[] = new Array()
   private msgCleanedListeners:MsgCleanedListener[] = new Array()
-
-  sendMessage(msg:MessageContent,conver:Conversation,callback:MsgSendCallback){
-    let targetId = conver.conversationId
-    let method:string = ""
-    if(conver.conversationType == 1){
-      method = 'p_msg'
-    }else if (conver.conversationType==2){
-      method = 'g_msg'
-    }
-    let flags = MsgFlagTool.toFlag(msg.getFlag())
-    let upMsg = immessage.UpMsg.create({
-      "msgType":msg.getMsgType(),
-      "msgContent":msg.encode(),
-      "flags": flags
-    })
-    let message = new Message()
-    message.conversation = conver
-    message.msgContent = msg
-    message.msgType = msg.getMsgType()
-
-    message.sentState = MessageSentState.sending
-    let data = immessage.UpMsg.encode(upMsg).finish()
-    this.imclient.publish(method,targetId,data,(code,pubAck)=>{
-      if(code==0){
-        if(typeof pubAck.msgId == 'string'){
-          message.messageId = pubAck.msgId
-        }
-        if(typeof pubAck.timestamp == 'number'){
-          message.sentTime = pubAck.timestamp
-          this.recordLatestSendboxMsgTime(message.sentTime,flags)
-        }
-        if(typeof pubAck.msgSeqNo == 'number'){
-          message.msgSeqNo = pubAck.msgSeqNo
-        }
-        message.sentState = MessageSentState.success
-        callback(code,message)
-      }else{
-        message.sentState = MessageSentState.failed
-        callback(code,message)
-      }
-    })
-  }
 
   addMsgReceivedListener(listener:MsgReceivedListener){
     this.msgReceivedListeners.push(listener)
@@ -256,29 +232,93 @@ export class MessageManager{
     })
   }
 
-  queryHistoryMsgs(conver:Conversation,count:number,startTime:number,isPositive:boolean,callback:QryMessagesCallback){
+  sendMessage(msg:MessageContent,conver:Conversation,callback:MessageCallback){
+    let targetId = conver.conversationId
+    let method:string = ""
+    if(conver.conversationType == 1){
+      method = 'p_msg'
+    }else if (conver.conversationType==2){
+      method = 'g_msg'
+    }
+    let flags = MsgFlagTool.toFlag(msg.getFlag())
+    let upMsg = immessage.UpMsg.create({
+      "msgType":msg.getMsgType(),
+      "msgContent":msg.encode(),
+      "flags": flags
+    })
+    let message = new Message()
+    message.conversation = conver
+    message.msgContent = msg
+    message.msgType = msg.getMsgType()
+
+    message.sentState = MessageSentState.sending
+    let data = immessage.UpMsg.encode(upMsg).finish()
+    this.imclient.publish(method,targetId,data,(code,pubAck)=>{
+      if(code==0){
+        if(typeof pubAck.msgId == 'string'){
+          message.messageId = pubAck.msgId
+        }
+        if(typeof pubAck.timestamp == 'number'){
+          message.sentTime = pubAck.timestamp
+          this.recordLatestSendboxMsgTime(message.sentTime,flags)
+        }
+        if(typeof pubAck.msgSeqNo == 'number'){
+          message.msgSeqNo = pubAck.msgSeqNo
+        }
+        message.sentState = MessageSentState.success
+        callback(code,message)
+      }else{
+        message.sentState = MessageSentState.failed
+        callback(code,message)
+      }
+    })
+  }
+
+  sendMediaMessage(msg:MessageContent,conver:Conversation){}
+
+  queryMessages(conver:Conversation,options:QueryMsgOptions,callback:QryMessagesCallback){
     let order:number = 0
-    if(isPositive){
+    if(options.isPositive){
       order = 1
     }
     let req = immessage.QryHisMsgsReq.create({
       "targetId":conver.conversationId,
       'channelType':conver.conversationType,
-      'startTime':startTime,
-      'count':count,
+      'startTime':options.startTime,
+      'count':options.count,
       'order':order
     })
     let data = immessage.QryHisMsgsReq.encode(req).finish()
     this.imclient.query("qry_hismsgs",conver.conversationId,data,(code,qryAck)=>{
+      let msgs:Message[] = new Array()
       if(code==0){
-        let msgs:Message[] = new Array()
         let data = qryAck.data as Uint8Array
         let resp = immessage.DownMsgSet.decode(data)
         resp.msgs.forEach((msg)=>{
           msgs.push(MessageUtil.downMsg2Message(msg))
         })
-        callback(msgs)
+        callback(code,msgs,!resp.isFinished)
+      }else{
+        callback(code,msgs,false)
       }
     })
   }
+
+  queryMentionMessages(conver:Conversation,count:number,startTime:number,isPositive:boolean,callback:QryMessagesCallback){}
+
+  clearMessages(conver:Conversation,startTime:number,callback:CommonCallback){}
+
+  delMessages(conver:Conversation,msgIds:string[],delScope:number,callback:CommonCallback){}
+
+  getMessagesByIds(conver:Conversation|null,msgIds:string[],callback:QryMessagesCallback){}
+
+  modifyMessage(conver:Conversation,msgId:string,msg:MessageContent,callback:MessageCallback){}
+
+  sendReadReceipt(conver:Conversation,msgIds:string[],callback:CommonCallback){}
+
+  recallMessage(conver:Conversation,msgId:string,extras:HashMap<string,string>,callback:MessageCallback){}
+
+  searchMessages(params:SearchParams,callback:QryMessagesCallback){}
+
+  setLocalAttribue(msgId:string,attribute:string){}
 }

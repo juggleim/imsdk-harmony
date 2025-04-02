@@ -66,8 +66,14 @@ export class Message{
   sender?:UserInfo
   direction:number = 0
   flags:number = 0
+  hasRead:boolean = false
+  readCount:number = 0
+  memberCount:number = 0
+  isDeleted:boolean = false
+  searchContent:string = ''
+  referMsgId:string = ''
 
-  sentState:number = MessageSentState.none
+  state:number = MessageSentState.none
 
   constructor() {
   }
