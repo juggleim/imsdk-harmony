@@ -242,18 +242,56 @@ export class ConversationManager{
   }
 
   setMute(conver:Conversation,isMute:boolean,callback:CommonCallback){
-
+    let req = immessage.UndisturbConversReq.create({
+      "items":[{
+        "targetId":conver.conversationId,
+        "channelType":conver.conversationType,
+        "undisturbType":1
+      }]
+    })
+    let data = immessage.UndisturbConversReq.encode(req).finish()
+    this.imclient.query("undisturb_convers",JuggleIm.instance.userId,data,(code)=>{
+      callback(code)
+    })
   }
 
   getTotalUnreadCount(callback:TotalUnreadCountCallback){
-
+    let req = immessage.QryTotalUnreadCountReq.create({
+      "time":0
+    })
+    let data = immessage.QryTotalUnreadCountReq.encode(req).finish()
+    this.imclient.query("qry_total_unread_count",JuggleIm.instance.userId,data,(code,qryAck)=>{
+      if(code==0){
+        let data = qryAck.data as Uint8Array
+        let resp = immessage.QryTotalUnreadCountResp.decode(data)
+        callback(code,resp.totalCount as number)
+      }else{
+        callback(code,0)
+      }
+    })
   }
 
   clearTotalUnreadCount(callback:CommonCallback){
-
+    let req = immessage.QryTotalUnreadCountReq.create({
+      "time":0
+    })
+    let data = immessage.QryTotalUnreadCountReq.encode(req).finish()
+    this.imclient.query("clear_total_unread",JuggleIm.instance.userId,data,(code)=>{
+      callback(code)
+    })
   }
 
   clearUnreadCount(conver:Conversation,callback:CommonCallback){
-
+    let req = immessage.ClearUnreadReq.create({
+      "conversations":[{
+        "targetId":conver.conversationId,
+        "channelType":conver.conversationType,
+        "latestReadIndex":conver.msgIndex
+      }]
+    })
+    let data = immessage.ClearUnreadReq.encode(req).finish()
+    this.imclient.query("clear_unread",JuggleIm.instance.userId,data,(code)=>{
+      callback(code)
+    })
   }
 }

@@ -1,4 +1,6 @@
 import {JuggleIm} from 'juggleim'
+import { RecallCmdMessage } from 'juggleim/src/main/ets/entries/message'
+import { HashMap, JSON } from '@kit.ArkTS'
 
 export function initJuggleIm(connectCallback:(status:number,code:number)=>void){
   JuggleIm.instance.init("ws://ws.juggleim.com/im","nsw3sue72begyv7y")

@@ -49,7 +49,7 @@ export struct ConversationList {
       })
     }
 
-    JuggleIm.instance.getMessageManager().addMessageListener((message)=>{
+    JuggleIm.instance.getMessageManager().addMsgReceivedListener((message)=>{
       let conversation = message.conversation
       if(this.conversationList.length === 0){
         return
@@ -97,15 +97,15 @@ export struct ConversationList {
               msgStr = txtMsg.content
             }
             //time str
-            let timeStr = CommonUtil.getTimeToYYYYDDMMHHMMSS(conver.sortTime)
+            let timeStr = CommonUtil.getTimeToYYYYDDMMHHMMSS(conver.converTime)
             this.conversationList.push(new ConversationViewItem("", conver.conversation.conversationId,
               conver.conversation.conversationType, conver.lastMessage.sentTime, conver.conversation.conversationTitle,
               msgStr, timeStr, iconUrl))
-            if (this.maxConverSortTime < conver.sortTime) {
-              this.maxConverSortTime = conver.sortTime
+            if (this.maxConverSortTime < conver.converTime) {
+              this.maxConverSortTime = conver.converTime
             }
-            if (this.minConverSortTime > conver.sortTime) {
-              this.minConverSortTime = conver.sortTime
+            if (this.minConverSortTime > conver.converTime) {
+              this.minConverSortTime = conver.converTime
             }
           })
         })

@@ -26,6 +26,7 @@ import { ObservedArray } from '../jim/common';
 import { JuggleIm } from 'juggleim';
 import { Conversation } from 'juggleim/src/main/ets/entries/conversation';
 import { TextMessage } from 'juggleim/src/main/ets/entries/message'
+import { QueryMsgOptions } from 'juggleim/src/main/ets/managers/messagemanager';
 
 @Component
 export struct ConversationDetail {
@@ -38,7 +39,7 @@ export struct ConversationDetail {
   aboutToAppear(): void {
     let param = this.pageInfo.getParamByIndex(0) as ConversationDetailParams
     console.log("jimsdk_param:",param.conversationId)
-    JuggleIm.instance.getMessageManager().addMessageListener((message)=>{
+    JuggleIm.instance.getMessageManager().addMsgReceivedListener((message)=>{
       let conver = message.conversation
       let currentUserId = JuggleIm.instance.userInfo.userId
       if(conver?.conversationId===param.conversationId){
@@ -54,7 +55,9 @@ export struct ConversationDetail {
         this.msgList.push(viewMsg)
       }
     })
-    JuggleIm.instance.getMessageManager().queryHistoryMsgs(new Conversation(param.conversationId,param.channelType),10,0,false,(msgs)=>{
+    let options:QueryMsgOptions = new QueryMsgOptions()
+    options.count = 10
+    JuggleIm.instance.getMessageManager().queryMessages(new Conversation(param.conversationId,param.channelType),options,(code,msgs)=>{
       let currentUserId = JuggleIm.instance.userInfo.userId
       console.log("jimsdk_hismsgs:",msgs.length,currentUserId)
       msgs.forEach((msg)=>{

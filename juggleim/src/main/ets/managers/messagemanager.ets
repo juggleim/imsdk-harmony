@@ -26,6 +26,13 @@ export class QueryMsgOptions{
   }
 }
 
+export class ClearMsgOptions{
+  cleanTime:number = 0
+  cleanScope:number = 0
+  senderId:string = ''
+  cleanTimeOffset:number = 0
+}
+
 export class SearchParams{
   conver?:Conversation
   keywords:string = ""
@@ -304,11 +311,43 @@ export class MessageManager{
     })
   }
 
-  queryMentionMessages(conver:Conversation,count:number,startTime:number,isPositive:boolean,callback:QryMessagesCallback){}
+  queryMentionMessages(conver:Conversation,count:number,startTime:number,isPositive:boolean,callback:QryMessagesCallback){
 
-  clearMessages(conver:Conversation,startTime:number,callback:CommonCallback){}
+  }
 
-  delMessages(conver:Conversation,msgIds:string[],delScope:number,callback:CommonCallback){}
+  clearMessages(conver:Conversation,options:ClearMsgOptions,callback:CommonCallback){
+    let req = immessage.CleanHisMsgReq.create({
+      "targetId":conver.conversationId,
+      "channelType":conver.conversationType,
+      "cleanMsgTime":options.cleanTime,
+      "cleanScope":options.cleanScope,
+      "senderId":options.senderId,
+      "cleanTimeOffset":options.cleanTimeOffset
+    })
+    let data = immessage.CleanHisMsgReq.encode(req).finish()
+    this.imclient.query("clean_hismsg",conver.conversationId,data,(code)=>{
+      callback(code)
+    })
+  }
+
+  delMessages(conver:Conversation,msgIds:string[],delScope:number,callback:CommonCallback){
+    let msgs:immessage.SimpleMsg[] = []
+    msgIds.forEach((msgId)=>{
+      msgs.push(immessage.SimpleMsg.create({
+        "msgId":msgId
+      }))
+    })
+    let req = immessage.DelHisMsgsReq.create({
+      "targetId":conver.conversationId,
+      "channelType":conver.conversationType,
+      "msgs":msgs,
+      "delScope":delScope
+    })
+    let data = immessage.DelHisMsgsReq.encode(req).finish()
+    this.imclient.query("del_hismsg",conver.conversationId,data,(code)=>{
+      callback(code)
+    })
+  }
 
   getMessagesByIds(conver:Conversation|null,msgIds:string[],callback:QryMessagesCallback){}
 
@@ -316,7 +355,26 @@ export class MessageManager{
 
   sendReadReceipt(conver:Conversation,msgIds:string[],callback:CommonCallback){}
 
-  recallMessage(conver:Conversation,msgId:string,extras:HashMap<string,string>,callback:MessageCallback){}
+  recallMessage(conver:Conversation,msgId:string,extras:HashMap<string,string>,callback:MessageCallback){
+    let exts:immessage.KvItem[] = []
+    extras.forEach((k,v)=>{
+      exts.push(immessage.KvItem.create({
+        "key":k,
+        "value":v
+      }))
+    })
+    let req = immessage.RecallMsgReq.create({
+      "targetId":conver.conversationId,
+      "channelType":conver.conversationType,
+      "msgId":msgId,
+      "exts":exts
+    })
+    let data = immessage.RecallMsgReq.encode(req).finish()
+    this.imclient.query("recall_msg",conver.conversationId,data,(code)=>{
+      let msg = new Message()
+      callback(code,msg)
+    })
+  }
 
   searchMessages(params:SearchParams,callback:QryMessagesCallback){}
 

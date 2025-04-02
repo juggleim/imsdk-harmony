@@ -5,6 +5,7 @@ export class Conversation{
   conversationId:string
   conversationType:number
 
+  msgIndex:number = 0
   conversationTitle:string = ''
   conversationPortrait:string = ''
   constructor(converId:string,converType:number) {

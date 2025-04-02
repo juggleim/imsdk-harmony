@@ -1,7 +1,7 @@
 import { JimUtil } from '../commons/jimutil'
 import { MsgFlag, MsgFlagTool } from '../improto/msgflag'
 import {UserInfo} from './user'
-import { JSON } from '@kit.ArkTS'
+import { HashMap, JSON } from '@kit.ArkTS'
 import { Conversation } from './conversation'
 
 export class MessageSentState{
@@ -250,5 +250,30 @@ export class VideoMessage extends MessageContent{
     let str = JimUtil.uint8ArrayToString(data)
     let t = JSON.parse(str) as VideoMessage
     return t
+  }
+}
+
+export class RecallInfoMessage extends MessageContent{
+  exts:HashMap<string,string> = new HashMap()
+  constructor() {
+    super()
+    this.setMsgType("jg:recallinfo")
+    let msgFlag = new MsgFlag()
+    msgFlag.isStorage=true
+    msgFlag.isCount = true
+    this.setMsgFlag(msgFlag)
+  }
+}
+
+export class RecallCmdMessage extends MessageContent{
+  msg_id:string = ''
+  msg_time:number = 0
+  exts:HashMap<string,string> = new HashMap()
+  constructor() {
+    super()
+    this.setMsgType("jg:recall")
+    let msgFlag = new MsgFlag()
+    msgFlag.isCmd = true
+    this.setMsgFlag(msgFlag)
   }
 }
