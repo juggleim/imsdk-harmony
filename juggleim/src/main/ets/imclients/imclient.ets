@@ -8,6 +8,7 @@ import { JSON } from '@kit.ArkTS';
 import {imconnect} from '../improto/imconnect.js'
 import {Cmd,newConnectMessage, newUserPublishMessage,newQueryMessage, newUserPubAckMessage,
   newPingMessag} from '../improto/connectmsg'
+import { PreferenceUtil } from '../commons/preferenceutil';
 
 export class ConnStatus{
   static readonly unknown = 0
@@ -17,7 +18,7 @@ export class ConnStatus{
   static readonly disconnected = 4
 }
 
-export type ConnStatusListener = (status:number,reasonCode:number)=>void
+export type ConnStatusListener = (status:number,reasonCode:number,userId:string)=>void
 export type PublishCallback = (code:number,pubAck:imconnect.IPublishAckMsgBody)=>void
 export type QueryCallback = (code:number,qryAck:imconnect.IQueryAckMsgBody)=>void
 export type PublishListener = (index:number,data:Uint8Array)=>void
@@ -44,6 +45,7 @@ class QueryCallbackWrap{
 export class ImClient{
   index:number = 0
   status:number = ConnStatus.unknown
+  token:string = ''
   wsSocket?:webSocket.WebSocket
   private connectStatusListeners:ConnStatusListener[] = new Array()
   private connectTimeoutId:number = 0
@@ -65,12 +67,13 @@ export class ImClient{
       console.error("jimsdk_noinit")
       return
     }
+    this.token = token
     if (this.status === ConnStatus.connecting||this.status === ConnStatus.connected){
       console.log("jimsdk_connecting");
       return
     }
     this.status = ConnStatus.connecting
-    this.setConnectStatus(this.status,0)
+    this.setConnectStatus(this.status,0,"")
 
     this.wsSocket = webSocket.createWebSocket()
     this.wsSocket.on('open',(err,value)=>{
@@ -111,7 +114,7 @@ export class ImClient{
     let timeoutId = setTimeout(()=>{
       if(this.status==ConnStatus.connecting){
         this.status = ConnStatus.fail
-        this.setConnectStatus(this.status,-2)
+        this.setConnectStatus(this.status,-2,JuggleIm.instance.userId)
       }
       this.connectTimeoutId = 0
     },5000)
@@ -166,26 +169,21 @@ export class ImClient{
           let uid = wsMsg.ConnectAckMsgBody?.userId as string
           JuggleIm.instance.userInfo.userId = uid
           JuggleIm.instance.userId = uid
-          await JuggleIm.instance.initDb()
+          PreferenceUtil.setUserIdByToken(JuggleIm.instance.config.appkey,this.token,uid)
           //start ping
           this.pingTaskId = setInterval(()=>{
             this.ping()
           },30000)
-          //sync offline msg
-          JuggleIm.instance.getMessageManager().syncMsgs(0)
         }else{
           this.status = ConnStatus.fail
         }
-        this.setConnectStatus(this.status,code)
-      }else{
-        this.status = ConnStatus.fail
-        this.setConnectStatus(this.status,-1)
+        this.setConnectStatus(this.status,code,JuggleIm.instance.userId)
       }
     }else if (wsMsg.cmd == Cmd.disconnect){
       let code = wsMsg.disconnectMsgBody?.code
       if(typeof  code == 'number'){
         this.status = ConnStatus.disconnected
-        this.setConnectStatus(this.status,code)
+        this.setConnectStatus(this.status,code,JuggleIm.instance.userId)
       }
     }else if(wsMsg.cmd == Cmd.publish){
       let body = wsMsg.publishMsgBody
@@ -234,6 +232,7 @@ export class ImClient{
 
   addConnectStatusListener(l:ConnStatusListener){
     this.connectStatusListeners.push(l)
+    console.log("jimsdk_initlis_size:",this.connectStatusListeners.length)
   }
 
   removeConnectStatusListener(l:ConnStatusListener){
@@ -245,9 +244,11 @@ export class ImClient{
     }
   }
 
-  private setConnectStatus(status:number,reasonCode:number){
+  private setConnectStatus(status:number,reasonCode:number,userId:string){
+    console.log("jinsdk_initlis_trisize:",this.connectStatusListeners.length)
     this.connectStatusListeners.forEach((listener)=>{
-      listener(status,reasonCode)
+      console.log("jimsdk_initlis_trigger:",status,reasonCode,userId)
+      listener(status,reasonCode,userId)
     })
   }
 

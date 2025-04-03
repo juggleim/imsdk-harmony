@@ -1,8 +1,7 @@
 import {JuggleIm} from '../juggleim'
-import { Conversation, ConversationInfo } from "../entries/conversation";
+import { Conversation, ConversationInfo } from "../entries/conversation"
 import {immessage} from  '../improto/immessage'
-import { ImClient } from '../imclients/imclient';
-import {MessageUtil} from  '../commons/msgutil'
+import { ImClient } from '../imclients/imclient'
 import {CommonCallback} from './commoncallback'
 
 export type ConversationCallback = (code:number,conver:ConversationInfo|null)=>void
@@ -98,7 +97,7 @@ export class ConversationManager{
         let resp = immessage.QryConversationsResp.decode(data)
         resp.conversations.forEach((conver)=>{
           let converInfo = new ConversationInfo()
-          converInfo.lastMessage = MessageUtil.downMsg2Message(conver.msg as immessage.IDownMsg)
+          converInfo.lastMessage = JuggleIm.instance.getMessageManager().downMsg2Message(conver.msg as immessage.IDownMsg)
           converInfo.conversation = converInfo.lastMessage.conversation
           converInfo.converTime = conver.sortTime as number
           converInfo.isTop = (conver.isTop as number)>0
@@ -125,7 +124,7 @@ export class ConversationManager{
         let data = qryAck.data as Uint8Array
         let resp = immessage.Conversation.decode(data)
         let converInfo = new ConversationInfo()
-        converInfo.lastMessage = MessageUtil.downMsg2Message(resp.msg as immessage.DownMsg)
+        converInfo.lastMessage = JuggleIm.instance.getMessageManager().downMsg2Message(resp.msg as immessage.DownMsg)
         converInfo.conversation = converInfo.lastMessage.conversation
         converInfo.converTime = resp.sortTime as number
         converInfo.isTop = (resp.isTop as number)>0
@@ -225,7 +224,7 @@ export class ConversationManager{
         let resp = immessage.QryConversationsResp.decode(data)
         resp.conversations.forEach((conver)=>{
           let converInfo = new ConversationInfo()
-          converInfo.lastMessage = MessageUtil.downMsg2Message(conver.msg as immessage.IDownMsg)
+          converInfo.lastMessage = JuggleIm.instance.getMessageManager().downMsg2Message(conver.msg as immessage.IDownMsg)
           converInfo.conversation = converInfo.lastMessage.conversation
           converInfo.converTime = conver.sortTime as number
           converInfo.isTop = (conver.isTop as number)>0

@@ -1,3 +1,6 @@
+import { JuggleIm } from '../../../../Index'
+import { PreferenceUtil } from '../commons/preferenceutil'
+import { JimDbManager } from '../dbs/dbmanager'
 import {ImClient,ConnStatusListener} from '../imclients/imclient'
 
 
@@ -9,6 +12,12 @@ export class ConnectionManager {
   }
 
   connect(token:string){
+    if(!JimDbManager.instance.hasInit){
+      let userId = PreferenceUtil.getUserIdByToken(JuggleIm.instance.config.appkey,token)
+      if(userId!=''){
+        JuggleIm.instance.initDb(userId)
+      }
+    }
     this.imclient.connect(token)
   }
 

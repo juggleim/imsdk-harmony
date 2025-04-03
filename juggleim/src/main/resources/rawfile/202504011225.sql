@@ -1,3 +1,10 @@
+create table confs(
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    conf_key VARCHAR(64),
+    conf_value VARCHAR(100)
+);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_key ON confs(conf_key);
+
 create table messages(
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     conver_id VARCHAR(64),

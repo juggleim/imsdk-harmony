@@ -44,32 +44,11 @@ export class JuggleIm{
     this.config.deviceId = PreferenceUtil.getDeviceId()
   }
 
-  async initDb(){
+  initDb(userId:string){
     let appkey = this.config.appkey
-    let userId = this.userId
     if(userId!=''&&appkey!='') {
       JimDbManager.instance.init(appkey,userId)
     }
-  }
-
-  testDb(){
-    let msgDao = JimDbManager.instance.getMessageDao()
-    let msg = new Message()
-    msg.conversation = new Conversation('userid2',1)
-    msg.msgType = 'jg:text'
-    msg.messageId = 'msgid3'
-    msg.clientId = 'clientid3'
-    let result = msgDao.insert(msg)
-    console.log("jimsdk_dbinsert",result)
-
-    let msgs = msgDao.queryMessages('userid2',1,0,10)
-    console.log("jimsdk_dbinsert_query:",msgs.length);
-    if(msgs.length>0){
-      msgs.forEach((msg)=>{
-        console.log("jimsdk_dbinsert_query_item:",msg.messageId,msg.conversation?.conversationId,msg.conversation?.conversationType)
-      })
-    }
-
   }
 
   getConnStatus():ConnStatus{

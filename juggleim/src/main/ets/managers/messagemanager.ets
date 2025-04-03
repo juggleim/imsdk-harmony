@@ -1,13 +1,22 @@
 import {JuggleIm} from '../juggleim'
 import {immessage} from  '../improto/immessage'
-import { Message, MessageContent,MessageSentState,TextMessage} from '../entries/message'
-import {imconnect} from '../improto/imconnect'
+import {
+  FileMessage,
+  ImageMessage,
+  MergeMessage, Message, MessageContent,MessageSentState,
+  RecallInfoMessage,TextMessage,
+  VideoMessage,
+  VoiceMessage} from '../entries/message'
 import { Conversation } from '../entries/conversation'
 import { MsgFlagTool } from '../improto/msgflag'
-import { ImClient } from '../imclients/imclient'
-import {MessageUtil} from '../commons/msgutil'
+import { ConnStatus, ImClient } from '../imclients/imclient'
 import { CommonCallback } from './commoncallback'
 import { HashMap } from '@kit.ArkTS'
+import { ClearUnreadMessage, ReadNtfMessage, RecallCmdMessage } from '../entries/cmdmsg'
+import { UserInfo } from '../entries/user';
+import { ConnStatusListener } from '../imclients/imclient'
+import { JimDbManager } from '../dbs/dbmanager'
+import { PreferenceUtil } from '../commons/preferenceutil'
 
 export type MessageCallback = (code:number,msg:Message|null)=>void
 export type QryMessagesCallback = (code:number,msgs:Message[],hasMore:boolean)=>void
@@ -45,18 +54,52 @@ export class MessageManager{
 
   private imclient:ImClient
 
+  private msgTypeMap:Map<string,Function> = new Map()
   private latestInboxMsgTime:number = 0
   private latestSendboxMsgTime:number = 0
   private isSyncing:boolean = false
+  private latestConverSyncTime:number = 0
 
   constructor(imclient:ImClient) {
     this.imclient = imclient
+    //regist inner msg type
+    this.registerMessage("jg:text",TextMessage)
+    this.registerMessage("jg:merge",MergeMessage)
+    this.registerMessage("jg:voice",VoiceMessage)
+    this.registerMessage("jg:img",ImageMessage)
+    this.registerMessage("jg:file",FileMessage)
+    this.registerMessage("jg:video",VideoMessage)
+    this.registerMessage("jg:recallinfo",RecallInfoMessage)
+    //cmd msg
+    this.registerMessage("jg:recall",RecallCmdMessage)
+    this.registerMessage("jg:readntf",ReadNtfMessage)
+    this.registerMessage("jg:clearunread",ClearUnreadMessage)
+
     this.imclient.registePublishListener("msg",(index,data)=>{
       this.onDirectMsgReceived(index,data)
     })
     this.imclient.registePublishListener("ntf",(index,data)=>{
       this.onMsgNotify(index,data)
     })
+    this.imclient.addConnectStatusListener(this.syncAfterConnect)
+  }
+
+  registerMessage(msgType:string,constructor:Function){
+    this.msgTypeMap.set(msgType,constructor)
+  }
+
+  constructByMsgType(msgType:string):MessageContent{
+    if(this.msgTypeMap.has(msgType)){
+      let f = this.msgTypeMap.get(msgType)
+      let obj  = this.createObj(f as FunctionConstructor)
+      return obj as MessageContent
+    }else{
+      return new MessageContent()
+    }
+  }
+
+  private createObj(constructor:FunctionConstructor):Object{
+    return new constructor()
   }
 
   private msgReceivedListeners:MsgReceivedListener[] = new Array()
@@ -136,57 +179,38 @@ export class MessageManager{
     }
   }
 
+  private syncAfterConnect(status:number,reasonCode:number,userId:string){
+    if(status === ConnStatus.connected) {
+      if (!JimDbManager.instance.hasInit) {
+        JuggleIm.instance.initDb(userId)
+      }
+      //sync conversation
+      this.syncConvers()
+      //sync offline msg
+      this.syncMsgs(0)
+    }
+  }
 
-  onDirectMsgReceived(index:number,data:Uint8Array){
+  private onDirectMsgReceived(index:number,data:Uint8Array){
     if(data!=null&&data!=undefined){
       let downMsg = immessage.DownMsg.decode(data)
       //send ack
       this.recordLatestInboxMsgTime(downMsg.msgTime as number,downMsg.flags)
       this.msgAck(index,downMsg.flags)
-      let msg = MessageUtil.downMsg2Message(downMsg)
+      let msg = this.downMsg2Message(downMsg)
       if(!this.isSyncing||msg.msgContent.getFlag().isState){
         this.msgReceive(msg)
       }
     }
   }
 
-  onMsgNotify(index:number,data:Uint8Array){
+  private onMsgNotify(index:number,data:Uint8Array){
     if(data!=null&&data!=undefined){
       let notify = immessage.Notify.decode(data)
       if(notify.type == immessage.NotifyType.Msg) {
         this.syncMsgs(notify.syncTime as number)
       }else if(notify.type == immessage.NotifyType.ChatroomMsg){
         //TODO
-      }
-    }
-  }
-
-  onMsgReceived(pubBody:imconnect.IPublishMsgBody){
-    let index = pubBody.index
-    if(typeof index == 'number'){
-      let topic = pubBody.topic
-      if (typeof topic == 'string'){
-        if(topic=='msg'){
-          let data = pubBody.data
-          if(data!=null&&data!=undefined){
-            let downMsg = immessage.DownMsg.decode(data)
-            //send ack
-            this.recordLatestInboxMsgTime(downMsg.msgTime as number,downMsg.flags)
-            this.msgAck(index,downMsg.flags)
-            let msg = MessageUtil.downMsg2Message(downMsg)
-            if(!this.isSyncing||msg.msgContent.getFlag().isState){
-              this.msgReceive(msg)
-            }
-          }
-        }else if(topic=='ntf'){
-          let data = pubBody.data
-          if(data!=null&&data!=undefined){
-            let notify = immessage.Notify.decode(data)
-            if(notify.type == immessage.NotifyType.Msg) {
-              this.syncMsgs(notify.syncTime as number)
-            }
-          }
-        }
       }
     }
   }
@@ -213,22 +237,21 @@ export class MessageManager{
     this.imclient.pubAck(index)
   }
 
-  public syncMsgs(ntfTime:number){
+  private syncMsgs(ntfTime:number){
     console.log("jimsdk_syncmsg_exetue")
     this.isSyncing = true
     let syncReq = immessage.SyncMsgReq.create({
-      "syncTime":this.latestInboxMsgTime,
+      "syncTime":this.getLatestInboxMsgTime(),
       "containsSendBox":true,
-      "sendBoxSyncTime":this.latestSendboxMsgTime
+      "sendBoxSyncTime":this.getLatestSendboxMsgTime()
     })
     let data = immessage.SyncMsgReq.encode(syncReq).finish()
-    let msgs = immessage.DownMsgSet.create()
     this.imclient.query("sync_msgs",JuggleIm.instance.userInfo.userId,data,(code,qryAck)=>{
       if(code==0){
         let data = qryAck.data as Uint8Array
         let downMsgs = immessage.DownMsgSet.decode(data)
-        downMsgs.msgs.forEach((downMsg,index)=>{
-          let message = MessageUtil.downMsg2Message(downMsg)
+        downMsgs.msgs.forEach((downMsg)=>{
+          let message = this.downMsg2Message(downMsg)
           this.recordLatestInboxMsgTime(downMsg.msgTime as number,downMsg.flags as number)
           this.msgReceive(message)
         })
@@ -237,6 +260,29 @@ export class MessageManager{
        console.log("jimsdk_syncmsg_failed:",code)
       }
     })
+  }
+
+  private getLatestInboxMsgTime():number{
+    return this.latestInboxMsgTime
+  }
+
+  private getLatestSendboxMsgTime():number{
+    return this.latestSendboxMsgTime
+  }
+
+  private syncConvers(){
+    let req = immessage.SyncConversationsReq.create({
+      startTime:this.getLatestConverSyncTime(),
+      count:100
+    })
+  }
+
+  private recordLatestConverSyncTime(time:number,flags:number){
+
+  }
+
+  private getLatestConverSyncTime():number{
+    return this.latestConverSyncTime
   }
 
   sendMessage(msg:MessageContent,conver:Conversation,callback:MessageCallback){
@@ -302,7 +348,7 @@ export class MessageManager{
         let data = qryAck.data as Uint8Array
         let resp = immessage.DownMsgSet.decode(data)
         resp.msgs.forEach((msg)=>{
-          msgs.push(MessageUtil.downMsg2Message(msg))
+          msgs.push(this.downMsg2Message(msg))
         })
         callback(code,msgs,!resp.isFinished)
       }else{
@@ -379,4 +425,32 @@ export class MessageManager{
   searchMessages(params:SearchParams,callback:QryMessagesCallback){}
 
   setLocalAttribue(msgId:string,attribute:string){}
+
+  downMsg2Message(downMsg:immessage.IDownMsg):Message{
+    let message = new Message()
+    message.conversation = new Conversation(downMsg.targetId as string,downMsg.channelType as number)
+    if(downMsg.channelType === immessage.ChannelType.Private){
+      message.conversation.conversationTitle = downMsg.targetUserInfo?.nickname as string
+      message.conversation.conversationPortrait = downMsg.targetUserInfo?.userPortrait as string
+    }else if(downMsg.channelType === immessage.ChannelType.Group){
+      message.conversation.conversationTitle = downMsg.groupInfo?.groupName as string
+      message.conversation.conversationPortrait = downMsg.groupInfo?.groupPortrait as string
+    }
+    console.log("jimsdk_converitem\tname:",message.conversation.conversationTitle,"\tportrait:",message.conversation.conversationPortrait)
+    message.messageId = downMsg.msgId as string
+    message.msgType = downMsg.msgType as string
+
+    message.msgContent = this.constructByMsgType(message.msgType)
+    message.msgContent.decode(downMsg.msgContent as Uint8Array)
+    console.log("jimsdk_des:", message.msgContent instanceof TextMessage,message.msgType)
+
+    message.sentTime = downMsg.msgTime as number
+    message.msgSeqNo = downMsg.msgSeqNo as number
+    message.sender = new UserInfo()
+    message.sender.userId = downMsg.senderId as string
+    message.sender.nickname = downMsg.targetUserInfo?.nickname as string
+    message.sender.userPortrait = downMsg.targetUserInfo?.userPortrait as string
+
+    return message
+  }
 }

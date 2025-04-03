@@ -1,12 +1,13 @@
 import { relationalStore } from "@kit.ArkData";
 import { JimUtil } from "../commons/jimutil";
-import { PreferenceUtil } from "../commons/preferenceutil";
 import { ConverTagDao } from "./convertagdao"
 import { ConversationDao } from "./conversationdao";
 import { MessageDao } from "./messagedao";
 import { UserDao } from "./userdao";
 import { GroupDao } from "./groupdao";
 import { GroupMemberDao } from "./groupmemberdao";
+import { ConfDao } from "./confdao";
+import { Conf } from "../entries/conf";
 
 export class JimDbManager{
   static instance:JimDbManager = new JimDbManager()
@@ -14,6 +15,7 @@ export class JimDbManager{
   }
 
   private db?:relationalStore.RdbStore
+  public hasInit:boolean = false
 
   async init(appkey:string,userId:string){
     let dbName = `${appkey}_${userId}.db`
@@ -23,7 +25,8 @@ export class JimDbManager{
       encrypt:false
     }
     this.db = await relationalStore.getRdbStore(getContext(),storeConfig)
-    this.onUpgrade(appkey,userId)
+    this.onUpgrade()
+    this.hasInit = true
   }
 
   getDb():relationalStore.RdbStore|undefined{
@@ -61,11 +64,11 @@ export class JimDbManager{
     return GroupMemberDao.instance
   }
 
-  private onUpgrade(appkey:string,userId:string){
+  private onUpgrade(){
     let data = getContext().resourceManager.getRawFileContentSync('sqllist.txt')
     let vals = JimUtil.uint8ArrayToString(data)
     let fileNames = vals.split(',')
-    let maxVersion = PreferenceUtil.getSqlMaxVersion(appkey,userId)
+    let maxVersion = this.getSqlVersion()
     let tmpMaxVersion = maxVersion
     fileNames.forEach((name:string)=>{
       let verStr:string = name.replaceAll('\n','')
@@ -85,7 +88,7 @@ export class JimDbManager{
       }
     })
     if(tmpMaxVersion>maxVersion){
-      PreferenceUtil.setSqlMaxVersion(appkey,userId,tmpMaxVersion)
+      this.setSqlVersion(tmpMaxVersion)
     }
   }
 
@@ -104,5 +107,18 @@ export class JimDbManager{
       list.push(vals)
     }
     return list
+  }
+
+  private getSqlVersion():number{
+    let verStr = ConfDao.instance.getByKey("sql_version")
+    console.log("jimsdk_db_version:",verStr)
+    return JimUtil.stringToNumber(verStr)
+  }
+
+  private setSqlVersion(version:number){
+    let conf = new Conf()
+    conf.key = "sql_version"
+    conf.value = version.toString()
+    ConfDao.instance.upsert(conf)
   }
 }

@@ -40,9 +40,13 @@ export struct ConversationList {
     this.maxConverSortTime = 0
     this.minConverSortTime = new Date().getTime()
 
+    console.log("jimsdk_initlis_status:",JuggleIm.instance.getConnStatus())
     if(JuggleIm.instance.getConnStatus() == ConnStatus.connecting){
+      console.log("jimsdk_initlis_regst")
       JuggleIm.instance.getConnectionManager().addConnectStatusListener((status,code)=>{
+        console.log("jinsdk_initlis_tri:",status,code)
         if(status==ConnStatus.connected){
+          console.log("jimsdk_initlis_load")
           this.loadMoreConvers()
           console.log("jimsdk_reload_connected:",this.conversationList.length)
         }
