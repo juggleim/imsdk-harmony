@@ -1,6 +1,7 @@
 import { UserInfo } from "../entries/user"
 import { relationalStore } from "@kit.ArkData"
 import { JimDbUtil } from "./dbutil"
+import { JimDbManager } from "./dbmanager"
 
 export class UserDao{
   static instance:UserDao = new UserDao()
@@ -8,12 +9,51 @@ export class UserDao{
   private constructor() {
   }
 
+  getUser(userId:string):UserInfo|null{
+    let sql = `SELECT user_id,name,portrait,user_type,upd_time FROM ${this.tableName} WHERE user_id=?`
+    let args:Array<relationalStore.ValueType> = []
+    args.push(userId)
+    let resultSet:relationalStore.ResultSet|undefined
+    try{
+      console.log("jimsdk_qryu_sql:",sql)
+      resultSet = JimDbManager.instance.getDb()?.querySqlSync(sql,args)
+      while (resultSet?.goToNextRow()){
+        let user = this.toUser(resultSet)
+        console.log("jimsdk_qryu_x",JSON.stringify(user))
+        return user
+      }
+    }catch (e){
+      console.error("jimsdk_db_err:",this.tableName,`err:${e.message}`)
+    }finally {
+      resultSet?.close()
+    }
+    return null
+  }
+
+  upsert(user:UserInfo):number{
+    let sql = `INSERT OR REPLACE INTO ${this.tableName} (user_id,name,portrait,user_type,upd_time) VALUES (?,?,?,?,?)`
+    let args:Array<relationalStore.ValueType> = []
+    args.push(user.userId)
+    args.push(user.nickname)
+    args.push(user.userPortrait)
+    args.push(user.userType)
+    args.push(user.updTime)
+    try{
+      let vt = JimDbManager.instance.getDb()?.executeSync(sql,args)
+      return vt as number
+    }catch (e) {
+      console.error("jimsdk_upsert_fail. ",this.tableName,`err:${e.message}`,JSON.stringify(e))
+    }
+    return 0
+  }
+
   private getValuesBucket(user:UserInfo):relationalStore.ValuesBucket{
     let valuesBucket:relationalStore.ValuesBucket = {
       "user_id":user.userId,
       "name":user.nickname,
       "portrait":user.userPortrait,
-      "user_type":user.userType
+      "user_type":user.userType,
+      "upd_time":user.updTime
     }
     return valuesBucket
   }
@@ -24,6 +64,7 @@ export class UserDao{
     user.nickname = JimDbUtil.toString(resultSet,"name")
     user.userPortrait = JimDbUtil.toString(resultSet,"portrait")
     user.userType = JimDbUtil.toNumber(resultSet,"user_type")
+    user.updTime = JimDbUtil.toNumber(resultSet, "upd_time")
     return user
   }
 }

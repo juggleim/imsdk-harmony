@@ -2,6 +2,7 @@ import { Conf } from "../entries/conf"
 import { relationalStore } from "@kit.ArkData"
 import { JimDbUtil } from "./dbutil"
 import { JimDbManager } from "./dbmanager"
+import { JimUtil } from "../commons/jimutil"
 
 export class ConfDao{
   static instance:ConfDao = new ConfDao()
@@ -60,6 +61,18 @@ export class ConfDao{
       resultSet?.close()
     }
     return ""
+  }
+
+  getConverSyncTime():number{
+    let syncTimeStr = this.getByKey("conver_sync_time")
+    return JimUtil.stringToNumber(syncTimeStr)
+  }
+
+  setConverSyncTime(t:number){
+    let conf = new Conf()
+    conf.key = "conver_sync_time"
+    conf.value = t.toString()
+    this.upsert(conf)
   }
 
   private getValuesBucket(conf:Conf):relationalStore.ValuesBucket{

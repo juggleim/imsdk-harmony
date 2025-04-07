@@ -40,6 +40,10 @@ export class JimDbManager{
     }
   }
 
+  getConfDao():ConfDao{
+    return ConfDao.instance
+  }
+
   getMessageDao():MessageDao{
     return MessageDao.instance
   }

@@ -6,8 +6,6 @@ export class Conversation{
   conversationType:number
 
   msgIndex:number = 0
-  conversationTitle:string = ''
-  conversationPortrait:string = ''
   constructor(converId:string,converType:number) {
     this.conversationId = converId
     this.conversationType = converType

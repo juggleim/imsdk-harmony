@@ -3,6 +3,7 @@ export class UserInfo{
   nickname:string = ''
   userPortrait:string = ''
   userType:number = 0
+  updTime:number = 0
   constructor() {
   }
 }

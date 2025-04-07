@@ -53,31 +53,31 @@ export struct ConversationList {
       })
     }
 
-    JuggleIm.instance.getMessageManager().addMsgReceivedListener((message)=>{
-      let conversation = message.conversation
-      if(this.conversationList.length === 0){
-        return
-      }
-
-      for(let i=0;i<this.conversationList.length;i++){
-        if(this.conversationList[i].converId===conversation.conversationId
-          &&this.conversationList[i].channelType===conversation.conversationType){
-          if(message.msgType == 'jg:text') {
-            let txtMsg = message.msgContent as TextMessage
-            this.conversationList[i].msg = txtMsg.content
-          }else {
-            this.conversationList[i].msg = ''
-          }
-        }else{
-          this.conversationList[i].msg = 'nnnnnn'
-        }
-      }
-      let converList:ObservedArray<ConversationViewItem>=[]
-      for(let i=0;i<this.conversationList.length;i++){
-        converList.push(this.conversationList[i])
-      }
-      this.conversationList = converList
-    })
+    // JuggleIm.instance.getMessageManager().addMsgReceivedListener((message)=>{
+    //   let conversation = message.conversation
+    //   if(this.conversationList.length === 0){
+    //     return
+    //   }
+    //
+    //   for(let i=0;i<this.conversationList.length;i++){
+    //     if(this.conversationList[i].converId===conversation.conversationId
+    //       &&this.conversationList[i].channelType===conversation.conversationType){
+    //       if(message.msgType == 'jg:text') {
+    //         let txtMsg = message.msgContent as TextMessage
+    //         this.conversationList[i].msg = txtMsg.content
+    //       }else {
+    //         this.conversationList[i].msg = ''
+    //       }
+    //     }else{
+    //       this.conversationList[i].msg = 'nnnnnn'
+    //     }
+    //   }
+    //   let converList:ObservedArray<ConversationViewItem>=[]
+    //   for(let i=0;i<this.conversationList.length;i++){
+    //     converList.push(this.conversationList[i])
+    //   }
+    //   this.conversationList = converList
+    // })
   }
 
   loadMoreConvers(){
@@ -91,19 +91,28 @@ export struct ConversationList {
             if (conver.conversation.conversationType == 2) {
               iconUrl = $r('app.media.img')
             }
-            if (conver.conversation.conversationPortrait != '') {
-              iconUrl = conver.conversation.conversationPortrait
+            //title
+            let title = ""
+            if(conver.conversation.conversationType==1){
+              let userInfo = JuggleIm.instance.getUserInfoManager().getLocalUserInfo(conver.conversation.conversationId)
+              console.log("jimsdk_saveuser_check:",JSON.stringify(userInfo),conver.conversation.conversationId)
+              if(userInfo!=null){
+                title = userInfo.nickname
+              }
             }
+            console.log("jimsdk_userinfo:",title,conver.conversation.conversationId,conver.conversation.conversationType)
             //latest msg content
             let msgStr = ""
             if (conver.lastMessage.msgType == 'jg:text') {
               let txtMsg = conver.lastMessage.msgContent as TextMessage
               msgStr = txtMsg.content
+
             }
+            console.log("jimsdk_qryconvers_msg:",conver.lastMessage.msgType,msgStr,typeof conver.lastMessage.msgContent)
             //time str
             let timeStr = CommonUtil.getTimeToYYYYDDMMHHMMSS(conver.converTime)
             this.conversationList.push(new ConversationViewItem("", conver.conversation.conversationId,
-              conver.conversation.conversationType, conver.lastMessage.sentTime, conver.conversation.conversationTitle,
+              conver.conversation.conversationType, conver.lastMessage.sentTime, title,
               msgStr, timeStr, iconUrl))
             if (this.maxConverSortTime < conver.converTime) {
               this.maxConverSortTime = conver.converTime

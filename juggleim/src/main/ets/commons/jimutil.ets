@@ -1,5 +1,5 @@
 import util from '@ohos.util';
-import { JSON } from '@kit.ArkTS';
+import Long from 'long';
 
 export class JimUtil{
   static isEmpty(str:Object):boolean{
@@ -53,5 +53,15 @@ export class JimUtil{
       m.set(key,record[key])
     })
     return m
+  }
+
+  static toNumber(value:number|Long|null):number{
+    if(value instanceof Long){
+      return value.toNumber()
+    }else if(value!==null){
+      return value
+    }else{
+      return 0
+    }
   }
 }

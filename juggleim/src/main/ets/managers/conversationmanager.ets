@@ -3,6 +3,7 @@ import { Conversation, ConversationInfo } from "../entries/conversation"
 import {immessage} from  '../improto/immessage'
 import { ImClient } from '../imclients/imclient'
 import {CommonCallback} from './commoncallback'
+import { JimDbManager } from '../dbs/dbmanager'
 
 export type ConversationCallback = (code:number,conver:ConversationInfo|null)=>void
 export type ConversationsCallback = (code:number,convers:ConversationInfo[])=>void
@@ -80,37 +81,13 @@ export class ConversationManager{
   }
 
   queryConversations(count:number,startTime:number,isPositive:boolean,callback:ConversationsCallback){
-    let order:number = 0
-    if(isPositive){
-      order = 1
+    if(!isPositive&&startTime<=0){
+      startTime = new Date().getTime()
     }
-    let req = immessage.QryConversationsReq.create({
-      "startTime":startTime,
-      "count":count,
-      "order":order
-    })
-    let data = immessage.QryConversationsReq.encode(req).finish()
-    this.imclient.query("qry_convers",JuggleIm.instance.userInfo.userId,data,(code,qryAck)=>{
-      let convers:ConversationInfo[] = new Array()
-      if(code==0){
-        let data = qryAck.data as Uint8Array
-        let resp = immessage.QryConversationsResp.decode(data)
-        resp.conversations.forEach((conver)=>{
-          let converInfo = new ConversationInfo()
-          converInfo.lastMessage = JuggleIm.instance.getMessageManager().downMsg2Message(conver.msg as immessage.IDownMsg)
-          converInfo.conversation = converInfo.lastMessage.conversation
-          converInfo.converTime = conver.sortTime as number
-          converInfo.isTop = (conver.isTop as number)>0
-          converInfo.topTime = conver.topUpdatedTime as number
-          converInfo.isMute = (conver.undisturbType as number)>0
-          convers.push(converInfo)
-        })
-        callback(code,convers)
-      }else{
-        console.log("jimsdk_qryconversations_failed:",code)
-        callback(code,convers)
-      }
-    })
+    console.log("jimsdk_qryconvers:",startTime,count,isPositive)
+    let convers = JimDbManager.instance.getConversationDao().queryConversations(startTime,count,isPositive)
+    console.log("jimsdk_qryconvers:",convers.length)
+    callback(0,convers)
   }
 
   getConversation(conver:Conversation,callback:ConversationCallback){

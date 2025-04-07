@@ -76,7 +76,8 @@ create table users(
     name VARCHAR(64),
     portrait text,
     extension text,
-    user_type SMALLINT
+    user_type SMALLINT,
+    upd_time INTEGER
 );
 CREATE UNIQUE INDEX IF NOT EXISTS idx_user ON users(user_id);
 
@@ -85,7 +86,8 @@ create table groups(
     group_id VARCHAR(64),
     name VARCHAR(64),
     portrait text,
-    extension text
+    extension text,
+    upd_time INTEGER
 );
 CREATE UNIQUE INDEX IF NOT EXISTS idx_group ON groups(group_id);
 

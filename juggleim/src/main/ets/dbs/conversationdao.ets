@@ -4,11 +4,39 @@ import { JimUtil } from "../commons/jimutil"
 import { JimDbUtil } from "./dbutil"
 import { Message } from "../entries/message";
 import { JimDbManager } from "./dbmanager";
+import { MessageManager } from "../managers/messagemanager";
+import { JuggleIm } from "../juggleim";
 
 export class ConversationDao{
   static instance:ConversationDao = new ConversationDao()
   private tableName:string = "conversations"
   private constructor() {
+  }
+
+  queryConversations(start:number,count:number,isPositive:boolean):ConversationInfo[]{
+    let sql = `SELECT * FROM ${this.tableName} WHERE `
+    if(isPositive){
+      sql = sql + ` conver_time >? order by conver_time asc`
+    }else{
+      sql = sql + ` conver_time < ? order by conver_time desc`
+    }
+    sql = sql + ` LIMIT ${count}`
+    let args:Array<relationalStore.ValueType> = []
+    args.push(start)
+    let resultSet:relationalStore.ResultSet|undefined
+    let converList:ConversationInfo[] = []
+    try{
+      resultSet = JimDbManager.instance.getDb()?.querySqlSync(sql,args)
+      while (resultSet?.goToNextRow()){
+        let conver = this.toConver(resultSet)
+        converList.push(conver)
+      }
+    }catch (e) {
+      console.error("failed to query convers",this.tableName,`err:${e.message}`)
+    }finally {
+      resultSet?.close()
+    }
+    return converList
   }
 
   insert(conver:ConversationInfo):number{
@@ -20,6 +48,7 @@ export class ConversationDao{
       }
       return 0
     }catch (e) {
+      console.error(`jimsdk_insert [${this.tableName}] err:${e.message}`)
       return 0
     }
   }
@@ -53,7 +82,7 @@ export class ConversationDao{
       "conver_time":conver.converTime,
       "last_msg_id":conver.lastMessage.messageId,
       "last_read_msg_index":conver.lastReadMsgIndex,
-      "last_msg_index":conver.lastMessage.msgIndex,
+      "last_msg_index":conver.lastMessage.msgUnreadIndex,
       "is_top":conver.isTop?1:0,
       "top_time":conver.topTime,
       "is_mute":conver.isMute?1:0,
@@ -85,8 +114,16 @@ export class ConversationDao{
     conver.unreadTag = JimDbUtil.toNumber(resultSet,"unread_tag")
     let msg = new Message()
     msg.messageId = JimDbUtil.toString(resultSet,"last_msg_id")
-    msg.msgIndex = JimDbUtil.toNumber(resultSet,"last_msg_index")
+    msg.msgUnreadIndex = JimDbUtil.toNumber(resultSet,"last_msg_index")
     msg.msgType = JimDbUtil.toString(resultSet,"last_msg_type")
+
+    //content
+    let dataStr = JimDbUtil.toString(resultSet,"last_msg_content")
+    let data = JimUtil.stringToUint8Array(dataStr)
+    let m = JuggleIm.instance.getMessageManager().constructByMsgType(msg.msgType)
+    m.decode(data)
+    msg.msgContent = m
+
     msg.clientId = JimDbUtil.toString(resultSet,"last_msg_client_id")
     msg.direction = JimDbUtil.toNumber(resultSet,"last_msg_direction")
     msg.state = JimDbUtil.toNumber(resultSet,"last_msg_state")

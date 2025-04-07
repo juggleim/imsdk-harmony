@@ -58,7 +58,7 @@ export class MessageDao{
       "direction":msg.direction,
       "msg_id":msg.messageId,
       "msg_seq_no":msg.msgSeqNo,
-      "msg_index":msg.msgIndex,
+      "msg_index":msg.msgUnreadIndex,
       "msg_type":msg.msgType,
       "sent_time":msg.sentTime,
       "msg_content": JimUtil.uint8ArrayToString(msg.msgContent.encode()),
@@ -83,7 +83,7 @@ export class MessageDao{
     message.direction = JimDbUtil.toNumber(resultSet,'direction')
     message.messageId = JimDbUtil.toString(resultSet,'msg_id')
     message.msgSeqNo = JimDbUtil.toNumber(resultSet,'msg_seq_no')
-    message.msgIndex = JimDbUtil.toNumber(resultSet,'msg_index')
+    message.msgUnreadIndex = JimDbUtil.toNumber(resultSet,'msg_index')
     message.msgType = JimDbUtil.toString(resultSet,'msg_type')
     message.sentTime = JimDbUtil.toNumber(resultSet,'sent_time')
     //content

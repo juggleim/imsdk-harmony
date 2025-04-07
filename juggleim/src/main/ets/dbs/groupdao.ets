@@ -13,7 +13,8 @@ export class GroupDao{
     let valuesBucket:relationalStore.ValuesBucket = {
       "group_id":grp.groupId,
       "name":grp.groupName,
-      "portrait":grp.groupPortrait
+      "portrait":grp.groupPortrait,
+      "upd_time":grp.updTime
     }
     return valuesBucket
   }
@@ -23,6 +24,7 @@ export class GroupDao{
     grp.groupId = JimDbUtil.toString(resultSet,"group_id")
     grp.groupName = JimDbUtil.toString(resultSet,"name")
     grp.groupPortrait = JimDbUtil.toString(resultSet,"portrait")
+    grp.updTime = JimDbUtil.toNumber(resultSet, "upd_time")
     return grp
   }
 }

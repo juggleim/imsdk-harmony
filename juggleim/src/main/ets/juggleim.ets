@@ -7,6 +7,7 @@ import { PreferenceUtil } from './commons/preferenceutil';
 import { JimDbManager } from './dbs/dbmanager';
 import { Message } from './entries/message';
 import { Conversation } from './entries/conversation';
+import { UserInfoManager } from './managers/userinfomanager';
 
 export class JimConfig{
   address:string = ''
@@ -27,6 +28,7 @@ export class JuggleIm{
   private connectManager:ConnectionManager
   private messageManager:MessageManager
   private converManager:ConversationManager
+  private userInfoManager:UserInfoManager
 
   private constructor() {
     this.config = new JimConfig();
@@ -36,6 +38,7 @@ export class JuggleIm{
     this.connectManager = new ConnectionManager(this.imclient)
     this.messageManager = new MessageManager(this.imclient)
     this.converManager = new ConversationManager(this.imclient)
+    this.userInfoManager = new UserInfoManager(this.imclient)
   }
 
   async init(address:string, appkey:string):Promise<void>{
@@ -65,6 +68,10 @@ export class JuggleIm{
 
   getConversationManager():ConversationManager{
     return this.converManager
+  }
+
+  getUserInfoManager():UserInfoManager{
+    return this.userInfoManager
   }
 }
 

@@ -59,7 +59,7 @@ export class Message{
   msgContent:MessageContent = new MessageContent()
   sentTime:number = 0
   msgSeqNo:number = 0
-  msgIndex:number = 0
+  msgUnreadIndex:number = 0
   senderId:string = ''
   sender?:UserInfo
   direction:number = 0
