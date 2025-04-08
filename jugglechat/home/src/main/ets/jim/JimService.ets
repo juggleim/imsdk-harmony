@@ -8,4 +8,15 @@ export function initJuggleIm(connectCallback:(status:number,code:number)=>void){
     connectCallback(status,code)
   })
   JuggleIm.instance.getConnectionManager().connect("ChBuc3czc3VlNzJiZWd5djd5GiC5pEcMb2Pa6WNhninw7ZEGQq9J9eQeR_VZs7UO7rpiJA==")
+
+
+}
+
+function asyncTask(i:number):Promise<void>{
+  return new Promise((resolve)=>{
+    setTimeout(()=>{
+      console.log("xxxxx_",i)
+      resolve()
+    },5000)
+  })
 }
