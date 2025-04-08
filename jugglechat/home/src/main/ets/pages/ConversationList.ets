@@ -98,7 +98,21 @@ export struct ConversationList {
               console.log("jimsdk_saveuser_check:",JSON.stringify(userInfo),conver.conversation.conversationId)
               if(userInfo!=null){
                 title = userInfo.nickname
+                if(userInfo.userPortrait!=''){
+                  iconUrl = userInfo.userPortrait
+                }
               }
+            }else if(conver.conversation.conversationType==2){
+              let grpInfo = JuggleIm.instance.getGroupInfoManager().getLocalGroupInfo(conver.conversation.conversationId)
+              if(grpInfo!=null){
+                title = grpInfo.groupName
+                if(grpInfo.groupPortrait!=''){
+                  console.log("jimsdk_nullgrp:",grpInfo.groupPortrait,grpInfo.groupName)
+                  iconUrl = grpInfo.groupPortrait
+                }
+              }
+            }else{
+              console.log("jimsdk_other:",conver.conversation.conversationId,conver.conversation.conversationType)
             }
             console.log("jimsdk_userinfo:",title,conver.conversation.conversationId,conver.conversation.conversationType)
             //latest msg content

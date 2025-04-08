@@ -39,18 +39,51 @@ export class ConversationDao{
     return converList
   }
 
-  insert(conver:ConversationInfo):number{
-    let valueBucket = this.getValuesBucket(conver)
+  // insert(conver:ConversationInfo):number{
+  //   let valueBucket = this.getValuesBucket(conver)
+  //   try{
+  //     let row = JimDbManager.instance.getDb()?.insertSync(this.tableName,valueBucket)
+  //     if(row!==undefined){
+  //       return row
+  //     }
+  //     return 0
+  //   }catch (e) {
+  //     console.error(`jimsdk_insert [${this.tableName}] err:${e.message}`)
+  //     return 0
+  //   }
+  // }
+
+  upsert(conver:ConversationInfo):number{
+    let sql = `INSERT OR REPLACE INTO ${this.tableName} (conver_id,conver_type,sync_time,conver_time,last_msg_id,last_read_msg_index,last_msg_index,is_top,top_time,is_mute,mention_info,last_msg_type,last_msg_client_id,last_msg_direction,last_msg_state,last_msg_has_read,last_msg_sender_id,last_msg_content,last_msg_mention_info,last_msg_seq_no,unread_tag) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
+    let args:Array<relationalStore.ValueType> = []
+    args.push(conver.conversation.conversationId)
+    args.push(conver.conversation.conversationType)
+    args.push(conver.syncTime)
+    args.push(conver.converTime)
+    args.push(conver.lastMessage.messageId)
+    args.push(conver.lastReadMsgIndex)
+    args.push(conver.lastMessage.msgUnreadIndex)
+    args.push(conver.isTop?1:0)
+    args.push(conver.topTime)
+    args.push(conver.isMute?1:0)
+    args.push('')//mention info
+    args.push(conver.lastMessage.msgType)
+    args.push(conver.lastMessage.clientId)
+    args.push(conver.lastMessage.direction)
+    args.push(conver.lastMessage.state)
+    args.push(conver.lastMessage.hasRead)
+    args.push(conver.lastMessage.senderId)
+    args.push(JimUtil.uint8ArrayToString(conver.lastMessage.msgContent.encode()))
+    args.push('') //last mention info
+    args.push(conver.lastMessage.msgSeqNo)
+    args.push(conver.unreadTag)
     try{
-      let row = JimDbManager.instance.getDb()?.insertSync(this.tableName,valueBucket)
-      if(row!==undefined){
-        return row
-      }
-      return 0
+      let vt = JimDbManager.instance.getDb()?.executeSync(sql,args)
+      return vt as number
     }catch (e) {
-      console.error(`jimsdk_insert [${this.tableName}] err:${e.message}`)
-      return 0
+      console.error(`jimsdk_db_fail. [${this.tableName}] err:${e.message}`)
     }
+    return 0
   }
 
   getConver(c:Conversation):ConversationInfo|undefined{
@@ -73,6 +106,20 @@ export class ConversationDao{
     return converInfo
   }
 
+  delConver(converId:string,converType:number):number{
+    let delPre = new relationalStore.RdbPredicates(this.tableName)
+    delPre.equalTo("conver_id",converId)
+    delPre.equalTo("conver_type",converType)
+    try{
+      let row = JimDbManager.instance.getDb()?.deleteSync(delPre)
+      if(row!==undefined){
+        return row
+      }
+    }catch (e) {
+      console.error(`jimsdk_del [${this.tableName}] err:${e.message}`)
+    }
+    return 0
+  }
   private getValuesBucket(conver:ConversationInfo):relationalStore.ValuesBucket{
     let valuesBucket:relationalStore.ValuesBucket = {
       "conver_id":conver.conversation.conversationId,

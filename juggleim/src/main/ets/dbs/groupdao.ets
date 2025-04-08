@@ -2,11 +2,47 @@ import { UserInfo } from "../entries/user"
 import { relationalStore } from "@kit.ArkData"
 import { JimDbUtil } from "./dbutil"
 import { GroupInfo } from "../entries/group"
+import { JimDbManager } from "./dbmanager"
 
 export class GroupDao{
   static instance:GroupDao = new GroupDao()
   private tableName:string = 'groups'
   private constructor() {
+  }
+
+  getGroupInfo(groupId:string):GroupInfo|null{
+    let sql = `SELECT group_id,name,portrait,upd_time FROM ${this.tableName} WHERE group_id=?`
+    let args:Array<relationalStore.ValueType> = []
+    args.push(groupId)
+    let resultSet:relationalStore.ResultSet|undefined
+    try{
+      resultSet = JimDbManager.instance.getDb()?.querySqlSync(sql,args)
+      while (resultSet?.goToNextRow()){
+        let group = this.toGroupInfo(resultSet)
+        return group
+      }
+    }catch (e) {
+      console.error("jimsdk_db_err:",this.tableName,`err:${e.message}`)
+    }finally {
+      resultSet?.close()
+    }
+    return null
+  }
+
+  upsert(grp:GroupInfo):number{
+    let sql = `INSERT OR REPLACE INTO ${this.tableName} (group_id,name,portrait,upd_time) VALUES (?,?,?,?)`
+    let args:Array<relationalStore.ValueType> = []
+    args.push(grp.groupId)
+    args.push(grp.groupName)
+    args.push(grp.groupPortrait)
+    args.push(grp.updTime)
+    try{
+      let vt = JimDbManager.instance.getDb()?.executeSync(sql,args)
+      return vt as number
+    }catch (e) {
+      console.error("jimsdk_db_fail. ", this.tableName,`err:${e.message}`)
+    }
+    return 0
   }
 
   private getValuesBucket(grp:GroupInfo):relationalStore.ValuesBucket{
