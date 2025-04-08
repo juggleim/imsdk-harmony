@@ -2,6 +2,7 @@ import { JimUtil } from '../commons/jimutil'
 import { MsgFlag, MsgFlagTool } from '../improto/msgflag'
 import {UserInfo} from './user'
 import { Conversation } from './conversation'
+import { GroupInfo } from './group'
 
 export class MessageSentState{
   static none:number = 0
@@ -49,10 +50,6 @@ export class MessageContent{
 
 export class Message{
   conversation:Conversation = new Conversation('',0)
-  conversationTitle:string=''
-  conversationPortrait:string=''
-  conversationExts:string = ''
-
   clientId:string = ''
   messageId:string = ''
   msgType:string = ''
@@ -61,7 +58,6 @@ export class Message{
   msgSeqNo:number = 0
   msgUnreadIndex:number = 0
   senderId:string = ''
-  sender?:UserInfo
   direction:number = 0
   flags:number = 0
   hasRead:boolean = false

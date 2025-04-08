@@ -44,10 +44,9 @@ export struct ConversationDetail {
       let currentUserId = JuggleIm.instance.userInfo.userId
       if(conver?.conversationId===param.conversationId){
         let viewMsg = new MessageViewItem("","Unknown")
-        if(message.sender!=undefined&&currentUserId==message.sender.userId){
+        if(currentUserId==message.senderId){
           viewMsg.isReceived = false
         }
-        console.log("jimsdk_his converId:",message.conversation?.conversationId,"\tcur:",currentUserId,"\tsender:",message.sender?.userId,"\tisRec:",viewMsg.isReceived)
         if(message.msgType=="jg:text") {
           let txtMsg = message.msgContent as TextMessage
           viewMsg.content = txtMsg.content
@@ -62,10 +61,9 @@ export struct ConversationDetail {
       console.log("jimsdk_hismsgs:",msgs.length,currentUserId)
       msgs.forEach((msg)=>{
         let viewMsg = new MessageViewItem("","Unknown")
-        if(msg.sender!=undefined&&currentUserId==msg.sender.userId){
+        if(currentUserId==msg.senderId){
           viewMsg.isReceived = false
         }
-        console.log("jimsdk_his converId:",msg.conversation?.conversationId,"\tcur:",currentUserId,"\tsender:",msg.sender?.userId,"\tisRec:",viewMsg.isReceived)
         if(msg.msgType=="jg:text") {
           let txtMsg = msg.msgContent as TextMessage
           viewMsg.content = txtMsg.content

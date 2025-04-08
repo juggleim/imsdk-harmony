@@ -11,7 +11,7 @@ import { Conversation, ConversationInfo } from '../entries/conversation'
 import { MsgFlag, MsgFlagTool } from '../improto/msgflag'
 import { ConnStatus, ImClient } from '../imclients/imclient'
 import { CommonCallback } from './commoncallback'
-import { HashMap } from '@kit.ArkTS'
+import { HashMap, JSON, taskpool } from '@kit.ArkTS'
 import { ClearUnreadMessage, ReadNtfMessage, RecallCmdMessage } from '../entries/cmdmsg'
 import { UserInfo } from '../entries/user';
 import { JimDbManager } from '../dbs/dbmanager'
@@ -67,6 +67,27 @@ function  promiseSyncMsgs(mgr:MessageManager):Promise<boolean>{
   })
 }
 
+function promiseHandleMsg(mgr:MessageManager,downMsg:immessage.IDownMsg):Promise<boolean>{
+  return new Promise((resolve)=>{
+    mgr.handleMsg(downMsg,(isFinish)=>{
+      resolve(isFinish)
+    })
+  })
+}
+
+class MsgNtfTask{
+  taskType:number = 0 //0:msg; 1:ntf; 2:chatNtf;
+  time:number = 0
+  msg?:immessage.IDownMsg
+  chatId:string = ''
+  constructor(type:number,time:number,msg:immessage.IDownMsg|undefined,chatId:string) {
+    this.taskType = type
+    this.time = time
+    this.msg = msg
+    this.chatId = chatId
+  }
+}
+
 export class MessageManager{
   public Index:number = 0
   private imclient:ImClient
@@ -74,8 +95,9 @@ export class MessageManager{
   private msgTypeMap:Map<string,Function> = new Map()
   private latestInboxMsgTime:number = 0
   private latestSendboxMsgTime:number = 0
-  private isSyncing:boolean = false
   private latestConverSyncTime:number = 0
+  private startSeqRunner:boolean = false
+  private taskQueue:MsgNtfTask[] = []
 
   constructor(imclient:ImClient) {
     this.imclient = imclient
@@ -144,6 +166,13 @@ export class MessageManager{
     })
   }
 
+  private startMsgNtfRunner(){
+    this.startSeqRunner = true
+    setInterval(()=>{
+      this.doMsgNtfProcess()
+    },50)
+  }
+
   addMsgRecalledListener(listener:MsgRecalledListener){
     this.msgRecalledListeners.push(listener)
   }
@@ -198,9 +227,11 @@ export class MessageManager{
 
   public async syncAfterConnect(status:number,reasonCode:number,userId:string){
     if(status === ConnStatus.connected) {
+      console.log("jimsdk_syncconvers_finish_1")
       if (!JimDbManager.instance.hasInit) {
         JuggleIm.instance.initDb(userId)
       }
+      console.log("jimsdk_syncconvers_finish_2")
       let isContinue:boolean = true
       //sync convers
       for(;isContinue;) {
@@ -210,6 +241,7 @@ export class MessageManager{
           }
         })
       }
+      console.log("jimsdk_syncconvers_finish_3")
       isContinue = true
       //sync msgs
       for(;isContinue;){
@@ -219,7 +251,27 @@ export class MessageManager{
           }
         })
       }
-      console.log("jimsdk_syncconvers_finish",isContinue)
+      JuggleIm.instance.getMessageManager().startMsgNtfRunner()
+    }
+  }
+
+  private handleMsgNtf(task:MsgNtfTask){
+    this.taskQueue.push(task)
+  }
+
+  private doMsgNtfProcess(){
+    if(this.taskQueue.length>0){
+      console.log("jimsdk_direct_do",this.startSeqRunner,this.taskQueue.length)
+      for(;this.taskQueue.length>0;){
+        let task = this.taskQueue.shift()
+        if(task?.taskType == 0){//msg
+          // this.handleMsg(task.msg as immessage.IDownMsg,(isFinish)=>{})
+          promiseHandleMsg(this,task.msg as immessage.IDownMsg).then(()=>{})
+        }else if(task?.taskType == 1){//ntf
+          // promiseSyncMsgs(this).then(()=>{})
+          this.syncMsgs(task.time,(isFinish)=>{})
+        }
+      }
     }
   }
 
@@ -227,12 +279,8 @@ export class MessageManager{
     if(data!=null&&data!=undefined){
       let downMsg = immessage.DownMsg.decode(data)
       //send ack
-      this.recordLatestInboxMsgTime(downMsg.msgTime as number,downMsg.flags)
       this.msgAck(index,downMsg.flags)
-      let msg = this.downMsg2Message(downMsg)
-      if(!this.isSyncing||msg.msgContent.getFlag().isState){
-        this.msgReceive(msg)
-      }
+      this.handleMsgNtf(new MsgNtfTask(0,JimUtil.toNumber(downMsg.msgTime as number),downMsg,''))
     }
   }
 
@@ -240,7 +288,7 @@ export class MessageManager{
     if(data!=null&&data!=undefined){
       let notify = immessage.Notify.decode(data)
       if(notify.type == immessage.NotifyType.Msg) {
-        this.syncMsgs(notify.syncTime as number,(isFinish)=>{})
+        this.handleMsgNtf(new MsgNtfTask(1,notify.syncTime as number,undefined,''))
       }else if(notify.type == immessage.NotifyType.ChatroomMsg){
         //TODO
       }
@@ -252,6 +300,7 @@ export class MessageManager{
     if(!flag.isState) {
       if (sentTime > this.latestInboxMsgTime) {
         this.latestInboxMsgTime = sentTime
+        JimDbManager.instance.getConfDao().setInboxSyncTime(this.latestInboxMsgTime)
       }
     }
   }
@@ -261,6 +310,7 @@ export class MessageManager{
     if(!flag.isState) {
       if (sentTime > this.latestSendboxMsgTime) {
         this.latestSendboxMsgTime = sentTime
+        JimDbManager.instance.getConfDao().setSendboxSyncTime(this.latestSendboxMsgTime)
       }
     }
   }
@@ -270,7 +320,11 @@ export class MessageManager{
   }
 
   public syncMsgs(ntfTime:number,callback:(isFinish:boolean)=>void){
-    console.log("jimsdk_syncmsg_exetue")
+    if(ntfTime>0&&ntfTime<=this.getLatestInboxMsgTime()){
+      callback(true)
+      return
+    }
+    console.log("jimsdk_direct_syncmsg:",ntfTime,this.getLatestInboxMsgTime(),this.getLatestSendboxMsgTime())
     let syncReq = immessage.SyncMsgReq.create({
       "syncTime":this.getLatestInboxMsgTime(),
       "containsSendBox":true,
@@ -282,27 +336,86 @@ export class MessageManager{
         let data = qryAck.data as Uint8Array
         let downMsgs = immessage.DownMsgSet.decode(data)
         downMsgs.msgs.forEach((downMsg)=>{
-          let message = this.downMsg2Message(downMsg)
-          this.recordLatestInboxMsgTime(downMsg.msgTime as number,downMsg.flags as number)
-          this.msgReceive(message)
+          this.handleMsg(downMsg,(isFinish)=>{})
         })
-        console.log("jimsdk_syncconvers_msgs",downMsgs.msgs.length,this.getLatestInboxMsgTime())
         if(downMsgs.isFinished){
           callback(true)
         }else{
           callback(false)
         }
-      }else{
-       console.log("jimsdk_syncmsg_failed:",code)
       }
     })
   }
 
+  public handleMsg(downMsg:immessage.IDownMsg,callback:(isFinish:boolean)=>void){
+    let msg = this.downMsg2Message(downMsg)
+    let msgFlag = MsgFlagTool.parseFlag(msg.flags)
+    if(msgFlag.isState){
+
+    }else{
+      let isSend:boolean = false
+      if(downMsg.senderId ==JuggleIm.instance.userId){
+        isSend = true
+      }
+      if(isSend){
+        if((downMsg.msgTime as number) < this.getLatestSendboxMsgTime()){
+          return
+        }
+      }else{
+        if((downMsg.msgTime as number) < this.getLatestInboxMsgTime()){
+          return
+        }
+      }
+      if(msgFlag.isCmd){
+        //handle cmd msg
+      }else{
+        if(msgFlag.isStorage){
+          let msgDao = JimDbManager.instance.getMessageDao()
+          // check exist
+          if(!msgDao.existByMsgId(msg.messageId)){
+            //save msg
+            console.log("jimsdk_modify_conver:",msg.messageId,msg.clientId)
+            let aff = msgDao.insert(msg)
+            console.log("jimsdk_modify_conver:",aff,msg.sentTime,this.getLatestConverSyncTime())
+            if(aff>0&&msg.sentTime>this.getLatestConverSyncTime()) {
+              //update conver
+              JimDbManager.instance.getConversationDao().upsert2(this.msg2Conver(msg))
+            }
+          }
+        }
+      }
+      if(isSend){
+        this.recordLatestSendboxMsgTime(msg.sentTime,msg.flags)
+      }else {
+        this.recordLatestInboxMsgTime(msg.sentTime, msg.flags)
+      }
+    }
+    callback(true)
+  }
+
+  private msg2Conver(msg:Message):ConversationInfo{
+    let converInfo = new ConversationInfo()
+    converInfo.conversation = new Conversation(msg.conversation.conversationId,msg.conversation.conversationType)
+    converInfo.lastMessage = msg
+    converInfo.converTime = msg.sentTime
+    converInfo.syncTime = msg.sentTime
+    console.log("jimsdk_syncmsg_conver:",JSON.stringify(converInfo))
+    return converInfo
+  }
+
   private getLatestInboxMsgTime():number{
+    if(this.latestInboxMsgTime>0){
+      return this.latestInboxMsgTime
+    }
+    this.latestInboxMsgTime = JimDbManager.instance.getConfDao().getInboxSyncTime()
     return this.latestInboxMsgTime
   }
 
   private getLatestSendboxMsgTime():number{
+    if(this.latestSendboxMsgTime>0){
+      return this.latestSendboxMsgTime
+    }
+    this.latestSendboxMsgTime = JimDbManager.instance.getConfDao().getSendboxSyncTime()
     return this.latestSendboxMsgTime
   }
 
@@ -470,6 +583,12 @@ export class MessageManager{
 
   sendMediaMessage(msg:MessageContent,conver:Conversation){}
 
+  queryLocalMessages(conver:Conversation,options:QueryMsgOptions,callback:QryMessagesCallback){
+    let dao = JimDbManager.instance.getMessageDao()
+    let msgs = dao.queryMessages(conver.conversationId,conver.conversationType,options.startTime,options.count)
+    callback(0,msgs,false)
+  }
+
   queryMessages(conver:Conversation,options:QueryMsgOptions,callback:QryMessagesCallback){
     let order:number = 0
     if(options.isPositive){
@@ -571,18 +690,16 @@ export class MessageManager{
     let message = new Message()
     message.conversation = new Conversation(downMsg.targetId as string,downMsg.channelType as number)
     message.messageId = downMsg.msgId as string
+    message.clientId = downMsg.clientUid as string
     message.msgType = downMsg.msgType as string
 
     message.msgContent = this.constructByMsgType(message.msgType)
     message.msgContent.decode(downMsg.msgContent as Uint8Array)
-    console.log("jimsdk_des:", message.msgContent instanceof TextMessage,message.msgType)
 
     message.sentTime = downMsg.msgTime as number
     message.msgSeqNo = downMsg.msgSeqNo as number
-    message.sender = new UserInfo()
-    message.sender.userId = downMsg.senderId as string
-    message.sender.nickname = downMsg.targetUserInfo?.nickname as string
-    message.sender.userPortrait = downMsg.targetUserInfo?.userPortrait as string
+
+    message.flags = downMsg.flags as number
 
     return message
   }

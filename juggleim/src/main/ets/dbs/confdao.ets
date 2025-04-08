@@ -75,6 +75,30 @@ export class ConfDao{
     this.upsert(conf)
   }
 
+  getInboxSyncTime():number{
+    let timeStr = this.getByKey("inbox_sync_time")
+    return JimUtil.stringToNumber(timeStr)
+  }
+
+  setInboxSyncTime(t:number){
+    let conf = new Conf()
+    conf.key = 'inbox_sync_time'
+    conf.value = t.toString()
+    this.upsert(conf)
+  }
+
+  getSendboxSyncTime():number{
+    let timeStr = this.getByKey("sendbox_sync_time")
+    return JimUtil.stringToNumber(timeStr)
+  }
+
+  setSendboxSyncTime(t:number){
+    let conf = new Conf()
+    conf.key = 'sendbox_sync_time'
+    conf.value = t.toString()
+    this.upsert(conf)
+  }
+
   private getValuesBucket(conf:Conf):relationalStore.ValuesBucket{
     let valuesBucket:relationalStore.ValuesBucket={
       "conf_key":conf.key,

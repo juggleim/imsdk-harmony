@@ -53,6 +53,30 @@ export class ConversationDao{
   //   }
   // }
 
+  upsert2(conver:ConversationInfo):number{
+    let sql = `INSERT OR REPLACE INTO ${this.tableName} (conver_id,conver_type,sync_time,conver_time,last_msg_id,last_msg_index,last_msg_type,last_msg_client_id,last_msg_direction,last_msg_sender_id,last_msg_content,last_msg_seq_no) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`
+    let args:Array<relationalStore.ValueType> = []
+    args.push(conver.conversation.conversationId)
+    args.push(conver.conversation.conversationType)
+    args.push(JimUtil.toNumber(conver.syncTime))
+    args.push(JimUtil.toNumber(conver.converTime))
+    args.push(conver.lastMessage.messageId)
+    args.push(JimUtil.toNumber(conver.lastMessage.msgUnreadIndex))
+    args.push(conver.lastMessage.msgType)
+    args.push(conver.lastMessage.clientId)
+    args.push(conver.lastMessage.direction)
+    args.push(conver.lastMessage.senderId)
+    args.push(JimUtil.uint8ArrayToString(conver.lastMessage.msgContent.encode()))
+    args.push(JimUtil.toNumber(conver.lastMessage.msgSeqNo))
+    try{
+      let vt = JimDbManager.instance.getDb()?.executeSync(sql,args)
+      return vt as number
+    }catch (e) {
+      console.error(`jimsdk_db_fail. [${this.tableName}] err:${e.message}`)
+    }
+    return 0
+  }
+
   upsert(conver:ConversationInfo):number{
     let sql = `INSERT OR REPLACE INTO ${this.tableName} (conver_id,conver_type,sync_time,conver_time,last_msg_id,last_read_msg_index,last_msg_index,is_top,top_time,is_mute,mention_info,last_msg_type,last_msg_client_id,last_msg_direction,last_msg_state,last_msg_has_read,last_msg_sender_id,last_msg_content,last_msg_mention_info,last_msg_seq_no,unread_tag) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
     let args:Array<relationalStore.ValueType> = []

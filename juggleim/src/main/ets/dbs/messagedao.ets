@@ -43,10 +43,28 @@ export class MessageDao{
       }
       return 0
     }catch (e) {
-      console.log("jimsdk_dbinsert_err",JSON.stringify(e))
-      console.error(`insert failed [${this.tableName}] err:${e.message}`)
+      console.error(`jimsdk_db_failed [${this.tableName}] err:${e.message}`)
+      console.error(`jimsdk_syncmsg_db_failed [${this.tableName}] err:${e.message}`)
       return 0
     }
+  }
+
+  existByMsgId(msgId:string):boolean{
+    let sql = `SELECT id FROM ${this.tableName} WHERE msg_id=?`
+    let args:Array<relationalStore.ValueType> = []
+    args.push(msgId)
+    try{
+      let resultSet = JimDbManager.instance.getDb()?.querySqlSync(sql,args)
+      if(resultSet?.goToNextRow()){
+        let id = JimDbUtil.toNumber(resultSet,"id")
+        if(id>0){
+          return true
+        }
+      }
+    }catch (e) {
+      console.error(`jimsdk_db_fail. [${this.tableName}], err:${e.message}`)
+    }
+    return false
   }
 
   private getValuesBucket(msg:Message):relationalStore.ValuesBucket{
@@ -57,10 +75,10 @@ export class MessageDao{
       "sender_id":msg.senderId,
       "direction":msg.direction,
       "msg_id":msg.messageId,
-      "msg_seq_no":msg.msgSeqNo,
+      "msg_seq_no": JimUtil.toNumber(msg.msgSeqNo),
       "msg_index":msg.msgUnreadIndex,
       "msg_type":msg.msgType,
-      "sent_time":msg.sentTime,
+      "sent_time":JimUtil.toNumber(msg.sentTime),
       "msg_content": JimUtil.uint8ArrayToString(msg.msgContent.encode()),
       "state":msg.state,
       "flags":MsgFlagTool.toFlag(msg.msgContent.getFlag()),
