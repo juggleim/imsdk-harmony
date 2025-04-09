@@ -23,7 +23,7 @@ export class CommonUtil{
       let currMonth = (curr.getMonth() + 1)<10 ? "0" + (curr.getMonth() + 1):(curr.getMonth() + 1)
 
       let day = date.getDate() < 10 ? "0" + date.getDate() : date.getDate()
-      let currDay = curr.getDate()<10?"0"+curr.getDate() : curr.getDate()
+      let currDay = curr.getDate()<10? "0" +curr.getDate() : curr.getDate()
 
       let hour = date.getHours() < 10 ? "0" + date.getHours() : date.getHours()
       let min = date.getMinutes() < 10 ? "0" + date.getMinutes() : date.getMinutes()

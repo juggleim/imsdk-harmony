@@ -60,7 +60,6 @@ export struct ConversationDetail {
 
   aboutToAppear(): void {
     let param = this.pageInfo.getParamByIndex(0) as ConversationDetailParams
-    console.log("jimsdk_param:",param.conversationId)
     this.conversationId = param.conversationId
     this.conversationType = param.converType
 

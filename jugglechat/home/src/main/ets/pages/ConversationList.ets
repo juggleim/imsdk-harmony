@@ -99,7 +99,6 @@ export struct ConversationList {
 
   loadMoreConvers(){
     if(JuggleIm.instance.getConnStatus()==ConnStatus.connected) {
-      console.log("jimsdk_load", "\tmin:", this.minConverSortTime)
       JuggleIm.instance.getConversationManager()
         .queryConversations(10, this.minConverSortTime, false, (code, convers) => {
           convers.forEach((conver) => {

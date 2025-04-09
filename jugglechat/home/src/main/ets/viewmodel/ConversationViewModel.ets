@@ -19,7 +19,7 @@ import { hilog } from '@kit.PerformanceAnalysisKit';
 import { Logger } from 'base';
 import { JuggleIm } from 'juggleim';
 import { ConversationInfo } from 'juggleim/src/main/ets/entries/conversation';
-import { TextMessage } from 'juggleim/src/main/ets/entries/message';
+import { FileMessage, TextMessage } from 'juggleim/src/main/ets/entries/message';
 import { CommonUtil } from '../jim/common';
 
 @Observed
@@ -73,10 +73,15 @@ export function toConverViewItem(conver:ConversationInfo):ConversationViewItem{
   }
   //latest msg content
   let msgStr = ""
-  if (conver.lastMessage.msgType == 'jg:text') {
-    let txtMsg = conver.lastMessage.msgContent as TextMessage
-    msgStr = txtMsg.content
-
+  if(conver.lastMessage!=undefined&&conver.lastMessage!=null) {
+    if (conver.lastMessage.msgContent instanceof TextMessage) {
+      let txtMsg = conver.lastMessage.msgContent as TextMessage
+      msgStr = txtMsg.content
+    } else if (conver.lastMessage.msgContent instanceof FileMessage) {
+      msgStr = "[File]"
+    } else {
+      msgStr = "Unknown"
+    }
   }
   //time str
   let timeStr = CommonUtil.getTimeToYYYYDDMMHHMMSS(conver.converTime)

@@ -18,9 +18,9 @@
         "name": "DemoAbility",
         "srcEntry": "./ets/demoability/DemoAbility.ets",
         "description": "$string:DemoAbility_desc",
-        "icon": "$media:layered_image",
+        "icon": "$media:juggleim",
         "label": "$string:DemoAbility_label",
-        "startWindowIcon": "$media:startIcon",
+        "startWindowIcon": "$media:juggleim",
         "startWindowBackground": "$color:start_window_background",
         "exported": true,
         "skills": [
