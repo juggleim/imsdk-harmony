@@ -11,21 +11,37 @@ export class ObservedArray<T> extends Array<T>{
 }
 
 export class CommonUtil{
-  static getTimeToYYYYDDMMHHMMSS(str: number): string {
-    let time: string = "";
-    let date = new Date(str-1);
+  static getTimeToYYYYDDMMHHMMSS(time: number): string {
+    let timeStr: string = "";
+    let date = new Date(time);
+    let curr = new Date()
     try {
-      let year = date.getFullYear();
-      let month = (date.getMonth() + 1) < 10 ? "0" + (date.getMonth() + 1) : (date.getMonth() + 1);
-      let day = date.getDate() < 10 ? "0" + date.getDate() : date.getDate();
-      let hour = date.getHours() < 10 ? "0" + date.getHours() : date.getHours();
-      let min = date.getMinutes() < 10 ? "0" + date.getMinutes() : date.getMinutes();
-      let second = date.getSeconds() < 10 ? "0" + date.getSeconds() : date.getSeconds();
-      time = year + "-" + month + "-" + day + " " + hour + ":" + min + ":" + second;
+      let year = date.getFullYear()
+      let currYear = curr.getFullYear()
+
+      let month = (date.getMonth() + 1) < 10 ? "0" + (date.getMonth() + 1) : (date.getMonth() + 1)
+      let currMonth = (curr.getMonth() + 1)<10 ? "0" + (curr.getMonth() + 1):(curr.getMonth() + 1)
+
+      let day = date.getDate() < 10 ? "0" + date.getDate() : date.getDate()
+      let currDay = curr.getDate()<10?"0"+curr.getDate() : curr.getDate()
+
+      let hour = date.getHours() < 10 ? "0" + date.getHours() : date.getHours()
+      let min = date.getMinutes() < 10 ? "0" + date.getMinutes() : date.getMinutes()
+      // let second = date.getSeconds() < 10 ? "0" + date.getSeconds() : date.getSeconds();
+
+      if(year==currYear && month == currMonth && day == currDay){
+        timeStr = hour + ":" + min
+      }else{
+        if(year==currYear){
+          timeStr = month + "-" + day
+        }else{
+          timeStr = year + "-" + month + "-" + day
+        }
+      }
     } catch (e) {
       console.info(`Failed to get currentTime. message: ${e.message}, code: ${e.code}`);
     }
-    return time;
+    return timeStr;
   }
 
   static sleepSync(ms:number){

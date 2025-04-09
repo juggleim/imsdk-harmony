@@ -27,23 +27,48 @@ import { JuggleIm } from 'juggleim';
 import { Conversation } from 'juggleim/src/main/ets/entries/conversation';
 import { TextMessage } from 'juggleim/src/main/ets/entries/message'
 import { QueryMsgOptions } from 'juggleim/src/main/ets/managers/messagemanager';
+import { ConnStatus } from 'juggleim/src/main/ets/imclients/imclient';
 
 @Component
 export struct ConversationDetail {
   @StorageProp('currentBreakpoint') currentBreakpoint: string = BreakpointConstants.BREAKPOINT_SM;
   @Prop currentConversationUserName: string;
   @Prop currentFeatureIndex: number;
+  @Prop conversationId:string
+  @Prop conversationType:number
   @Consume('pageInfo') pageInfo: NavPathStack;
   @State msgList:ObservedArray<MessageViewItem>=[]
+  private maxMsgTime:number = 0
+  private minMsgTime:number = Number.MAX_SAFE_INTEGER
+  @State refreshing:boolean = false
+
+  @Builder
+  refreshContent() {
+    Text('Loading...')
+      .width('100%')
+      .textAlign(TextAlign.Center)
+  }
+
+  private recordMsgTime(time:number){
+    if(time>this.maxMsgTime){
+      this.maxMsgTime = time
+    }
+    if(time<this.minMsgTime){
+      this.minMsgTime = time
+    }
+  }
 
   aboutToAppear(): void {
     let param = this.pageInfo.getParamByIndex(0) as ConversationDetailParams
     console.log("jimsdk_param:",param.conversationId)
+    this.conversationId = param.conversationId
+    this.conversationType = param.converType
+
     JuggleIm.instance.getMessageManager().addMsgReceivedListener((message)=>{
       let conver = message.conversation
       let currentUserId = JuggleIm.instance.userInfo.userId
       if(conver?.conversationId===param.conversationId){
-        let viewMsg = new MessageViewItem("","Unknown")
+        let viewMsg = new MessageViewItem("","Unknown",message.sentTime)
         if(currentUserId==message.senderId){
           viewMsg.isReceived = false
         }
@@ -54,12 +79,19 @@ export struct ConversationDetail {
         this.msgList.push(viewMsg)
       }
     })
+    this.loadMoreMsgs()
+  }
+
+  loadMoreMsgs(){
+    console.log("jimsdk_top",this.conversationId,this.conversationType,this.currentConversationUserName)
     let options:QueryMsgOptions = new QueryMsgOptions()
     options.count = 10
-    JuggleIm.instance.getMessageManager().queryLocalMessages(new Conversation(param.conversationId,param.channelType),options,(code,msgs)=>{
+    options.startTime = this.minMsgTime
+    options.isPositive = false
+    JuggleIm.instance.getMessageManager().queryRemoteMessages(new Conversation(this.conversationId,this.conversationType),options,(code,msgs)=>{
       let currentUserId = JuggleIm.instance.userInfo.userId
       msgs.forEach((msg)=>{
-        let viewMsg = new MessageViewItem("","Unknown")
+        let viewMsg = new MessageViewItem("","Unknown",msg.sentTime)
         if(currentUserId==msg.senderId){
           viewMsg.isReceived = false
         }
@@ -68,7 +100,9 @@ export struct ConversationDetail {
           viewMsg.content = txtMsg.content
         }
         this.msgList.push(viewMsg)
+        this.recordMsgTime(msg.sentTime)
       })
+      this.msgList = this.msgList.slice().sort((a,b)=>a.msgTime-b.msgTime)
     })
   }
 
@@ -77,13 +111,20 @@ export struct ConversationDetail {
       Flex({ direction: FlexDirection.Column }) {
         ConversationDetailTopSearch({ currentConversationUserName: $currentConversationUserName, })
           .height(Adaptive.ContactItemHeight(this.currentBreakpoint))
-        List(){
-          ForEach(this.msgList,(item:MessageViewItem,index:number)=>{
-            ListItem(){
-              ConversationDetailItem(item)
-            }
-          })
-        }
+        Refresh({refreshing:$$this.refreshing,builder:this.refreshContent}){
+          List(){
+            ForEach(this.msgList,(item:MessageViewItem,index:number)=>{
+              ListItem(){
+                ConversationDetailItem(item)
+              }
+            })
+          }
+        }.onRefreshing(()=>{
+          setTimeout(()=>{
+            this.loadMoreMsgs()
+            this.refreshing = false
+          },200)
+        })
         Blank()
         ConversationDetailBottom()
       }

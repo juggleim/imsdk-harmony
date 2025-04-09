@@ -19,10 +19,10 @@ import { ConversationItem } from '../views/Conversation/ConversationItem';
 import { HomeTopSearch } from '../views/common/HomeTopSearch';
 import { HomeConstants } from '../constants/HomeConstants';
 import { deviceInfo } from '@kit.BasicServicesKit';
-import { CommonUtil, ObservedArray} from '../jim/common'
+import { ObservedArray} from '../jim/common'
 import {JuggleIm} from 'juggleim'
-import { TextMessage } from 'juggleim/src/main/ets/entries/message'
 import { ConnStatus } from 'juggleim/src/main/ets/imclients/imclient';
+import { toConverViewItem } from '../viewmodel/ConversationViewModel'
 
 @Component
 export struct ConversationList {
@@ -35,6 +35,15 @@ export struct ConversationList {
   private scroller: ListScroller = new ListScroller()
   private maxConverSortTime:number = 0
   private minConverSortTime:number = Number.MAX_SAFE_INTEGER
+
+  private recordConverTime(time:number){
+    if (this.maxConverSortTime < time) {
+      this.maxConverSortTime = time
+    }
+    if (this.minConverSortTime > time) {
+      this.minConverSortTime = time
+    }
+  }
 
   aboutToAppear(): void {
     this.maxConverSortTime = 0
@@ -52,6 +61,14 @@ export struct ConversationList {
         }
       })
     }
+
+    JuggleIm.instance.getConversationManager().addConversationAddListener((convers)=>{
+      convers.forEach((conver)=>{
+        this.conversationList.push(toConverViewItem(conver))
+        this.recordConverTime(conver.converTime)
+      })
+      this.conversationList = this.conversationList.slice().sort((a,b)=>b.converTime - a.converTime)
+    })
 
     // JuggleIm.instance.getMessageManager().addMsgReceivedListener((message)=>{
     //   let conversation = message.conversation
@@ -86,55 +103,10 @@ export struct ConversationList {
       JuggleIm.instance.getConversationManager()
         .queryConversations(10, this.minConverSortTime, false, (code, convers) => {
           convers.forEach((conver) => {
-            //portrait
-            let iconUrl: ResourceStr = $r('app.media.avatar2')
-            if (conver.conversation.conversationType == 2) {
-              iconUrl = $r('app.media.img')
-            }
-            //title
-            let title = ""
-            if(conver.conversation.conversationType==1){
-              let userInfo = JuggleIm.instance.getUserInfoManager().getLocalUserInfo(conver.conversation.conversationId)
-              console.log("jimsdk_saveuser_check:",JSON.stringify(userInfo),conver.conversation.conversationId)
-              if(userInfo!=null){
-                title = userInfo.nickname
-                if(userInfo.userPortrait!=''){
-                  iconUrl = userInfo.userPortrait
-                }
-              }
-            }else if(conver.conversation.conversationType==2){
-              let grpInfo = JuggleIm.instance.getGroupInfoManager().getLocalGroupInfo(conver.conversation.conversationId)
-              if(grpInfo!=null){
-                title = grpInfo.groupName
-                if(grpInfo.groupPortrait!=''){
-                  console.log("jimsdk_nullgrp:",grpInfo.groupPortrait,grpInfo.groupName)
-                  iconUrl = grpInfo.groupPortrait
-                }
-              }
-            }else{
-              console.log("jimsdk_other:",conver.conversation.conversationId,conver.conversation.conversationType)
-            }
-            console.log("jimsdk_userinfo:",title,conver.conversation.conversationId,conver.conversation.conversationType)
-            //latest msg content
-            let msgStr = ""
-            if (conver.lastMessage.msgType == 'jg:text') {
-              let txtMsg = conver.lastMessage.msgContent as TextMessage
-              msgStr = txtMsg.content
-
-            }
-            console.log("jimsdk_qryconvers_msg:",conver.lastMessage.msgType,msgStr,typeof conver.lastMessage.msgContent)
-            //time str
-            let timeStr = CommonUtil.getTimeToYYYYDDMMHHMMSS(conver.converTime)
-            this.conversationList.push(new ConversationViewItem("", conver.conversation.conversationId,
-              conver.conversation.conversationType, conver.lastMessage.sentTime, title,
-              msgStr, timeStr, iconUrl))
-            if (this.maxConverSortTime < conver.converTime) {
-              this.maxConverSortTime = conver.converTime
-            }
-            if (this.minConverSortTime > conver.converTime) {
-              this.minConverSortTime = conver.converTime
-            }
+            this.conversationList.push(toConverViewItem(conver))
+            this.recordConverTime(conver.converTime)
           })
+          this.conversationList = this.conversationList.slice().sort((a,b)=>b.converTime - a.converTime)
         })
     }
   }
@@ -151,7 +123,7 @@ export struct ConversationList {
                 if (this.pageInfo.size() > 1) {
                   this.pageInfo.pop();
                 }
-                this.pageInfo.pushPath({ name: 'ConversationDetail',param:new ConversationDetailParams(item.userId,item.converId,item.channelType)});
+                this.pageInfo.pushPath({ name: 'ConversationDetail',param:new ConversationDetailParams(item.userId,item.converId,item.converType)});
                 this.currentConversationUserName = item.name;
                 this.currentContactUserName = '';
                 this.currentIndex = index;

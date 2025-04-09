@@ -17,22 +17,28 @@ import { Want, common } from '@kit.AbilityKit';
 import { BusinessError } from '@kit.BasicServicesKit';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { Logger } from 'base';
+import { JuggleIm } from 'juggleim';
+import { ConversationInfo } from 'juggleim/src/main/ets/entries/conversation';
+import { TextMessage } from 'juggleim/src/main/ets/entries/message';
+import { CommonUtil } from '../jim/common';
 
 @Observed
 class ConversationViewItem {
   userId:string
   converId:string
-  channelType:number
+  converType:number
   lastMsgTime:number
+  converTime:number
   name: ResourceStr
   msg: ResourceStr
   time: ResourceStr
   icon: ResourceStr
-  constructor(userId:string,converId:string,channelType:number,lastMsgTime:number,name:ResourceStr,msg:ResourceStr,time:ResourceStr,icon:ResourceStr) {
+  constructor(userId:string,converId:string,converType:number,lastMsgTime:number,converTime:number,name:ResourceStr,msg:ResourceStr,time:ResourceStr,icon:ResourceStr) {
     this.userId = userId
     this.converId = converId
-    this.channelType = channelType
+    this.converType = converType
     this.lastMsgTime = lastMsgTime
+    this.converTime = converTime
     this.name = name
     this.msg = msg
     this.time = time
@@ -40,29 +46,54 @@ class ConversationViewItem {
   }
 };
 
-//const ConversationListData: ConversationDataInterface[] = [
-  // { name: $r('app.string.Alan'), msg: $r('app.string.okay'), time: '13:55', icon: $r('app.media.avatar1') },
-  // { name: $r('app.string.CaiLan'), msg: $r('app.string.okay'), time: '13:55', icon: $r('app.media.avatar2') },
-  // { name: $r('app.string.FenFen'), msg: $r('app.string.okay'), time: '12:00', icon: $r('app.media.avatar11') },
-  // { name: $r('app.string.FenFen'), msg: $r('app.string.okay'), time: '08:00', icon: $r('app.media.avatar4') },
-  // { name: $r('app.string.FanYi'), msg: $r('app.string.okay'), time: $r('app.string.yesterday'), icon: $r('app.media.avatar5') },
-  // { name: $r('app.string.Deng'), msg: $r('app.string.okay'), time: $r('app.string.yesterday'), icon: $r('app.media.avatar6') },
-  // { name: $r('app.string.CaiLan'), msg: $r('app.string.okay'), time: $r('app.string.yesterday'), icon: $r('app.media.avatar7') },
-  // { name: $r('app.string.Alan'), msg: $r('app.string.okay'), time: $r('app.string.yesterday'), icon: $r('app.media.avatar8') },
-  // { name: $r('app.string.Alan'), msg: $r('app.string.okay'), time: $r('app.string.yesterday'), icon: $r('app.media.avatar9') },
-  // { name: $r('app.string.FanYi'), msg: $r('app.string.okay'), time: $r('app.string.yesterday'), icon: $r('app.media.avatar10') },
-  // { name: $r('app.string.Deng'), msg: $r('app.string.okay'), time: $r('app.string.yesterday'), icon: $r('app.media.avatar11') },
-  // { name: $r('app.string.ge'), msg: $r('app.string.okay'), time: $r('app.string.yesterday'), icon: $r('app.media.avatar1') },
-// ];
+export function toConverViewItem(conver:ConversationInfo):ConversationViewItem{
+  //portrait
+  let iconUrl: ResourceStr = $r('app.media.avatar2')
+  if (conver.conversation.conversationType == 2) {
+    iconUrl = $r('app.media.img')
+  }
+  //title
+  let title = ""
+  if(conver.conversation.conversationType==1){
+    let userInfo = JuggleIm.instance.getUserInfoManager().getLocalUserInfo(conver.conversation.conversationId)
+    if(userInfo!=null){
+      title = userInfo.nickname
+      if(userInfo.userPortrait!=''){
+        iconUrl = userInfo.userPortrait
+      }
+    }
+  }else if(conver.conversation.conversationType==2){
+    let grpInfo = JuggleIm.instance.getGroupInfoManager().getLocalGroupInfo(conver.conversation.conversationId)
+    if(grpInfo!=null){
+      title = grpInfo.groupName
+      if(grpInfo.groupPortrait!=''){
+        iconUrl = grpInfo.groupPortrait
+      }
+    }
+  }
+  //latest msg content
+  let msgStr = ""
+  if (conver.lastMessage.msgType == 'jg:text') {
+    let txtMsg = conver.lastMessage.msgContent as TextMessage
+    msgStr = txtMsg.content
+
+  }
+  //time str
+  let timeStr = CommonUtil.getTimeToYYYYDDMMHHMMSS(conver.converTime)
+
+  return new ConversationViewItem("", conver.conversation.conversationId,
+    conver.conversation.conversationType, conver.lastMessage.sentTime,conver.converTime, title,
+    msgStr, timeStr, iconUrl)
+}
 
 class ConversationDetailParams{
-  channelType:number
+  converType:number
   conversationId:string
   userId:string
-  constructor(userId:string,converId:string,channelType:number) {
+  constructor(userId:string,converId:string,converType:number) {
     this.userId = userId
     this.conversationId = converId
-    this.channelType = channelType
+    this.converType = converType
   }
 }
 

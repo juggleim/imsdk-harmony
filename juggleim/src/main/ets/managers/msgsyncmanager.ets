@@ -8,7 +8,7 @@ import { MsgHandler } from "../entries/msghandler";
 import { UserInfo } from "../entries/user";
 import { ConnStatus, ImClient } from "../imclients/imclient";
 import { immessage } from "../improto/immessage";
-import { MsgFlagTool } from "../improto/msgflag";
+import { MsgFlag, MsgFlagTool } from "../improto/msgflag";
 import Long from 'long'
 import { ConversationAddListener,ConversationUpdateListener,ConversationDeleteListener,TotalUnreadCountUpdateListener } from "./conversationmanager";
 import { MessageCallback } from "./messagemanager";
@@ -325,20 +325,46 @@ export class MsgSyncManager{
         let resp = immessage.QryConversationsResp.decode(d)
         let l = resp.conversations.length
         let lastSyncTime = 0
+        let addConvers:ConversationInfo[] = []
+        let updateConvers:ConversationInfo[] = []
+        let delConvers:ConversationInfo[] = []
         resp.conversations.forEach((conver)=> {
           if (lastSyncTime < (conver.syncTime as number)) {
             lastSyncTime = conver.syncTime as number
           }
           if (conver.isDelete != null && conver.isDelete != undefined) {
             if (conver.isDelete == 1) {
+              let converInfo = new ConversationInfo()
+              converInfo.conversation = new Conversation(conver.targetId as string, conver.channelType as number)
+              delConvers.push(converInfo)
               JimDbManager.instance.getConversationDao().delConver(conver.targetId as string, conver.channelType as number)
             } else {
               let converInfo = this.toConversationInfo(conver)
+              let dbConver = JimDbManager.instance.getConversationDao().getConver(new Conversation(conver.targetId as string,conver.channelType as number))
+              if(dbConver===undefined){//add
+                addConvers.push(converInfo)
+              }else{//update
+                updateConvers.push(converInfo)
+              }
               JimDbManager.instance.getConversationDao().upsert(converInfo)
             }
           }
-          this.recordLatestConverSyncTime(JimUtil.toNumber(conver.syncTime as number),conver.msg?.flags as number)
         })
+        if(lastSyncTime>0){
+          let flag = new MsgFlag()
+          flag.isStorage = true
+          this.recordLatestConverSyncTime(lastSyncTime,MsgFlagTool.toFlag(flag))
+        }
+        //trigger listener
+        if(addConvers.length>0){
+          this.triggerConversationAdd(addConvers)
+        }
+        if(updateConvers.length>0){
+          this.triggerConversationUpdate(updateConvers)
+        }
+        if(delConvers.length>0){
+          this.triggerConversationDelete(delConvers)
+        }
         console.log("jimsdk_syncconvers_len:",l,this.latestConverSyncTime)
         if(resp.isFinished){
           callback(true)

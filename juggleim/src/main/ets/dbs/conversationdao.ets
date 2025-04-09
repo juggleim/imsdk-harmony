@@ -117,7 +117,7 @@ export class ConversationDao{
     args.push(c.conversationType)
     args.push(c.conversationId)
     let resultSet:relationalStore.ResultSet|undefined
-    let converInfo:ConversationInfo|undefined
+    let converInfo:ConversationInfo|undefined = undefined
     try{
       resultSet = JimDbManager.instance.getDb()?.querySqlSync(sql,args)
       if(resultSet?.goToNextRow()){

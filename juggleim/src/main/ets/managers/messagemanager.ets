@@ -177,13 +177,17 @@ export class MessageManager{
 
   sendMediaMessage(msg:MessageContent,conver:Conversation){}
 
+  queryMessages(conver:Conversation,options:QueryMsgOptions,callback:QryMessagesCallback){
+
+  }
+
   queryLocalMessages(conver:Conversation,options:QueryMsgOptions,callback:QryMessagesCallback){
     let dao = JimDbManager.instance.getMessageDao()
     let msgs = dao.queryMessages(conver.conversationId,conver.conversationType,options.startTime,options.count)
     callback(0,msgs,false)
   }
 
-  queryMessages(conver:Conversation,options:QueryMsgOptions,callback:QryMessagesCallback){
+  queryRemoteMessages(conver:Conversation,options:QueryMsgOptions,callback:QryMessagesCallback){
     let order:number = 0
     if(options.isPositive){
       order = 1
