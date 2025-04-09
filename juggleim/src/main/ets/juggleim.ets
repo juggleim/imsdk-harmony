@@ -42,7 +42,7 @@ export class JuggleIm{
     this.connectManager = new ConnectionManager(this.imclient)
     this.msgSyncManager = new MsgSyncManager(this.imclient)
     this.messageManager = new MessageManager(this.imclient,this.msgSyncManager)
-    this.converManager = new ConversationManager(this.imclient)
+    this.converManager = new ConversationManager(this.imclient,this.msgSyncManager)
     this.userInfoManager = new UserInfoManager(this.imclient)
     this.groupInfoManager = new GroupInfoManager(this.imclient)
   }

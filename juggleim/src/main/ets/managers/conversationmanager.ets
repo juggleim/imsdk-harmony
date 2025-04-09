@@ -5,6 +5,7 @@ import { ImClient } from '../imclients/imclient'
 import {CommonCallback} from './commoncallback'
 import { JimDbManager } from '../dbs/dbmanager'
 import { MsgHandler } from '../entries/msghandler'
+import { MsgSyncManager } from './msgsyncmanager'
 
 export type ConversationCallback = (code:number,conver:ConversationInfo|null)=>void
 export type ConversationsCallback = (code:number,convers:ConversationInfo[])=>void
@@ -23,62 +24,42 @@ export type TotalUnreadCountUpdateListener = (count:number)=>void
 
 export class ConversationManager{
   private imclient:ImClient
+  private msgSyncMgr:MsgSyncManager
 
-  constructor(imclient:ImClient) {
+  constructor(imclient:ImClient,mgr:MsgSyncManager) {
     this.imclient = imclient
+    this.msgSyncMgr = mgr
   }
-
-  private converAddListeners:ConversationAddListener[] = new Array()
-  private converUpdateListeners:ConversationUpdateListener[] = new Array()
-  private converDeleteListeners:ConversationDeleteListener[] = new Array()
-  private totalUnreadCountUpdateListeners:TotalUnreadCountUpdateListener[] = new Array()
 
   addConversationAddListener(listener:ConversationAddListener){
-    this.converAddListeners.push(listener)
+    this.msgSyncMgr.addConversationAddListener(listener)
   }
+
   removeConversationAddListener(listener:ConversationAddListener){
-    for(let i=0;i<this.converAddListeners.length;i++){
-      if(this.converAddListeners[i]===listener){
-        this.converAddListeners.splice(i,1)
-        break
-      }
-    }
+    this.msgSyncMgr.removeConversationAddListener(listener)
   }
 
   addConversationUpdateListener(listener:ConversationUpdateListener){
-    this.converUpdateListeners.push(listener)
+    this.msgSyncMgr.addConversationUpdateListener(listener)
   }
+
   removeConversationUpdateListener(listener:ConversationUpdateListener){
-    for(let i=0;i<this.converUpdateListeners.length;i++){
-      if(this.converUpdateListeners[i]===listener){
-        this.converUpdateListeners.splice(i,1)
-        break
-      }
-    }
+    this.msgSyncMgr.removeConversationUpdateListener(listener)
   }
 
   addConversationDeleteListener(listener:ConversationDeleteListener){
-    this.converUpdateListeners.push(listener)
+    this.msgSyncMgr.addConversationDeleteListener(listener)
   }
+
   removeConversationDeleteListener(listener:ConversationDeleteListener){
-    for(let i=0;i<this.converDeleteListeners.length;i++){
-      if(this.converDeleteListeners[i]===listener){
-        this.converDeleteListeners.splice(i,1)
-        break
-      }
-    }
+    this.msgSyncMgr.removeConversationDeleteListener(listener)
   }
 
   addTotalUnreadCountUpdateListener(listener:TotalUnreadCountUpdateListener){
-    this.totalUnreadCountUpdateListeners.push(listener)
+    this.msgSyncMgr.addTotalUnreadCountUpdateListener(listener)
   }
   removeTotalUnreadCountUpdateListener(listener:TotalUnreadCountUpdateListener){
-    for(let i=0;i<this.totalUnreadCountUpdateListeners.length;i++){
-      if(this.totalUnreadCountUpdateListeners[i]===listener){
-        this.totalUnreadCountUpdateListeners.splice(i,1)
-        break
-      }
-    }
+    this.msgSyncMgr.removeTotalUnreadCountUpdateListener(listener)
   }
 
   queryConversations(count:number,startTime:number,isPositive:boolean,callback:ConversationsCallback){

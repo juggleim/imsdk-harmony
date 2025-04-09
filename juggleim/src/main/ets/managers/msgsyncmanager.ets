@@ -3,13 +3,15 @@ import { JimUtil } from "../commons/jimutil";
 import { JimDbManager } from "../dbs/dbmanager";
 import { Conversation, ConversationInfo } from "../entries/conversation";
 import { GroupInfo } from "../entries/group";
-import { Message } from "../entries/message";
+import { Message, MessageContent, MessageSentState } from "../entries/message";
 import { MsgHandler } from "../entries/msghandler";
 import { UserInfo } from "../entries/user";
 import { ConnStatus, ImClient } from "../imclients/imclient";
 import { immessage } from "../improto/immessage";
 import { MsgFlagTool } from "../improto/msgflag";
 import Long from 'long'
+import { ConversationAddListener,ConversationUpdateListener,ConversationDeleteListener,TotalUnreadCountUpdateListener } from "./conversationmanager";
+import { MessageCallback } from "./messagemanager";
 
 function promiseSyncConvers(mgr:MsgSyncManager):Promise<boolean>{
   return new Promise((resolve)=>{
@@ -57,6 +59,12 @@ export class MsgSyncManager{
   private afterFirstSync:boolean = false
   private taskQueue:MsgNtfTask[] = []
 
+  //conversation
+  private converAddListeners:ConversationAddListener[] = new Array()
+  private converUpdateListeners:ConversationUpdateListener[] = new Array()
+  private converDeleteListeners:ConversationDeleteListener[] = new Array()
+  private totalUnreadCountUpdateListeners:TotalUnreadCountUpdateListener[] = new Array()
+
   constructor(imclient:ImClient) {
     this.imclient = imclient
     this.imclient.registePublishListener("msg",(index,data)=>{
@@ -66,6 +74,76 @@ export class MsgSyncManager{
       this.onMsgNotify(index,data)
     })
     this.imclient.addConnectStatusListener(this.syncAfterConnect)
+  }
+
+  addConversationAddListener(listener:ConversationAddListener){
+    this.converAddListeners.push(listener)
+  }
+
+  removeConversationAddListener(listener:ConversationAddListener){
+    for(let i=0;i<this.converAddListeners.length;i++){
+      if(this.converAddListeners[i]===listener){
+        this.converAddListeners.splice(i,1)
+        break
+      }
+    }
+  }
+
+  private triggerConversationAdd(convers:ConversationInfo[]){
+    this.converAddListeners.forEach((listener)=>{
+      listener(convers)
+    })
+  }
+
+  addConversationUpdateListener(listener:ConversationUpdateListener){
+    this.converUpdateListeners.push(listener)
+  }
+
+  removeConversationUpdateListener(listener:ConversationUpdateListener){
+    for(let i=0;i<this.converUpdateListeners.length;i++){
+      if(this.converUpdateListeners[i]===listener){
+        this.converUpdateListeners.splice(i,1)
+        break
+      }
+    }
+  }
+
+  private triggerConversationUpdate(convers:ConversationInfo[]){
+    this.converUpdateListeners.forEach((listener)=>{
+      listener(convers)
+    })
+  }
+
+  addConversationDeleteListener(listener:ConversationDeleteListener){
+    this.converUpdateListeners.push(listener)
+  }
+
+  removeConversationDeleteListener(listener:ConversationDeleteListener){
+    for(let i=0;i<this.converDeleteListeners.length;i++){
+      if(this.converDeleteListeners[i]===listener){
+        this.converDeleteListeners.splice(i,1)
+        break
+      }
+    }
+  }
+
+  private triggerConversationDelete(convers:ConversationInfo[]){
+    this.converDeleteListeners.forEach((listener)=>{
+      listener(convers)
+    })
+  }
+
+  addTotalUnreadCountUpdateListener(listener:TotalUnreadCountUpdateListener){
+    this.totalUnreadCountUpdateListeners.push(listener)
+  }
+
+  removeTotalUnreadCountUpdateListener(listener:TotalUnreadCountUpdateListener){
+    for(let i=0;i<this.totalUnreadCountUpdateListeners.length;i++){
+      if(this.totalUnreadCountUpdateListeners[i]===listener){
+        this.totalUnreadCountUpdateListeners.splice(i,1)
+        break
+      }
+    }
   }
 
   private onDirectMsgReceived(index:number,data:Uint8Array){
