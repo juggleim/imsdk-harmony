@@ -6,6 +6,7 @@ import { Message } from "../entries/message";
 import { JimDbManager } from "./dbmanager";
 import { MessageManager } from "../managers/messagemanager";
 import { JuggleIm } from "../juggleim";
+import { MsgHandler } from "../entries/msghandler";
 
 export class ConversationDao{
   static instance:ConversationDao = new ConversationDao()
@@ -191,9 +192,7 @@ export class ConversationDao{
     //content
     let dataStr = JimDbUtil.toString(resultSet,"last_msg_content")
     let data = JimUtil.stringToUint8Array(dataStr)
-    let m = JuggleIm.instance.getMessageManager().constructByMsgType(msg.msgType)
-    m.decode(data)
-    msg.msgContent = m
+    msg.msgContent = MsgHandler.constructByMsgType(msg.msgType, data)
 
     msg.clientId = JimDbUtil.toString(resultSet,"last_msg_client_id")
     msg.direction = JimDbUtil.toNumber(resultSet,"last_msg_direction")

@@ -7,6 +7,8 @@ import { PreferenceUtil } from './commons/preferenceutil';
 import { JimDbManager } from './dbs/dbmanager';
 import { UserInfoManager } from './managers/userinfomanager';
 import { GroupInfoManager } from './managers/groupinfomanager';
+import { MsgSyncManager } from './managers/msgsyncmanager';
+import { MsgHandler } from './entries/msghandler';
 
 export class JimConfig{
   address:string = ''
@@ -26,6 +28,7 @@ export class JuggleIm{
 
   private connectManager:ConnectionManager
   private messageManager:MessageManager
+  private msgSyncManager:MsgSyncManager
   private converManager:ConversationManager
   private userInfoManager:UserInfoManager
   private groupInfoManager:GroupInfoManager
@@ -34,9 +37,11 @@ export class JuggleIm{
     this.config = new JimConfig();
     this.userInfo = new UserInfo();
     this.userId = ''
+    MsgHandler.init()
     this.imclient = new ImClient()
     this.connectManager = new ConnectionManager(this.imclient)
-    this.messageManager = new MessageManager(this.imclient)
+    this.msgSyncManager = new MsgSyncManager(this.imclient)
+    this.messageManager = new MessageManager(this.imclient,this.msgSyncManager)
     this.converManager = new ConversationManager(this.imclient)
     this.userInfoManager = new UserInfoManager(this.imclient)
     this.groupInfoManager = new GroupInfoManager(this.imclient)
@@ -65,6 +70,10 @@ export class JuggleIm{
 
   getMessageManager():MessageManager{
     return this.messageManager
+  }
+
+  getMsgSyncManager():MsgSyncManager{
+    return this.msgSyncManager
   }
 
   getConversationManager():ConversationManager{

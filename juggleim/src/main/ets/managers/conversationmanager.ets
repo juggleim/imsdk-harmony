@@ -4,6 +4,7 @@ import {immessage} from  '../improto/immessage'
 import { ImClient } from '../imclients/imclient'
 import {CommonCallback} from './commoncallback'
 import { JimDbManager } from '../dbs/dbmanager'
+import { MsgHandler } from '../entries/msghandler'
 
 export type ConversationCallback = (code:number,conver:ConversationInfo|null)=>void
 export type ConversationsCallback = (code:number,convers:ConversationInfo[])=>void
@@ -101,7 +102,7 @@ export class ConversationManager{
         let data = qryAck.data as Uint8Array
         let resp = immessage.Conversation.decode(data)
         let converInfo = new ConversationInfo()
-        converInfo.lastMessage = JuggleIm.instance.getMessageManager().downMsg2Message(resp.msg as immessage.DownMsg)
+        converInfo.lastMessage = MsgHandler.downMsg2Message(resp.msg as immessage.DownMsg)
         converInfo.conversation = converInfo.lastMessage.conversation
         converInfo.converTime = resp.sortTime as number
         converInfo.isTop = (resp.isTop as number)>0
@@ -201,7 +202,7 @@ export class ConversationManager{
         let resp = immessage.QryConversationsResp.decode(data)
         resp.conversations.forEach((conver)=>{
           let converInfo = new ConversationInfo()
-          converInfo.lastMessage = JuggleIm.instance.getMessageManager().downMsg2Message(conver.msg as immessage.IDownMsg)
+          converInfo.lastMessage = MsgHandler.downMsg2Message(conver.msg as immessage.IDownMsg)
           converInfo.conversation = converInfo.lastMessage.conversation
           converInfo.converTime = conver.sortTime as number
           converInfo.isTop = (conver.isTop as number)>0

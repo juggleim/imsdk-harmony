@@ -5,6 +5,8 @@ import { MsgFlagTool } from "../improto/msgflag";
 import { JimDbManager } from "./dbmanager";
 import { JimDbUtil } from "./dbutil";
 import { Conversation } from "../entries/conversation";
+import { JuggleIm } from "../../../../Index";
+import { MsgHandler } from "../entries/msghandler";
 
 export class MessageDao{
   static instance:MessageDao = new MessageDao()
@@ -105,6 +107,8 @@ export class MessageDao{
     message.msgType = JimDbUtil.toString(resultSet,'msg_type')
     message.sentTime = JimDbUtil.toNumber(resultSet,'sent_time')
     //content
+    let content = JimDbUtil.toString(resultSet,'msg_content')
+    message.msgContent = MsgHandler.constructByMsgType(message.msgType, JimUtil.stringToUint8Array(content))
     message.state = JimDbUtil.toNumber(resultSet,'state')
     message.flags = JimDbUtil.toNumber(resultSet,'flags')
     message.hasRead = JimDbUtil.toNumber(resultSet,"has_read")>0

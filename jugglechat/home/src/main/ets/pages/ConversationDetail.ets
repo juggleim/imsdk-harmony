@@ -56,9 +56,8 @@ export struct ConversationDetail {
     })
     let options:QueryMsgOptions = new QueryMsgOptions()
     options.count = 10
-    JuggleIm.instance.getMessageManager().queryMessages(new Conversation(param.conversationId,param.channelType),options,(code,msgs)=>{
+    JuggleIm.instance.getMessageManager().queryLocalMessages(new Conversation(param.conversationId,param.channelType),options,(code,msgs)=>{
       let currentUserId = JuggleIm.instance.userInfo.userId
-      console.log("jimsdk_hismsgs:",msgs.length,currentUserId)
       msgs.forEach((msg)=>{
         let viewMsg = new MessageViewItem("","Unknown")
         if(currentUserId==msg.senderId){
