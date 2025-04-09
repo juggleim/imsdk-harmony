@@ -50,6 +50,10 @@ export class MessageManager{
   constructor(imclient:ImClient,mgr:MsgSyncManager) {
     this.imclient = imclient
     this.msgSyncMgr = mgr
+    this.msgSyncMgr.addMsgReceivedListener((msg)=>{
+      //handle msg
+      this.triggerMsgReceive(msg)
+    })
   }
 
   private msgReceivedListeners:MsgReceivedListener[] = new Array()
@@ -71,7 +75,7 @@ export class MessageManager{
     }
   }
 
-  private msgReceive(msg:Message){
+  private triggerMsgReceive(msg:Message){
     this.msgReceivedListeners.forEach((listener)=>{
       listener(msg)
     })
@@ -88,6 +92,12 @@ export class MessageManager{
         break
       }
     }
+  }
+
+  private triggerMsgRecalled(msg:Message){
+    this.msgRecalledListeners.forEach((listener)=>{
+      listener(msg)
+    })
   }
 
   addMsgModifiedListener(listener:MsgModifiedListener){

@@ -3,6 +3,7 @@ import { RecallCmdMessage, ReadNtfMessage, ClearUnreadMessage } from "./cmdmsg"
 import { MessageContent, TextMessage, MergeMessage, VoiceMessage, ImageMessage, FileMessage, VideoMessage, RecallInfoMessage,
   Message } from "./message"
 import { Conversation } from "./conversation"
+import { JimUtil } from "../commons/jimutil"
 
 export class MsgHandler{
   private static msgTypeMap:Map<string,Function> = new Map()
@@ -50,10 +51,10 @@ export class MsgHandler{
     message.msgType = downMsg.msgType as string
     message.msgContent = MsgHandler.constructByMsgType(message.msgType,downMsg.msgContent as Uint8Array)
 
-    message.sentTime = downMsg.msgTime as number
-    message.msgSeqNo = downMsg.msgSeqNo as number
+    message.sentTime = JimUtil.toNumber(downMsg.msgTime as number)
+    message.msgSeqNo = JimUtil.toNumber(downMsg.msgSeqNo as number)
 
-    message.flags = downMsg.flags as number
+    message.flags = JimUtil.toNumber(downMsg.flags as number)
 
     return message
   }

@@ -23,6 +23,11 @@ import { ObservedArray} from '../jim/common'
 import {JuggleIm} from 'juggleim'
 import { ConnStatus } from 'juggleim/src/main/ets/imclients/imclient';
 import { toConverViewItem } from '../viewmodel/ConversationViewModel'
+import { ConversationInfo } from 'juggleim/src/main/ets/entries/conversation';
+import {
+  ConversationAddListener,
+  ConversationDeleteListener,
+  ConversationUpdateListener } from 'juggleim/src/main/ets/managers/conversationmanager';
 
 @Component
 export struct ConversationList {
@@ -35,6 +40,9 @@ export struct ConversationList {
   private scroller: ListScroller = new ListScroller()
   private maxConverSortTime:number = 0
   private minConverSortTime:number = Number.MAX_SAFE_INTEGER
+  private converAddListener:ConversationAddListener = ()=>{}
+  private converUpdListener:ConversationUpdateListener = ()=>{}
+  private converDelListener:ConversationDeleteListener = ()=>{}
 
   private recordConverTime(time:number){
     if (this.maxConverSortTime < time) {
@@ -43,6 +51,12 @@ export struct ConversationList {
     if (this.minConverSortTime > time) {
       this.minConverSortTime = time
     }
+  }
+
+  aboutToDisappear(): void {
+    JuggleIm.instance.getConversationManager().removeConversationAddListener(this.converAddListener)
+    JuggleIm.instance.getConversationManager().removeConversationUpdateListener(this.converUpdListener)
+    JuggleIm.instance.getConversationManager().removeConversationDeleteListener(this.converDelListener)
   }
 
   aboutToAppear(): void {
@@ -62,39 +76,60 @@ export struct ConversationList {
       })
     }
 
-    JuggleIm.instance.getConversationManager().addConversationAddListener((convers)=>{
+    //conver add
+    this.converAddListener = (convers)=>{
       convers.forEach((conver)=>{
         this.conversationList.push(toConverViewItem(conver))
         this.recordConverTime(conver.converTime)
       })
       this.conversationList = this.conversationList.slice().sort((a,b)=>b.converTime - a.converTime)
-    })
+    }
+    JuggleIm.instance.getConversationManager().addConversationAddListener(this.converAddListener)
 
-    // JuggleIm.instance.getMessageManager().addMsgReceivedListener((message)=>{
-    //   let conversation = message.conversation
-    //   if(this.conversationList.length === 0){
-    //     return
-    //   }
-    //
-    //   for(let i=0;i<this.conversationList.length;i++){
-    //     if(this.conversationList[i].converId===conversation.conversationId
-    //       &&this.conversationList[i].channelType===conversation.conversationType){
-    //       if(message.msgType == 'jg:text') {
-    //         let txtMsg = message.msgContent as TextMessage
-    //         this.conversationList[i].msg = txtMsg.content
-    //       }else {
-    //         this.conversationList[i].msg = ''
-    //       }
-    //     }else{
-    //       this.conversationList[i].msg = 'nnnnnn'
-    //     }
-    //   }
-    //   let converList:ObservedArray<ConversationViewItem>=[]
-    //   for(let i=0;i<this.conversationList.length;i++){
-    //     converList.push(this.conversationList[i])
-    //   }
-    //   this.conversationList = converList
-    // })
+    //conver update
+    this.converUpdListener = (convers)=>{
+      console.log("jimsdk_msgrece_converupd:",JSON.stringify(convers))
+      let updatedConverList:ConversationViewItem[] = new Array()
+      let updatedConverKeys:Map<string,boolean> = new Map()
+      convers.forEach((conver)=>{
+        let converViewItem = toConverViewItem(conver)
+        updatedConverList.push(converViewItem)
+        let key:string = conver.conversation.conversationId+"_"+conver.conversation.conversationType
+        updatedConverKeys.set(key,true)
+      })
+      let tmpConverList:ObservedArray<ConversationViewItem>=[]
+      this.conversationList.forEach((conver)=>{
+        let key = conver.converId+"_"+conver.converType
+        if(!updatedConverKeys.has(key)){
+          tmpConverList.push(conver)
+        }
+      })
+      updatedConverList.forEach((conver)=>{
+        tmpConverList.push(conver)
+      })
+      tmpConverList = tmpConverList.slice().sort((a,b)=>b.converTime-a.converTime)
+      this.conversationList = tmpConverList
+    }
+    JuggleIm.instance.getConversationManager().addConversationUpdateListener(this.converUpdListener)
+
+    //conver del
+    this.converDelListener = (convers)=>{
+      console.log("jimsdk_msgrece_del",JSON.stringify(convers))
+      let delConverKeys:Map<string,boolean> = new Map()
+      convers.forEach((conver)=>{
+        let key:string = conver.conversation.conversationId+"_"+conver.conversation.conversationType
+        delConverKeys.set(key,true)
+      })
+      let tmpConverList:ObservedArray<ConversationViewItem>=[]
+      this.conversationList.forEach((conver)=>{
+        let key = conver.converId+"_"+conver.converType
+        if(!delConverKeys.has(key)){
+          tmpConverList.push(conver)
+        }
+      })
+      this.conversationList = tmpConverList
+    }
+    JuggleIm.instance.getConversationManager().addConversationDeleteListener(this.converDelListener)
   }
 
   loadMoreConvers(){

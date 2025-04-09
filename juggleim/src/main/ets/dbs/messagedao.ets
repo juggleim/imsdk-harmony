@@ -64,8 +64,9 @@ export class MessageDao{
     let sql = `SELECT id FROM ${this.tableName} WHERE msg_id=?`
     let args:Array<relationalStore.ValueType> = []
     args.push(msgId)
+    let resultSet:relationalStore.ResultSet|undefined
     try{
-      let resultSet = JimDbManager.instance.getDb()?.querySqlSync(sql,args)
+      resultSet = JimDbManager.instance.getDb()?.querySqlSync(sql,args)
       if(resultSet?.goToNextRow()){
         let id = JimDbUtil.toNumber(resultSet,"id")
         if(id>0){
@@ -74,6 +75,8 @@ export class MessageDao{
       }
     }catch (e) {
       console.error(`jimsdk_db_fail. [${this.tableName}], err:${e.message}`)
+    }finally {
+      resultSet?.close()
     }
     return false
   }

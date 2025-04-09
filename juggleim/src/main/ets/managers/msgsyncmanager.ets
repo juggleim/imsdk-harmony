@@ -11,7 +11,7 @@ import { immessage } from "../improto/immessage";
 import { MsgFlag, MsgFlagTool } from "../improto/msgflag";
 import Long from 'long'
 import { ConversationAddListener,ConversationUpdateListener,ConversationDeleteListener,TotalUnreadCountUpdateListener } from "./conversationmanager";
-import { MessageCallback } from "./messagemanager";
+import { MsgReceivedListener } from "./messagemanager";
 
 function promiseSyncConvers(mgr:MsgSyncManager):Promise<boolean>{
   return new Promise((resolve)=>{
@@ -65,6 +65,9 @@ export class MsgSyncManager{
   private converDeleteListeners:ConversationDeleteListener[] = new Array()
   private totalUnreadCountUpdateListeners:TotalUnreadCountUpdateListener[] = new Array()
 
+  //message
+  private msgReceivedListeners:MsgReceivedListener[] = new Array()
+
   constructor(imclient:ImClient) {
     this.imclient = imclient
     this.imclient.registePublishListener("msg",(index,data)=>{
@@ -115,7 +118,7 @@ export class MsgSyncManager{
   }
 
   addConversationDeleteListener(listener:ConversationDeleteListener){
-    this.converUpdateListeners.push(listener)
+    this.converDeleteListeners.push(listener)
   }
 
   removeConversationDeleteListener(listener:ConversationDeleteListener){
@@ -146,6 +149,25 @@ export class MsgSyncManager{
     }
   }
 
+  addMsgReceivedListener(listener:MsgReceivedListener){
+    this.msgReceivedListeners.push(listener)
+  }
+
+  removeMsgReceivedListener(listener:MsgReceivedListener){
+    for(let i=0;i<this.msgReceivedListeners.length;i++){
+      if(this.msgReceivedListeners[i]===listener){
+        this.msgReceivedListeners.splice(i,1)
+        break
+      }
+    }
+  }
+
+  private triggerMsgReceive(msg:Message){
+    this.msgReceivedListeners.forEach((listener)=>{
+      listener(msg)
+    })
+  }
+
   private onDirectMsgReceived(index:number,data:Uint8Array){
     if(data!=null&&data!=undefined){
       let downMsg = immessage.DownMsg.decode(data)
@@ -164,6 +186,10 @@ export class MsgSyncManager{
         //TODO
       }
     }
+  }
+
+  private completeFirstSync(){
+    this.afterFirstSync = true
   }
 
   private handleMsgNtf(task:MsgNtfTask){
@@ -241,9 +267,9 @@ export class MsgSyncManager{
   }
 
   public handleMsg(downMsg:immessage.IDownMsg,callback:(isFinish:boolean)=>void){
-    console.log("jimsdk_qryhismsg_sync")
     let msg = MsgHandler.downMsg2Message(downMsg)
     let msgFlag = MsgFlagTool.parseFlag(msg.flags)
+    let isTrigger:boolean = true
     if(msgFlag.isState){
 
     }else{
@@ -272,9 +298,31 @@ export class MsgSyncManager{
             console.log("jimsdk_qryhismsg_sync:",JSON.stringify(msg))
             let aff = msgDao.insert(msg)
             if(aff>0&&msg.sentTime>this.getLatestConverSyncTime()) {
+              //check conver exist
+              let dbConver = JimDbManager.instance.getConversationDao().getConver(new Conversation(msg.conversation.conversationId,msg.conversation.conversationType))
+              let newConverInfo = this.msg2Conver(msg)
+              let isAdd:boolean = true
+              if(dbConver===undefined){//add
+                dbConver = newConverInfo
+              }else{//update
+                dbConver.syncTime = newConverInfo.syncTime
+                dbConver.converTime = newConverInfo.converTime
+                dbConver.lastMessage = newConverInfo.lastMessage
+                isAdd = false
+              }
               //update conver
-              JimDbManager.instance.getConversationDao().upsert2(this.msg2Conver(msg))
+              JimDbManager.instance.getConversationDao().upsert(dbConver as ConversationInfo)
+              this.recordLatestConverSyncTime(dbConver.converTime)
+              let convers:ConversationInfo[] = new Array()
+              convers.push(dbConver)
+              if(isAdd){
+                this.triggerConversationAdd(convers)
+              }else{
+                this.triggerConversationUpdate(convers)
+              }
             }
+          }else{
+            isTrigger = false
           }
         }
       }
@@ -282,6 +330,9 @@ export class MsgSyncManager{
         this.recordLatestSendboxMsgTime(msg.sentTime,msg.flags)
       }else {
         this.recordLatestInboxMsgTime(msg.sentTime, msg.flags)
+      }
+      if(isTrigger){
+        this.triggerMsgReceive(msg)
       }
     }
     callback(true)
@@ -351,9 +402,7 @@ export class MsgSyncManager{
           }
         })
         if(lastSyncTime>0){
-          let flag = new MsgFlag()
-          flag.isStorage = true
-          this.recordLatestConverSyncTime(lastSyncTime,MsgFlagTool.toFlag(flag))
+          this.recordLatestConverSyncTime(lastSyncTime)
         }
         //trigger listener
         if(addConvers.length>0){
@@ -377,13 +426,10 @@ export class MsgSyncManager{
     })
   }
 
-  private recordLatestConverSyncTime(time:number,flags:number){
-    let flag = MsgFlagTool.parseFlag(flags)
-    if(flag.isStorage){
-      if(time>this.latestConverSyncTime){
-        this.latestConverSyncTime = time
-        JimDbManager.instance.getConfDao().setConverSyncTime(this.latestConverSyncTime)
-      }
+  private recordLatestConverSyncTime(time:number){
+    if(time>this.latestConverSyncTime){
+      this.latestConverSyncTime = time
+      JimDbManager.instance.getConfDao().setConverSyncTime(this.latestConverSyncTime)
     }
   }
 
@@ -397,11 +443,9 @@ export class MsgSyncManager{
 
   public async syncAfterConnect(status:number,reasonCode:number,userId:string){
     if(status === ConnStatus.connected) {
-      console.log("jimsdk_syncconvers_finish_1")
       if (!JimDbManager.instance.hasInit) {
         JuggleIm.instance.initDb(userId)
       }
-      console.log("jimsdk_syncconvers_finish_2")
       let isContinue:boolean = true
       //sync convers
       for(;isContinue;) {
@@ -411,7 +455,6 @@ export class MsgSyncManager{
           }
         })
       }
-      console.log("jimsdk_syncconvers_finish_3")
       isContinue = true
       //sync msgs
       for(;isContinue;){
@@ -421,7 +464,7 @@ export class MsgSyncManager{
           }
         })
       }
-      this.afterFirstSync = true
+      JuggleIm.instance.getMsgSyncManager().completeFirstSync()
     }
   }
 

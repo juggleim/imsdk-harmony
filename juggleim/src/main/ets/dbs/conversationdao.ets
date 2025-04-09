@@ -111,6 +111,28 @@ export class ConversationDao{
     return 0
   }
 
+  existByConver(conver:Conversation):boolean{
+    let sql = `SELECT id FROM ${this.tableName} WHERE conver_type=? and conver_id=?`
+    let args:Array<relationalStore.ValueType> = []
+    args.push(conver.conversationType)
+    args.push(conver.conversationId)
+    let resultSet:relationalStore.ResultSet|undefined
+    try{
+      resultSet = JimDbManager.instance.getDb()?.querySqlSync(sql,args)
+      if(resultSet?.goToNextRow()){
+        let id=JimDbUtil.toNumber(resultSet,"id")
+        if(id>0){
+          return true
+        }
+      }
+    }catch (e) {
+      console.error(`jimsdk_db_fail. [${this.tableName}], err:${e.message}`)
+    }finally {
+      resultSet?.close()
+    }
+    return false
+  }
+
   getConver(c:Conversation):ConversationInfo|undefined{
     let sql = `SELECT * FROM ${this.tableName} WHERE conver_type=? and conver_id=?`
     let args:Array<relationalStore.ValueType> = []
