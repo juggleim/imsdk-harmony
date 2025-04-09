@@ -82,12 +82,11 @@ export struct ConversationDetail {
   }
 
   loadMoreMsgs(){
-    console.log("jimsdk_top",this.conversationId,this.conversationType,this.currentConversationUserName)
     let options:QueryMsgOptions = new QueryMsgOptions()
     options.count = 10
     options.startTime = this.minMsgTime
     options.isPositive = false
-    JuggleIm.instance.getMessageManager().queryRemoteMessages(new Conversation(this.conversationId,this.conversationType),options,(code,msgs)=>{
+    JuggleIm.instance.getMessageManager().queryMessages(new Conversation(this.conversationId,this.conversationType),options,(code,msgs)=>{
       let currentUserId = JuggleIm.instance.userInfo.userId
       msgs.forEach((msg)=>{
         let viewMsg = new MessageViewItem("","Unknown",msg.sentTime)

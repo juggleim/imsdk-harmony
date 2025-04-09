@@ -241,6 +241,7 @@ export class MsgSyncManager{
   }
 
   public handleMsg(downMsg:immessage.IDownMsg,callback:(isFinish:boolean)=>void){
+    console.log("jimsdk_qryhismsg_sync")
     let msg = MsgHandler.downMsg2Message(downMsg)
     let msgFlag = MsgFlagTool.parseFlag(msg.flags)
     if(msgFlag.isState){
@@ -267,10 +268,9 @@ export class MsgSyncManager{
           // check exist
           if(!msgDao.existByMsgId(msg.messageId)){
             //save msg
-            console.log("jimsdk_modify_conver:",msg.messageId,msg.clientId)
-            console.log("jimsdk_sync_check:",JSON.stringify(msg))
+            console.log("jimsdk_qryhismsg_sync:",msg.messageId,msg.clientId)
+            console.log("jimsdk_qryhismsg_sync:",JSON.stringify(msg))
             let aff = msgDao.insert(msg)
-            console.log("jimsdk_modify_conver:",aff,msg.sentTime,this.getLatestConverSyncTime())
             if(aff>0&&msg.sentTime>this.getLatestConverSyncTime()) {
               //update conver
               JimDbManager.instance.getConversationDao().upsert2(this.msg2Conver(msg))

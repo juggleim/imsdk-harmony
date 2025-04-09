@@ -5,7 +5,6 @@ import { MsgFlagTool } from "../improto/msgflag";
 import { JimDbManager } from "./dbmanager";
 import { JimDbUtil } from "./dbutil";
 import { Conversation } from "../entries/conversation";
-import { JuggleIm } from "../../../../Index";
 import { MsgHandler } from "../entries/msghandler";
 
 export class MessageDao{
@@ -14,11 +13,18 @@ export class MessageDao{
   private constructor() {
   }
 
-  queryMessages(converId:string,converType:number,start:number,count:number):Message[]{
-    let sql = `SELECT * FROM ${this.tableName} WHERE conver_type=? and conver_id=? limit ${count}`
+  queryMessages(converId:string,converType:number,start:number,count:number,isPositive:boolean):Message[]{
+    let sql = `SELECT * FROM ${this.tableName} WHERE conver_type=? and conver_id=?`
     let args:Array<relationalStore.ValueType> = []
     args.push(converType)
     args.push(converId)
+    if(isPositive){
+      sql = sql + ` and sent_time>? order by sent_time asc`
+    }else{
+      sql = sql + ` and sent_time<? order by sent_time desc`
+    }
+    args.push(start)
+    sql = sql + ` LIMIT ${count}`
     let resultSet:relationalStore.ResultSet|undefined
     let msgList:Message[] = []
     try{
@@ -26,6 +32,9 @@ export class MessageDao{
       while (resultSet?.goToNextRow()){
         let msg = this.toMessage(resultSet)
         msgList.push(msg)
+      }
+      if(!isPositive){
+        msgList = msgList.slice().sort((a,b)=>a.sentTime-b.sentTime)
       }
       return msgList
     }catch (e) {

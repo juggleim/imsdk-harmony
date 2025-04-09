@@ -178,13 +178,48 @@ export class MessageManager{
   sendMediaMessage(msg:MessageContent,conver:Conversation){}
 
   queryMessages(conver:Conversation,options:QueryMsgOptions,callback:QryMessagesCallback){
-
+    this.queryLocalMessages(conver,options,(code,msgs)=>{
+      //check lack msgs
+      let isLack:boolean = false
+      let lastSeq:number = 0
+      msgs.forEach((msg)=>{
+        if(lastSeq==0){
+          lastSeq = msg.msgSeqNo
+        }else{
+          if(lastSeq!=msg.msgSeqNo-1){
+            isLack = true
+            return
+          }else{
+            lastSeq = msg.msgSeqNo
+          }
+        }
+      })
+      if(isLack||msgs.length<options.count){
+        //query from remote
+        this.queryRemoteMessages(conver,options,(code,remoteMsgs,hasMore)=>{
+          remoteMsgs.forEach((msg)=>{
+            //check exist
+            let msgDao = JimDbManager.instance.getMessageDao()
+            if(!msgDao.existByMsgId(msg.messageId)){
+              //save msg
+              msgDao.insert(msg)
+            }
+          })
+          callback(code,remoteMsgs,hasMore)
+        })
+      }else{
+        callback(code,msgs,msgs.length>=options.count)
+      }
+    })
   }
 
   queryLocalMessages(conver:Conversation,options:QueryMsgOptions,callback:QryMessagesCallback){
     let dao = JimDbManager.instance.getMessageDao()
-    let msgs = dao.queryMessages(conver.conversationId,conver.conversationType,options.startTime,options.count)
-    callback(0,msgs,false)
+    if(!options.isPositive&&options.startTime<=0){
+      options.startTime = new Date().getTime()
+    }
+    let msgs = dao.queryMessages(conver.conversationId,conver.conversationType,options.startTime,options.count,options.isPositive)
+    callback(0,msgs,msgs.length>=options.count)
   }
 
   queryRemoteMessages(conver:Conversation,options:QueryMsgOptions,callback:QryMessagesCallback){
