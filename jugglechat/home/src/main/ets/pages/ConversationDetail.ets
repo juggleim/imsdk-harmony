@@ -23,7 +23,6 @@ import {MessageViewItem} from '../viewmodel/MessageViewModel'
 import { ObservedArray } from '../jim/common';
 import { JuggleIm } from 'juggleim';
 import { Conversation } from 'juggleim/src/main/ets/entries/conversation';
-import { TextMessage } from 'juggleim/src/main/ets/entries/message'
 import { QueryMsgOptions } from 'juggleim/src/main/ets/managers/messagemanager';
 
 @Component
@@ -60,18 +59,21 @@ export struct ConversationDetail {
     let param = this.pageInfo.getParamByIndex(0) as ConversationDetailParams
     this.conversationId = param.conversationId
     this.conversationType = param.converType
+    console.log("jimsdk_video_converid:",this.conversationId)
 
-    JuggleIm.instance.getMessageManager().addMsgReceivedListener((message)=>{
+    JuggleIm.instance.getMessageManager().addMsgReceivedListener(async (message)=>{
       let conver = message.conversation
       let currentUserId = JuggleIm.instance.userInfo.userId
       if(conver?.conversationId===param.conversationId){
-        let viewMsg = new MessageViewItem("","Unknown",message.sentTime)
+        let senderName:string = ''
+        let senderIcon:string = ''
+        await JuggleIm.instance.getUserInfoManager().getUserInfo(message.senderId).then((u)=>{
+          senderName = u.nickname
+          senderIcon = u.userPortrait
+        })
+        let viewMsg = new MessageViewItem(senderName,senderIcon,message.msgContent,message.sentTime)
         if(currentUserId==message.senderId){
           viewMsg.isReceived = false
-        }
-        if(message.msgType=="jg:text") {
-          let txtMsg = message.msgContent as TextMessage
-          viewMsg.content = txtMsg.content
         }
         this.msgList.push(viewMsg)
         this.scroller.scrollEdge(Edge.Bottom)
@@ -87,14 +89,16 @@ export struct ConversationDetail {
     options.isPositive = false
     JuggleIm.instance.getMessageManager().queryMessages(new Conversation(this.conversationId,this.conversationType),options,(code,msgs)=>{
       let currentUserId = JuggleIm.instance.userInfo.userId
-      msgs.forEach((msg)=>{
-        let viewMsg = new MessageViewItem("","Unknown",msg.sentTime)
+      msgs.forEach(async (msg)=>{
+        let senderName:string = ''
+        let senderIcon:string = ''
+        await JuggleIm.instance.getUserInfoManager().getUserInfo(msg.senderId).then((u)=>{
+          senderName = u.nickname
+          senderIcon = u.userPortrait
+        })
+        let viewMsg = new MessageViewItem(senderName,senderIcon,msg.msgContent,msg.sentTime)
         if(currentUserId==msg.senderId){
           viewMsg.isReceived = false
-        }
-        if(msg.msgType=="jg:text") {
-          let txtMsg = msg.msgContent as TextMessage
-          viewMsg.content = txtMsg.content
         }
         this.msgList.push(viewMsg)
         this.recordMsgTime(msg.sentTime)

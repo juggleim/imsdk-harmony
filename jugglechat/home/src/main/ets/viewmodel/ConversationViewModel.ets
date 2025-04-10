@@ -18,9 +18,9 @@ import { BusinessError } from '@kit.BasicServicesKit';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { Logger } from 'base';
 import { JuggleIm } from 'juggleim';
-import { JimUtil } from 'juggleim/src/main/ets/commons/jimutil';
 import { ConversationInfo } from 'juggleim/src/main/ets/entries/conversation';
-import { FileMessage, TextMessage } from 'juggleim/src/main/ets/entries/message';
+import { FileMessage, ImageMessage, TextMessage, VideoMessage,
+  VoiceMessage } from 'juggleim/src/main/ets/entries/message';
 import { CommonUtil } from '../jim/common';
 
 @Observed
@@ -80,6 +80,12 @@ export function toConverViewItem(conver:ConversationInfo):ConversationViewItem{
       msgStr = txtMsg.content
     } else if (conver.lastMessage.msgContent instanceof FileMessage) {
       msgStr = "[File]"
+    } else if(conver.lastMessage.msgContent instanceof ImageMessage){
+      msgStr = "[Image]"
+    } else if(conver.lastMessage.msgContent instanceof VideoMessage){
+      msgStr = "[Video]"
+    } else if(conver.lastMessage.msgContent instanceof VoiceMessage){
+      msgStr = "[Voice]"
     } else {
       msgStr = "Unknown"
     }

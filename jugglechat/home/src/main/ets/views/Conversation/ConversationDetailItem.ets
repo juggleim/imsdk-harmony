@@ -13,25 +13,26 @@
  * limitations under the License.
  */
 
-import { HomeConstants } from '../../constants/HomeConstants';
+import { MessageContent } from 'juggleim/src/main/ets/entries/message';
 import { MessageBubble } from '../MessageBubble';
 
 @Component
 export struct ConversationDetailItem {
-  private receivedName?: string = '';
+  private senderName?:string
+  private senderIcon?:string
+  private msgContent?:MessageContent
+
   private isReceived?: boolean = false;
-  private content?: ResourceStr = '';
-  private isAppletMsg?: boolean;
-  private isDocumentMsg?: boolean;
+  private msgTime:number=0
 
   build() {
     Flex({ justifyContent: FlexAlign.End, alignItems: ItemAlign.End }) {
       MessageBubble({
-        receivedName: this.receivedName,
+        senderName:this.senderName,
+        senderIcon:this.senderIcon,
+        msgContent:this.msgContent,
         isReceived: this.isReceived,
-        content: this.content,
-        isAppletMsg: this.isAppletMsg,
-        isDocumentMsg: this.isDocumentMsg
+        msgTime:this.msgTime
       })
     }
   }

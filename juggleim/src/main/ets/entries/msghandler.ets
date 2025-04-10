@@ -4,23 +4,27 @@ import { MessageContent, TextMessage, MergeMessage, VoiceMessage, ImageMessage, 
   Message } from "./message"
 import { Conversation } from "./conversation"
 import { JimUtil } from "../commons/jimutil"
+import { UserInfo } from "./user"
+import { JuggleIm } from "../../../../Index"
+import { GroupInfo } from "./group"
+import { JimMsgType } from "./msgtypes"
 
 export class MsgHandler{
   private static msgTypeMap:Map<string,Function> = new Map()
 
   static init() {
     //regist inner msg type
-    MsgHandler.registerMessage("jg:text",TextMessage)
-    MsgHandler.registerMessage("jg:merge",MergeMessage)
-    MsgHandler.registerMessage("jg:voice",VoiceMessage)
-    MsgHandler.registerMessage("jg:img",ImageMessage)
-    MsgHandler.registerMessage("jg:file",FileMessage)
-    MsgHandler.registerMessage("jg:video",VideoMessage)
-    MsgHandler.registerMessage("jg:recallinfo",RecallInfoMessage)
+    MsgHandler.registerMessage(JimMsgType.Text,TextMessage)
+    MsgHandler.registerMessage(JimMsgType.Merge,MergeMessage)
+    MsgHandler.registerMessage(JimMsgType.Voice,VoiceMessage)
+    MsgHandler.registerMessage(JimMsgType.Image,ImageMessage)
+    MsgHandler.registerMessage(JimMsgType.File,FileMessage)
+    MsgHandler.registerMessage(JimMsgType.Video,VideoMessage)
+    MsgHandler.registerMessage(JimMsgType.RecallInfo,RecallInfoMessage)
     //cmd msg
-    MsgHandler.registerMessage("jg:recall",RecallCmdMessage)
-    MsgHandler.registerMessage("jg:readntf",ReadNtfMessage)
-    MsgHandler.registerMessage("jg:clearunread",ClearUnreadMessage)
+    MsgHandler.registerMessage(JimMsgType.RecallCmd,RecallCmdMessage)
+    MsgHandler.registerMessage(JimMsgType.ReadNtf,ReadNtfMessage)
+    MsgHandler.registerMessage(JimMsgType.ClearUnread,ClearUnreadMessage)
   }
 
   static registerMessage(msgType:string,constructor:Function){
@@ -53,8 +57,35 @@ export class MsgHandler{
 
     message.sentTime = JimUtil.toNumber(downMsg.msgTime as number)
     message.msgSeqNo = JimUtil.toNumber(downMsg.msgSeqNo as number)
+    message.msgUnreadIndex = JimUtil.toNumber(downMsg.unreadIndex as number)
+    message.senderId = downMsg.senderId as string
+    message.memberCount = JimUtil.toNumber(downMsg.memberCount as number)
+    message.searchContent = downMsg.SearchText as string
+    message.referMsgId = downMsg.referMsg as string
 
     message.flags = JimUtil.toNumber(downMsg.flags as number)
+
+    //check userinfo
+    if(downMsg.channelType===immessage.ChannelType.Private){
+      if(downMsg.targetUserInfo!=null&&downMsg.targetUserInfo!=undefined){
+        let user = new UserInfo()
+        user.userId = downMsg.targetUserInfo.userId as string
+        user.nickname = downMsg.targetUserInfo.nickname as string
+        user.userPortrait = downMsg.targetUserInfo.userPortrait as string
+        user.userType = JimUtil.toNumber(downMsg.targetUserInfo.userType as number)
+        user.updTime = JimUtil.toNumber(downMsg.targetUserInfo.updatedTime as number)
+        JuggleIm.instance.getUserInfoManager().saveUserInfo(user)
+      }
+    }else if(downMsg.channelType === immessage.ChannelType.Group){
+      if(downMsg.groupInfo!=null&&downMsg.groupInfo!=undefined){
+        let grp = new GroupInfo()
+        grp.groupId = downMsg.groupInfo.groupId as string
+        grp.groupName = downMsg.groupInfo.groupName as string
+        grp.groupPortrait = downMsg.groupInfo.groupPortrait as string
+        grp.updTime = JimUtil.toNumber(downMsg.groupInfo.updatedTime as number)
+        JuggleIm.instance.getGroupInfoManager().saveGroupInfo(grp)
+      }
+    }
 
     return message
   }

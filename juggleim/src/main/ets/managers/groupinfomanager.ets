@@ -12,7 +12,9 @@ export class GroupInfoManager{
 
   saveGroupInfo(grpInfo:GroupInfo){
     let dao = JimDbManager.instance.getGroupDao()
-    dao.upsert(grpInfo)
+    if(dao.needUpdate(grpInfo.groupId,grpInfo.updTime)) {
+      dao.upsert(grpInfo)
+    }
   }
 
   getLocalGroupInfo(groupId:string):GroupInfo|null{

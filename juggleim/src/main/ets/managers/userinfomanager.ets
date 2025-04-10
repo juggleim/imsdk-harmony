@@ -5,6 +5,8 @@ import { ImClient } from "../imclients/imclient";
 import { immessage } from "../improto/immessage";
 import { JimUtil } from "../commons/jimutil";
 
+export type UserInfoCallback = (code:number,userInfo:UserInfo)=>void
+
 export class UserInfoManager{
   private imclient:ImClient
   constructor(imclient:ImClient) {
@@ -13,7 +15,9 @@ export class UserInfoManager{
 
   saveUserInfo(userInfo:UserInfo){
     let userDao = JimDbManager.instance.getUserDao()
-    userDao.upsert(userInfo)
+    if(userDao.needUpdate(userInfo.userId, userInfo.updTime)) {
+      userDao.upsert(userInfo)
+    }
   }
 
   getLocalUserInfo(userid:string):UserInfo|null{
@@ -31,47 +35,49 @@ export class UserInfoManager{
     return null
   }
 
-  getUserInfo(userid:string):UserInfo{
-    let user = new UserInfo()
-    user.userId = userid
-    let userDao = JimDbManager.instance.getUserDao()
-    let dbUser = userDao.getUser(userid)
-    console.log("jimsdk_qryu_db",JSON.stringify(dbUser))
-    if(dbUser!=null){
-      user.nickname = dbUser.nickname
-      user.userPortrait = dbUser.userPortrait
-      user.updTime = dbUser.updTime
-    }else{
-      // this.qryUserInfo(userid).then((u)=>{
-      //   if(u!=null){
-      //     userDao.upsert(u)
-      //   }
-      // })
-    }
-    return user
+  getUserInfo(userid:string):Promise<UserInfo>{
+    return new Promise((resolve)=>{
+      let user = new UserInfo()
+      user.userId = userid
+      let userDao = JimDbManager.instance.getUserDao()
+      let dbUser = userDao.getUser(userid)
+      console.log("jimsdk_qryu_db",JSON.stringify(dbUser))
+      if(dbUser!=null){
+        user.nickname = dbUser.nickname
+        user.userPortrait = dbUser.userPortrait
+        user.userType = dbUser.userType
+        user.updTime = dbUser.updTime
+        resolve(user)
+      }else{
+        this.getRemoteUserInfo(userid,(code,user)=>{
+          if(code==0) {
+            userDao.upsert(user)
+          }
+          resolve(user)
+        })
+      }
+    })
   }
 
-  private qryUserInfo(userid:string):Promise<UserInfo|null>{
-    return new Promise((resolve)=>{
-      let req = immessage.UserIdReq.create({
-        "userId":userid
-      })
-      let data = immessage.UserIdReq.encode(req).finish()
-      this.imclient.query("qry_user_info",userid,data,(code,qryAck)=>{
-        if(code==0){
-          let user = new UserInfo()
-          user.userId = userid
-          let d = qryAck.data as Uint8Array
-          let u = immessage.UserInfo.decode(d)
-          user.nickname  = u.nickname
-          user.userPortrait = u.userPortrait
-          user.updTime = JimUtil.toNumber(u.updatedTime)
-          user.userType = u.userType as number
-          resolve(user)
-        }else{
-          resolve(null)
-        }
-      })
+  public getRemoteUserInfo(userid:string,callback:UserInfoCallback){
+    let req = immessage.UserIdReq.create({
+      "userId":userid
+    })
+    let data = immessage.UserIdReq.encode(req).finish()
+    this.imclient.query("qry_user_info",userid,data,(code,qryAck)=>{
+      let user = new UserInfo()
+      user.userId = userid
+      if(code==0){
+        let d = qryAck.data as Uint8Array
+        let u = immessage.UserInfo.decode(d)
+        user.nickname  = u.nickname
+        user.userPortrait = u.userPortrait
+        user.updTime = JimUtil.toNumber(u.updatedTime)
+        user.userType = u.userType as number
+        callback(code,user)
+      }else{
+        callback(code,user)
+      }
     })
   }
 }

@@ -23,7 +23,6 @@ import { ObservedArray} from '../jim/common'
 import {JuggleIm} from 'juggleim'
 import { ConnStatus } from 'juggleim/src/main/ets/imclients/imclient';
 import { toConverViewItem } from '../viewmodel/ConversationViewModel'
-import { ConversationInfo } from 'juggleim/src/main/ets/entries/conversation';
 import {
   ConversationAddListener,
   ConversationDeleteListener,

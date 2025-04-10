@@ -13,26 +13,50 @@
  * limitations under the License.
  */
 
-import { BaseConstants, BreakpointConstants, IntroduceText, NormalText } from 'base'
+import { BaseConstants, BreakpointConstants } from 'base'
+import { FileMessage, ImageMessage, MessageContent, TextMessage,
+  VideoMessage,
+  VoiceMessage} from 'juggleim/src/main/ets/entries/message';
 import { HomeConstants } from '../constants/HomeConstants';
+import { JimMsgType } from 'juggleim/src/main/ets/entries/msgtypes';
+import { TextMsgBubble } from './MsgBubbles/TextMsgBubble';
+import { ImageMsgBubble } from './MsgBubbles/ImageMsgBubble';
+import { FileMsgBubble } from './MsgBubbles/FileMsgBubble';
+import { VideoMsgBubble } from './MsgBubbles/VideoMsgBubble';
+import { VoiceMsgBubble } from './MsgBubbles/VoiceMsgBubble';
 
 @Component
 export struct MessageBubble {
   @StorageProp('currentBreakpoint') currentBreakpoint: string = BreakpointConstants.BREAKPOINT_SM;
-  receivedName: string = 'xxx';
   // @Link currentFeatureIndex: number;
   private isReceived: boolean = !HomeConstants.IS_RECEIVED;
-  private content: ResourceStr = "";
-  private isAppletMsg?: boolean;
-  private isDocumentMsg?: boolean;
   avatar1: Resource = $r('app.media.avatar1');
   avatar2: Resource = $r('app.media.avatar7');
+  private senderName?:string
+  private senderIcon?:string
+  private msgContent?:MessageContent
+  private msgTime?:number
+
+  private getAvata():ResourceStr{
+    if(this.senderIcon!==undefined&&this.senderIcon!=''){
+      return this.senderIcon
+    }else{
+      return $r('app.media.avatar1')
+    }
+  }
+
+  private getMsgType():string{
+    if(this.msgContent!==undefined){
+      return this.msgContent.getMsgType()
+    }
+    return "unknown"
+  }
 
   build() {
     Column() {
       Flex({ justifyContent: this.isReceived ? FlexAlign.Start : FlexAlign.End, direction: FlexDirection.Row }) {
         if (this.isReceived) {
-          Image(this.avatar1) //ConversationListData.find((item) => item.name === this.receivedName)?.icon || this.avatar1
+          Image(this.getAvata())
             .width($r('app.float.avatar_image_size'))
             .height($r('app.float.avatar_image_size'))
             .flexShrink(BaseConstants.FLEX_SHRINK_ZERO)
@@ -90,82 +114,28 @@ export struct MessageBubble {
 
   @Builder
   MessageContent() {
-    if (this.isAppletMsg) {
-      Column() {
-        Row() {
-          Image($r('app.media.ic_tea'))
-            .height($r('app.float.applet_icon_size'))
-            .width($r('app.float.applet_icon_size'))
-            .margin({ right: $r('app.float.applet_icon_right') })
-          Text(HomeConstants.APPLET_TITLE)
-            .fontFamily(BaseConstants.FONT_FAMILY_NORMAL)
-            .fontSize(BaseConstants.FONT_SIZE_TWELVE)
-            .fontColor($r('app.color.conversation_default_text_color'))
-            .textAlign(TextAlign.Start)
-            .fontWeight(BaseConstants.FONT_WEIGHT_FOUR)
-        }
-        .margin({ bottom: $r('app.float.applet_title_bottom') })
-
-        Text(this.content)
-          .fontFamily(BaseConstants.FONT_FAMILY_NORMAL)
-          .fontSize(BaseConstants.FONT_SIZE_TWELVE)
-          .fontColor($r('app.color.conversation_default_text_color'))
-          .textAlign(TextAlign.Start)
-          .fontWeight(BaseConstants.FONT_WEIGHT_FOUR)
-          .margin({ bottom: $r('app.float.applet_introduce_bottom') })
-          .copyOption(CopyOptions.LocalDevice)
-        Flex() {
-        }
-        .height($r('app.float.applet_image_height'))
-        .width($r('app.float.applet_image_width'))
-        .backgroundImage($r('app.media.picture_applet_link'))
-        .backgroundImageSize({ width: $r('app.float.applet_image_width'), height: $r('app.float.applet_image_height') })
-        .constraintSize({ maxWidth: BaseConstants.FULL_WIDTH })
-        .margin({ bottom: $r('app.float.applet_image_bottom') })
-
-        Text(HomeConstants.APPLET_DESCRIBE)
-          .fontFamily(BaseConstants.FONT_FAMILY_NORMAL)
-          .fontSize(BaseConstants.FONT_SIZE_TEN)
-          .fontColor($r('app.color.background_color_grey_three'))
-          .textAlign(TextAlign.Start)
-          .fontWeight(BaseConstants.FONT_WEIGHT_FOUR)
-      }
-      .alignItems(HorizontalAlign.Start)
-    } else if (this.isDocumentMsg) {
-      Column() {
-        Row() {
-          NormalText({ data: this.content })
-            .margin({ right: $r('app.float.applet_icon_right') })
-            .width($r('app.float.document_text_width'))
-          Image($r('app.media.ic_PDF'))
-            .height($r('app.float.document_icon_size'))
-            .width($r('app.float.document_icon_size'))
-            .margin({ right: $r('app.float.document_icon_right') })
-        }
-        .margin({ bottom: $r('app.float.document_icon_bottom') })
-
-        IntroduceText({ data: HomeConstants.DOCUMENT_SIZE, fontColor: $r('app.color.background_color_grey_three') })
-          .margin({ bottom: $r('app.float.document_text_bottom') })
-        Divider()
-          .color($r('app.color.divider_background_color'))
-          .strokeWidth(HomeConstants.DOCUMENT_DIVIDER_WIDTH).margin({ bottom: $r('app.float.divider_bottom') })
-        Row() {
-          Image($r('app.media.ic_file'))
-            .width($r('app.float.document_small_icon_size'))
-            .height($r('app.float.document_small_icon_size'))
-            .margin({ right: $r('app.float.document_small_icon_right') })
-          IntroduceText({
-            data: HomeConstants.DOCUMENT_INTRODUCE,
-            fontColor: $r('app.color.background_color_grey_three')
-          })
-            .margin({ top: $r('app.float.document_introduce_top') })
-        }
-      }
-      .alignItems(HorizontalAlign.Start)
-      .width($r('app.float.document_width'))
-      .margin({ bottom: $r('app.float.document_bottom') })
+    if(this.getMsgType() == JimMsgType.Text){
+      TextMsgBubble({
+        txtMsg:this.msgContent as TextMessage
+      })
+    } else if (this.getMsgType() == JimMsgType.Image){
+      ImageMsgBubble({
+        imgMsg:this.msgContent as ImageMessage
+      })
+    } else if (this.getMsgType() == JimMsgType.File){
+      FileMsgBubble({
+        fileMsg:this.msgContent as FileMessage
+      })
+    } else if(this.getMsgType() == JimMsgType.Video){
+      VideoMsgBubble({
+        videoMsg:this.msgContent as VideoMessage
+      })
+    } else if(this.getMsgType() == JimMsgType.Voice){
+      VoiceMsgBubble({
+        voiceMsg:this.msgContent as VoiceMessage
+      })
     } else {
-      Text(this.content)
+      Text('Unknown')
         .fontSize(BaseConstants.FONT_SIZE_TWELVE)
         .fontFamily(BaseConstants.FONT_FAMILY_NORMAL)
         .fontWeight(BaseConstants.FONT_WEIGHT_FOUR)

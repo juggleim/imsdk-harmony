@@ -1,16 +1,18 @@
+import { MessageContent } from "juggleim/src/main/ets/entries/message"
 
 @Observed
 class MessageViewItem{
+  senderName:string
+  senderIcon?:string
+  msgContent?:MessageContent
+
   isReceived:boolean = true
-  receivedName:string
-  content:ResourceStr
-  isAppletMsg:boolean = false
-  isDocumentMsg:boolean = false
   msgTime:number = 0
 
-  constructor(receivedName:string,content:ResourceStr,msgTime:number) {
-    this.receivedName = receivedName
-    this.content = content
+  constructor(senderName:string,senderIcon:string,msgContent:MessageContent,msgTime:number) {
+    this.senderName = senderName
+    this.senderIcon = senderIcon
+    this.msgContent = msgContent
     this.msgTime = msgTime
   }
 }

@@ -10,6 +10,28 @@ export class GroupDao{
   private constructor() {
   }
 
+  needUpdate(groupId:string,updTime:number):boolean{
+    let sql = `SELECT id,upd_time FROM ${this.tableName} WHERE group_id=?`
+    let args:Array<relationalStore.ValueType> = []
+    args.push(groupId)
+    let resultSet:relationalStore.ResultSet|undefined
+    try{
+      resultSet = JimDbManager.instance.getDb()?.querySqlSync(sql,args)
+      if(resultSet?.goToNextRow()){
+        let id = JimDbUtil.toNumber(resultSet,"id")
+        let dbUpdTime = JimDbUtil.toNumber(resultSet,"upd_time")
+        if(id>0&&dbUpdTime>=updTime){
+          return false
+        }
+      }
+    }catch (e) {
+      console.error(`jimsdk_db_fail. [${this.tableName}] err:${e.message}`)
+    }finally {
+      resultSet?.close()
+    }
+    return true
+  }
+
   getGroupInfo(groupId:string):GroupInfo|null{
     let sql = `SELECT group_id,name,portrait,upd_time FROM ${this.tableName} WHERE group_id=?`
     let args:Array<relationalStore.ValueType> = []

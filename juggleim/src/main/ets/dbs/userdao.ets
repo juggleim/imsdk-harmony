@@ -9,6 +9,28 @@ export class UserDao{
   private constructor() {
   }
 
+  needUpdate(userId:string,updTime:number):boolean{
+    let sql = `SELECT id,upd_time FROM ${this.tableName} WHERE user_id=?`
+    let args:Array<relationalStore.ValueType> = []
+    args.push(userId)
+    let resultSet:relationalStore.ResultSet|undefined
+    try{
+      resultSet = JimDbManager.instance.getDb()?.querySqlSync(sql,args)
+      if(resultSet?.goToNextRow()){
+        let id = JimDbUtil.toNumber(resultSet,"id")
+        let dbUpdTime = JimDbUtil.toNumber(resultSet,"upd_time")
+        if(id>0&&dbUpdTime>=updTime){
+          return false
+        }
+      }
+    }catch (e) {
+      console.error(`jimsdk_db_fail. [${this.tableName}] err:${e.message}`)
+    }finally {
+      resultSet?.close()
+    }
+    return true
+  }
+
   getUser(userId:string):UserInfo|null{
     let sql = `SELECT user_id,name,portrait,user_type,upd_time FROM ${this.tableName} WHERE user_id=?`
     let args:Array<relationalStore.ValueType> = []

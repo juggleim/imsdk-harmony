@@ -1,6 +1,7 @@
 import {MessageContent} from './message'
 import { MsgFlag } from '../improto/msgflag'
 import { JimUtil } from '../commons/jimutil'
+import { JimMsgType } from './msgtypes'
 
 interface IRecallCmdMessage{
   msg_id:string
@@ -14,7 +15,7 @@ export class RecallCmdMessage extends MessageContent{
   exts:Map<string,string> = new Map()
   constructor() {
     super()
-    this.setMsgType("jg:recall")
+    this.setMsgType(JimMsgType.RecallCmd)
     let msgFlag = new MsgFlag()
     msgFlag.isCmd = true
     this.setMsgFlag(msgFlag)
@@ -58,7 +59,7 @@ export class ReadNtfMessage extends MessageContent{
   indexScopes:IIndexScope[] = []
   constructor() {
     super()
-    this.setMsgType("jg:readntf")
+    this.setMsgType(JimMsgType.ReadNtf)
     let msgFlag = new MsgFlag()
     msgFlag.isCmd = true
     this.setMsgFlag(msgFlag)
@@ -94,7 +95,7 @@ export class ClearUnreadMessage extends  MessageContent{
   conversations:IClearUnreadConver[] = []
   constructor() {
     super()
-    this.setMsgType("jg:clearunread")
+    this.setMsgType(JimMsgType.ClearUnread)
     let msgFlag = new MsgFlag()
     msgFlag.isCmd = true
     this.setMsgFlag(msgFlag)

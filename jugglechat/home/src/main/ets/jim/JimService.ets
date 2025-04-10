@@ -1,8 +1,6 @@
 import {JuggleIm} from 'juggleim'
-import { taskpool } from '@kit.ArkTS'
-import { TextMessage } from 'juggleim/src/main/ets/entries/message'
 
-export function initJuggleIm(connectCallback:(status:number,code:number)=>void){
+export async function initJuggleIm(connectCallback:(status:number,code:number)=>void){
   JuggleIm.instance.init("ws://ws.juggleim.com/im","nsw3sue72begyv7y")
   JuggleIm.instance.getConnectionManager().addConnectStatusListener((status,code)=>{
     console.log("jimsdk_connect_status:",status,"\tcode:",code)

@@ -493,30 +493,24 @@ export class MsgSyncManager{
       converInfo.lastMessage.msgUnreadIndex = JimUtil.toNumber(conver.msg.unreadIndex as number)
       converInfo.lastMessage.senderId = conver.msg.senderId as string
       if (converInfo.conversation.conversationType == 1) {
-        let dbU = JuggleIm.instance.getUserInfoManager().getLocalUserInfo(conver.targetId as string)
-        if (dbU === null) {
-          if (conver.targetUserInfo != null && conver.targetUserInfo != undefined) {
-            let user = new UserInfo()
-            user.userId = conver.targetUserInfo.userId as string
-            user.nickname = conver.targetUserInfo.nickname as string
-            user.userPortrait = conver.targetUserInfo.userPortrait as string
-            user.updTime = JimUtil.toNumber(conver.targetUserInfo.updatedTime as number)
-            user.userType = conver.targetUserInfo.userType as number
-            JuggleIm.instance.getUserInfoManager().saveUserInfo(user)
-          }
+        if (conver.targetUserInfo != null && conver.targetUserInfo != undefined) {
+          let user = new UserInfo()
+          user.userId = conver.targetUserInfo.userId as string
+          user.nickname = conver.targetUserInfo.nickname as string
+          user.userPortrait = conver.targetUserInfo.userPortrait as string
+          user.updTime = JimUtil.toNumber(conver.targetUserInfo.updatedTime as number)
+          user.userType = conver.targetUserInfo.userType as number
+          JuggleIm.instance.getUserInfoManager().saveUserInfo(user)
         }
       } else if (converInfo.conversation.conversationType == 2) {
-        let dbGrp = JuggleIm.instance.getGroupInfoManager().getLocalGroupInfo(conver.targetId as string)
-        if (dbGrp === null) {
-          if (conver.groupInfo != null && conver.groupInfo != undefined) {
-            let grp = new GroupInfo()
-            grp.groupId = conver.groupInfo.groupId as string
-            grp.groupName = conver.groupInfo.groupName as string
-            grp.groupPortrait = conver.groupInfo.groupPortrait as string
-            grp.updTime = JimUtil.toNumber(conver.groupInfo.updatedTime as number)
-            JuggleIm.instance.getGroupInfoManager().saveGroupInfo(grp)
-            console.log("jimsdk_grp:", JSON.stringify(grp))
-          }
+        if (conver.groupInfo != null && conver.groupInfo != undefined) {
+          let grp = new GroupInfo()
+          grp.groupId = conver.groupInfo.groupId as string
+          grp.groupName = conver.groupInfo.groupName as string
+          grp.groupPortrait = conver.groupInfo.groupPortrait as string
+          grp.updTime = JimUtil.toNumber(conver.groupInfo.updatedTime as number)
+          JuggleIm.instance.getGroupInfoManager().saveGroupInfo(grp)
+          console.log("jimsdk_grp:", JSON.stringify(grp))
         }
       }
       console.log("jimsdk_converinfo:", conver.targetId, conver.channelType, JSON.stringify(conver.groupInfo),

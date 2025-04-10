@@ -1,6 +1,7 @@
 import { JimUtil } from '../commons/jimutil'
 import { MsgFlag, MsgFlagTool } from '../improto/msgflag'
 import { Conversation } from './conversation'
+import { JimMsgType } from './msgtypes'
 
 export class MessageSentState{
   static none:number = 0
@@ -81,7 +82,7 @@ export class TextMessage extends MessageContent{
   public extra:string = ''
   constructor() {
     super()
-    this.setMsgType("jg:text")
+    this.setMsgType(JimMsgType.Text)
     let msgFlag = new MsgFlag()
     msgFlag.isStorage = true
     msgFlag.isCount = true
@@ -129,7 +130,7 @@ export class MergeMessage extends  MessageContent{
   public extra:string = ''
   constructor() {
     super()
-    this.setMsgType("jg:merge")
+    this.setMsgType(JimMsgType.Merge)
     let msgFlag = new MsgFlag()
     msgFlag.isStorage = true
     msgFlag.isCount = true
@@ -170,7 +171,7 @@ export class VoiceMessage extends MessageContent{
   public extra:string = ''
   constructor() {
     super()
-    this.setMsgType("jg:voice")
+    this.setMsgType(JimMsgType.Voice)
     let msgFlag = new MsgFlag()
     msgFlag.isStorage = true
     msgFlag.isCount = true
@@ -215,7 +216,7 @@ export class ImageMessage extends MessageContent{
   extra:string=''
   constructor() {
     super()
-    this.setMsgType("jg:img")
+    this.setMsgType(JimMsgType.Image)
     let msgFlag = new MsgFlag()
     msgFlag.isStorage = true
     msgFlag.isCount = true
@@ -262,7 +263,7 @@ export class FileMessage extends MessageContent{
   extra:string=''
   constructor() {
     super()
-    this.setMsgType("jg:file")
+    this.setMsgType(JimMsgType.File)
     let msgFlag = new MsgFlag()
     msgFlag.isStorage=true
     msgFlag.isCount = true
@@ -293,7 +294,7 @@ export class FileMessage extends MessageContent{
 
 interface IVideoMessage{
   url:string
-  snapshotUrl:string
+  poster:string
   height:number
   width:number
   size:number
@@ -303,7 +304,7 @@ interface IVideoMessage{
 
 export class VideoMessage extends MessageContent{
   url:string=''
-  snapshotUrl:string=''
+  poster:string=''
   height:number=0
   width:number=0
   size:number = 0
@@ -311,7 +312,7 @@ export class VideoMessage extends MessageContent{
   extra:string=''
   constructor() {
     super()
-    this.setMsgType("jg:video")
+    this.setMsgType(JimMsgType.Video)
     let msgFlag = new MsgFlag()
     msgFlag.isStorage=true
     msgFlag.isCount = true
@@ -321,7 +322,7 @@ export class VideoMessage extends MessageContent{
   encode():Uint8Array{
     let str = JSON.stringify({
       url:this.url,
-      snapshotUrl:this.snapshotUrl,
+      poster:this.poster,
       height:this.height,
       width:this.width,
       size:this.size,
@@ -335,7 +336,7 @@ export class VideoMessage extends MessageContent{
     let str = JimUtil.uint8ArrayToString(data)
     let t = JSON.parse(str) as IVideoMessage
     this.url = t.url
-    this.snapshotUrl = t.snapshotUrl
+    this.poster = t.poster
     this.height = t.height
     this.width = t.width
     this.size = t.size
@@ -352,7 +353,7 @@ export class RecallInfoMessage extends MessageContent{
   exts:Map<string,string> = new Map()
   constructor() {
     super()
-    this.setMsgType("jg:recallinfo")
+    this.setMsgType(JimMsgType.RecallInfo)
     let msgFlag = new MsgFlag()
     msgFlag.isStorage=true
     msgFlag.isCount = true
