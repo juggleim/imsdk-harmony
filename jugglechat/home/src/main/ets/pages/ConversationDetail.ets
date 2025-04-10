@@ -23,7 +23,7 @@ import {MessageViewItem} from '../viewmodel/MessageViewModel'
 import { ObservedArray } from '../jim/common';
 import { JuggleIm } from 'juggleim';
 import { Conversation } from 'juggleim/src/main/ets/entries/conversation';
-import { QueryMsgOptions } from 'juggleim/src/main/ets/managers/messagemanager';
+import { MsgReceivedListener, QueryMsgOptions } from 'juggleim/src/main/ets/managers/messagemanager';
 
 @Component
 export struct ConversationDetail {
@@ -38,6 +38,7 @@ export struct ConversationDetail {
   private minMsgTime:number = Number.MAX_SAFE_INTEGER
   @State refreshing:boolean = false
   private scroller:Scroller = new Scroller()
+  private msgReceiveListener:MsgReceivedListener = async (message)=>{}
 
   @Builder
   refreshContent() {
@@ -61,7 +62,7 @@ export struct ConversationDetail {
     this.conversationType = param.converType
     console.log("jimsdk_video_converid:",this.conversationId)
 
-    JuggleIm.instance.getMessageManager().addMsgReceivedListener(async (message)=>{
+    this.msgReceiveListener = async (message)=>{
       let conver = message.conversation
       let currentUserId = JuggleIm.instance.userInfo.userId
       if(conver?.conversationId===param.conversationId){
@@ -78,8 +79,14 @@ export struct ConversationDetail {
         this.msgList.push(viewMsg)
         this.scroller.scrollEdge(Edge.Bottom)
       }
-    })
+    }
+
+    JuggleIm.instance.getMessageManager().addMsgReceivedListener(this.msgReceiveListener)
     this.loadMoreMsgs()
+  }
+
+  aboutToDisappear(): void {
+    JuggleIm.instance.getMessageManager().removeMsgReceivedListener(this.msgReceiveListener)
   }
 
   loadMoreMsgs(){
