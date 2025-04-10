@@ -30,6 +30,7 @@ export struct ConversationItem {
         Image(this.icon)
           .height($r('app.float.avatar_image_size'))
           .width($r('app.float.avatar_image_size'))
+          .borderRadius(20)
       }
       .width($r('app.float.avatar_image_size'))
       .margin({ left: $r('app.float.icon_margin_two'), right: $r('app.float.icon_margin_one') })

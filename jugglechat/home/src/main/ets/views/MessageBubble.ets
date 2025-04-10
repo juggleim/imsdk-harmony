@@ -60,6 +60,7 @@ export struct MessageBubble {
             .width($r('app.float.avatar_image_size'))
             .height($r('app.float.avatar_image_size'))
             .flexShrink(BaseConstants.FLEX_SHRINK_ZERO)
+            .borderRadius(20)
         }
         Column() {
           Stack({ alignContent: this.isReceived ? Alignment.TopStart : Alignment.TopEnd }) {
@@ -106,6 +107,7 @@ export struct MessageBubble {
             .width($r('app.float.icon_width'))
             .height($r('app.float.icon_height'))
             .flexShrink(BaseConstants.FLEX_SHRINK_ZERO)
+            .borderRadius(20)
         }
       }
     }
