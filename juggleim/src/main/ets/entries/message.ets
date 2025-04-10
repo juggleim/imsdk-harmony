@@ -1,8 +1,6 @@
 import { JimUtil } from '../commons/jimutil'
 import { MsgFlag, MsgFlagTool } from '../improto/msgflag'
-import {UserInfo} from './user'
 import { Conversation } from './conversation'
-import { GroupInfo } from './group'
 
 export class MessageSentState{
   static none:number = 0
@@ -73,6 +71,11 @@ export class Message{
   }
 }
 
+interface ITextMessage{
+  content:string
+  extra:string
+}
+
 export class TextMessage extends MessageContent{
   public content:string = ''
   public extra:string = ''
@@ -87,15 +90,15 @@ export class TextMessage extends MessageContent{
 
   encode():Uint8Array{
     let str = JSON.stringify({
-      "content":this.content,
-      "extra":this.extra
+      content:this.content,
+      extra:this.extra
     })
     return JimUtil.stringToUint8Array(str)
   }
 
   decode(data:Uint8Array){
     let str = JimUtil.uint8ArrayToString(data)
-    let t = JSON.parse(str) as TextMessage
+    let t = JSON.parse(str) as ITextMessage
     this.content = t.content
     this.extra = t.extra
   }
@@ -108,6 +111,14 @@ export class PreviewUnit{
     this.content = content
     this.senderName = senderName
   }
+}
+
+interface IMergeMessage{
+  title:string
+  conversation:Conversation
+  messageIdList:string[]
+  previewList:PreviewUnit[]
+  extra:string
 }
 
 export class MergeMessage extends  MessageContent{
@@ -127,17 +138,17 @@ export class MergeMessage extends  MessageContent{
 
   encode():Uint8Array{
     let str = JSON.stringify({
-      "title":this.title,
-      "messageIdList":this.messageIdList,
-      "previewList":this.previewList,
-      "extra":this.extra
+      title:this.title,
+      messageIdList:this.messageIdList,
+      previewList:this.previewList,
+      extra:this.extra
     })
     return JimUtil.stringToUint8Array(str)
   }
 
   decode(data:Uint8Array){
     let str = JimUtil.uint8ArrayToString(data)
-    let t = JSON.parse(str) as MergeMessage
+    let t = JSON.parse(str) as IMergeMessage
     this.title = t.title
     this.messageIdList = t.messageIdList
     this.conversation = t.conversation
@@ -146,6 +157,12 @@ export class MergeMessage extends  MessageContent{
   }
 }
 
+interface IVoiceMessage{
+  url:string
+  type:string
+  duration:number
+  extra:string
+}
 export class VoiceMessage extends MessageContent{
   public url:string = ''
   public type:string = ''
@@ -162,22 +179,31 @@ export class VoiceMessage extends MessageContent{
 
   encode():Uint8Array{
     let str = JSON.stringify({
-      "url":this.url,
-      "type":this.type,
-      "duration":this.duration,
-      "extra":this.extra
+      url:this.url,
+      type:this.type,
+      duration:this.duration,
+      extra:this.extra
     })
     return JimUtil.stringToUint8Array(str)
   }
 
   decode(data:Uint8Array){
     let str = JimUtil.uint8ArrayToString(data)
-    let t = JSON.parse(str) as VoiceMessage
+    let t = JSON.parse(str) as IVoiceMessage
     this.url = t.url
     this.type = t.type
     this.duration = t.duration
     this.extra = t.extra
   }
+}
+
+interface IImageMessage{
+  url:string
+  thumbnail:string
+  height:number
+  width:number
+  size:number
+  extra:string
 }
 
 export class ImageMessage extends MessageContent{
@@ -198,19 +224,19 @@ export class ImageMessage extends MessageContent{
 
   encode():Uint8Array{
     let str = JSON.stringify({
-      "url":this.url,
-      "thumbnail":this.thumbnail,
-      "height":this.height,
-      "width":this.width,
-      "size":this.size,
-      "extra":this.extra
+      url:this.url,
+      thumbnail:this.thumbnail,
+      height:this.height,
+      width:this.width,
+      size:this.size,
+      extra:this.extra
     })
     return JimUtil.stringToUint8Array(str)
   }
 
   decode(data:Uint8Array){
     let str = JimUtil.uint8ArrayToString(data)
-    let t = JSON.parse(str) as ImageMessage
+    let t = JSON.parse(str) as IImageMessage
     this.url = t.url
     this.thumbnail = t.thumbnail
     this.height = t.height
@@ -218,6 +244,14 @@ export class ImageMessage extends MessageContent{
     this.size = t.size
     this.extra = t.extra
   }
+}
+
+interface IFileMessage{
+  name:string
+  url:string
+  size:number
+  type:string
+  extra:string
 }
 
 export class FileMessage extends MessageContent{
@@ -237,24 +271,34 @@ export class FileMessage extends MessageContent{
 
   encode():Uint8Array{
     let str = JSON.stringify({
-      "name":this.name,
-      "url":this.url,
-      "size":this.size,
-      "type":this.type,
-      "extra":this.extra
+      name:this.name,
+      url:this.url,
+      size:this.size,
+      type:this.type,
+      extra:this.extra
     })
     return JimUtil.stringToUint8Array(str)
   }
 
   decode(data:Uint8Array){
     let str = JimUtil.uint8ArrayToString(data)
-    let t = JSON.parse(str) as FileMessage
+    let t = JSON.parse(str) as IFileMessage
     this.name = t.name
     this.url = t.url
     this.size = t.size
     this.type = t.type
     this.extra = t.extra
   }
+}
+
+interface IVideoMessage{
+  url:string
+  snapshotUrl:string
+  height:number
+  width:number
+  size:number
+  duration:number
+  extra:string
 }
 
 export class VideoMessage extends MessageContent{
@@ -276,20 +320,20 @@ export class VideoMessage extends MessageContent{
 
   encode():Uint8Array{
     let str = JSON.stringify({
-      "url":this.url,
-      "snapshotUrl":this.snapshotUrl,
-      "height":this.height,
-      "width":this.width,
-      "size":this.size,
-      "duration":this.duration,
-      "extra":this.extra
+      url:this.url,
+      snapshotUrl:this.snapshotUrl,
+      height:this.height,
+      width:this.width,
+      size:this.size,
+      duration:this.duration,
+      extra:this.extra
     })
     return JimUtil.stringToUint8Array(str)
   }
 
   decode(data:Uint8Array){
     let str = JimUtil.uint8ArrayToString(data)
-    let t = JSON.parse(str) as VideoMessage
+    let t = JSON.parse(str) as IVideoMessage
     this.url = t.url
     this.snapshotUrl = t.snapshotUrl
     this.height = t.height
@@ -298,6 +342,10 @@ export class VideoMessage extends MessageContent{
     this.duration = t.duration
     this.extra = t.extra
   }
+}
+
+interface IRecallInfoMessage{
+  exts:Map<string,string>
 }
 
 export class RecallInfoMessage extends MessageContent{
@@ -320,7 +368,7 @@ export class RecallInfoMessage extends MessageContent{
 
   decode(data: Uint8Array): void {
     let str = JimUtil.uint8ArrayToString(data)
-    let t = JSON.parse(str) as RecallInfoMessage
+    let t = JSON.parse(str) as IRecallInfoMessage
     this.exts = JimUtil.obj2Map(t.exts)
   }
 }
