@@ -17,9 +17,7 @@ import { Adaptive, BaseConstants, BreakpointConstants } from 'base';
 import { ConversationDetailBottom } from '../views/Conversation/ConversationDetailBottom';
 import {ConversationDetailItem} from '../views/Conversation/ConversationDetailItem';
 import { ConversationDetailTopSearch } from '../views/Conversation/ConversationDetailTopSearch';
-import { HomeConstants } from '../constants/HomeConstants';
 import { deviceInfo } from '@kit.BasicServicesKit';
-import { router } from '@kit.ArkUI';
 import { ConversationDetailParams } from '../viewmodel/ConversationViewModel';
 import {MessageViewItem} from '../viewmodel/MessageViewModel'
 import { ObservedArray } from '../jim/common';
@@ -27,7 +25,6 @@ import { JuggleIm } from 'juggleim';
 import { Conversation } from 'juggleim/src/main/ets/entries/conversation';
 import { TextMessage } from 'juggleim/src/main/ets/entries/message'
 import { QueryMsgOptions } from 'juggleim/src/main/ets/managers/messagemanager';
-import { ConnStatus } from 'juggleim/src/main/ets/imclients/imclient';
 
 @Component
 export struct ConversationDetail {
@@ -41,6 +38,7 @@ export struct ConversationDetail {
   private maxMsgTime:number = 0
   private minMsgTime:number = Number.MAX_SAFE_INTEGER
   @State refreshing:boolean = false
+  private scroller:Scroller = new Scroller()
 
   @Builder
   refreshContent() {
@@ -76,6 +74,7 @@ export struct ConversationDetail {
           viewMsg.content = txtMsg.content
         }
         this.msgList.push(viewMsg)
+        this.scroller.scrollEdge(Edge.Bottom)
       }
     })
     this.loadMoreMsgs()
@@ -110,7 +109,7 @@ export struct ConversationDetail {
         ConversationDetailTopSearch({ currentConversationUserName: $currentConversationUserName, })
           .height(Adaptive.ContactItemHeight(this.currentBreakpoint))
         Refresh({refreshing:$$this.refreshing,builder:this.refreshContent}){
-          List(){
+          List({scroller:this.scroller}){
             ForEach(this.msgList,(item:MessageViewItem,index:number)=>{
               ListItem(){
                 ConversationDetailItem(item)
