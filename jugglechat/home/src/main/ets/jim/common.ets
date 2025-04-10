@@ -48,4 +48,21 @@ export class CommonUtil{
     const end = Date.now()+ms
     while(Date.now()<end){}
   }
+
+  private static defaultBackgroundColors:string[] = ['#D45246','#F68136','#6C61DF','#46BA43','#5CAFFA','#408ACF','#D95574']
+
+  static getBackgroundColor(c:string):string{
+    if(c===undefined||c.length<=0){
+      return CommonUtil.defaultBackgroundColors[0]
+    }
+    let charCode:number = c.charCodeAt(0)
+    return CommonUtil.defaultBackgroundColors[charCode%7]
+  }
+
+  static getFirstChar(c:string):string{
+    if(c===undefined||c.length<=0){
+      return ''
+    }
+    return c.charAt(0)
+  }
 }

@@ -49,10 +49,10 @@ class ConversationViewItem {
 
 export function toConverViewItem(conver:ConversationInfo):ConversationViewItem{
   //portrait
-  let iconUrl: ResourceStr = $r('app.media.avatar2')
-  if (conver.conversation.conversationType == 2) {
-    iconUrl = $r('app.media.img')
-  }
+  let iconUrl: ResourceStr = ''//$r('app.media.avatar2')
+  // if (conver.conversation.conversationType == 2) {
+  //   iconUrl = $r('app.media.img')
+  // }
   //title
   let title = ""
   if(conver.conversation.conversationType==1){

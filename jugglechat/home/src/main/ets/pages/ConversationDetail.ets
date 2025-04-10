@@ -72,7 +72,13 @@ export struct ConversationDetail {
           senderName = u.nickname
           senderIcon = u.userPortrait
         })
-        let viewMsg = new MessageViewItem(senderName,senderIcon,message.msgContent,message.sentTime)
+        let selfName:string = ''
+        let selfIcon:string = ''
+        await JuggleIm.instance.getUserInfoManager().getUserInfo(JuggleIm.instance.userId).then((u)=>{
+          selfName = u.nickname
+          selfIcon = u.userPortrait
+        })
+        let viewMsg = new MessageViewItem(senderName,senderIcon,selfName,selfIcon,message.msgContent,message.sentTime)
         if(currentUserId==message.senderId){
           viewMsg.isReceived = false
         }
@@ -103,7 +109,13 @@ export struct ConversationDetail {
           senderName = u.nickname
           senderIcon = u.userPortrait
         })
-        let viewMsg = new MessageViewItem(senderName,senderIcon,msg.msgContent,msg.sentTime)
+        let selfName:string = ''
+        let selfIcon:string = ''
+        await JuggleIm.instance.getUserInfoManager().getUserInfo(JuggleIm.instance.userId).then((u)=>{
+          selfName = u.nickname
+          selfIcon = u.userPortrait
+        })
+        let viewMsg = new MessageViewItem(senderName,senderIcon,selfName,selfIcon,msg.msgContent,msg.sentTime)
         if(currentUserId==msg.senderId){
           viewMsg.isReceived = false
         }

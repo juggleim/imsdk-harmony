@@ -15,6 +15,7 @@
 
 import { BaseConstants, BreakpointConstants } from 'base';
 import { HomeConstants } from '../../constants/HomeConstants';
+import { CommonUtil } from '../../jim/common';
 
 @Component
 export struct ConversationItem {
@@ -24,13 +25,35 @@ export struct ConversationItem {
   private time?: ResourceStr;
   private icon?: ResourceStr;
 
+  private getDefaultBackgroundColor():string{
+    return CommonUtil.getBackgroundColor(this.name as string)
+  }
+
+  private getNameFirstChar():string{
+    let n = this.name as string
+    if(n.length>0){
+      return n.charAt(0)
+    }else{
+      return ''
+    }
+  }
+
   build() {
     Flex({ alignItems: ItemAlign.Center, justifyContent: FlexAlign.SpaceBetween }) {
       Column() {
-        Image(this.icon)
-          .height($r('app.float.avatar_image_size'))
-          .width($r('app.float.avatar_image_size'))
-          .borderRadius(20)
+        if(this.icon!=''){
+          Image(this.icon)
+            .height(45)
+            .width(45)
+            .borderRadius(30)
+        }else {
+          Stack() {
+            Text(this.getNameFirstChar()).fontColor(Color.White)
+          }.backgroundColor(this.getDefaultBackgroundColor())
+          .width(45)
+          .height(45)
+          .borderRadius(30)
+        }
       }
       .width($r('app.float.avatar_image_size'))
       .margin({ left: $r('app.float.icon_margin_two'), right: $r('app.float.icon_margin_one') })

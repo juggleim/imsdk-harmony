@@ -24,26 +24,19 @@ import { ImageMsgBubble } from './MsgBubbles/ImageMsgBubble';
 import { FileMsgBubble } from './MsgBubbles/FileMsgBubble';
 import { VideoMsgBubble } from './MsgBubbles/VideoMsgBubble';
 import { VoiceMsgBubble } from './MsgBubbles/VoiceMsgBubble';
+import { CommonUtil } from '../jim/common';
 
 @Component
 export struct MessageBubble {
   @StorageProp('currentBreakpoint') currentBreakpoint: string = BreakpointConstants.BREAKPOINT_SM;
   // @Link currentFeatureIndex: number;
   private isReceived: boolean = !HomeConstants.IS_RECEIVED;
-  avatar1: Resource = $r('app.media.avatar1');
-  avatar2: Resource = $r('app.media.avatar7');
   private senderName?:string
   private senderIcon?:string
+  private selfName?:string
+  private selfIcon?:string
   private msgContent?:MessageContent
   private msgTime?:number
-
-  private getAvata():ResourceStr{
-    if(this.senderIcon!==undefined&&this.senderIcon!=''){
-      return this.senderIcon
-    }else{
-      return $r('app.media.avatar1')
-    }
-  }
 
   private getMsgType():string{
     if(this.msgContent!==undefined){
@@ -56,11 +49,20 @@ export struct MessageBubble {
     Column() {
       Flex({ justifyContent: this.isReceived ? FlexAlign.Start : FlexAlign.End, direction: FlexDirection.Row }) {
         if (this.isReceived) {
-          Image(this.getAvata())
-            .width($r('app.float.avatar_image_size'))
-            .height($r('app.float.avatar_image_size'))
-            .flexShrink(BaseConstants.FLEX_SHRINK_ZERO)
-            .borderRadius(20)
+          if(this.senderIcon!='') {
+            Image(this.senderIcon)
+              .width($r('app.float.avatar_image_size'))
+              .height($r('app.float.avatar_image_size'))
+              .flexShrink(BaseConstants.FLEX_SHRINK_ZERO)
+              .borderRadius(20)
+          }else{
+            Stack() {
+              Text(CommonUtil.getFirstChar(this.senderName as string)).fontColor(Color.White)
+            }.backgroundColor(CommonUtil.getBackgroundColor(this.senderName as string))
+            .width(40)
+            .height(40)
+            .borderRadius(30)
+          }
         }
         Column() {
           Stack({ alignContent: this.isReceived ? Alignment.TopStart : Alignment.TopEnd }) {
@@ -103,11 +105,20 @@ export struct MessageBubble {
         .width(BaseConstants.FULL_WIDTH)
 
         if (!this.isReceived) {
-          Image(this.avatar2)
-            .width($r('app.float.icon_width'))
-            .height($r('app.float.icon_height'))
-            .flexShrink(BaseConstants.FLEX_SHRINK_ZERO)
-            .borderRadius(20)
+          if(this.selfIcon!=undefined&&this.selfIcon!='') {
+            Image(this.selfIcon)
+              .width($r('app.float.avatar_image_size'))
+              .height($r('app.float.avatar_image_size'))
+              .flexShrink(BaseConstants.FLEX_SHRINK_ZERO)
+              .borderRadius(20)
+          }else{
+            Stack() {
+              Text(CommonUtil.getFirstChar(this.selfName as string)).fontColor(Color.White)
+            }.backgroundColor(CommonUtil.getBackgroundColor(this.selfName as string))
+            .width(40)
+            .height(40)
+            .borderRadius(30)
+          }
         }
       }
     }

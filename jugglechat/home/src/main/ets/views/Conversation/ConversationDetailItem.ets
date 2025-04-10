@@ -20,6 +20,8 @@ import { MessageBubble } from '../MessageBubble';
 export struct ConversationDetailItem {
   private senderName?:string
   private senderIcon?:string
+  private selfName?:string
+  private selfIcon?:string
   private msgContent?:MessageContent
 
   private isReceived?: boolean = false;
@@ -30,6 +32,8 @@ export struct ConversationDetailItem {
       MessageBubble({
         senderName:this.senderName,
         senderIcon:this.senderIcon,
+        selfName:this.selfName,
+        selfIcon:this.selfIcon,
         msgContent:this.msgContent,
         isReceived: this.isReceived,
         msgTime:this.msgTime
