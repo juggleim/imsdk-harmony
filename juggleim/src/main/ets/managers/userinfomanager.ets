@@ -1,4 +1,3 @@
-import { JuggleIm } from "../../../../Index";
 import { JimDbManager } from "../dbs/dbmanager";
 import { UserInfo } from "../entries/user";
 import { ImClient } from "../imclients/imclient";

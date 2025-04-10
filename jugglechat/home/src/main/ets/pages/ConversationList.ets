@@ -36,7 +36,7 @@ export struct ConversationList {
   @State private currentIndex: number = 0;
   @State conversationList:ObservedArray<ConversationViewItem>=[]
   @Consume('pageInfo') pageInfo: NavPathStack;
-  private scroller: ListScroller = new ListScroller()
+  // private scroller: ListScroller = new ListScroller()
   private maxConverSortTime:number = 0
   private minConverSortTime:number = Number.MAX_SAFE_INTEGER
   private converAddListener:ConversationAddListener = ()=>{}
@@ -62,15 +62,10 @@ export struct ConversationList {
     this.maxConverSortTime = 0
     this.minConverSortTime = new Date().getTime()
 
-    console.log("jimsdk_initlis_status:",JuggleIm.instance.getConnStatus())
     if(JuggleIm.instance.getConnStatus() == ConnStatus.connecting){
-      console.log("jimsdk_initlis_regst")
       JuggleIm.instance.getConnectionManager().addConnectStatusListener((status,code)=>{
-        console.log("jinsdk_initlis_tri:",status,code)
         if(status==ConnStatus.connected){
-          console.log("jimsdk_initlis_load")
           this.loadMoreConvers()
-          console.log("jimsdk_reload_connected:",this.conversationList.length)
         }
       })
     }
@@ -134,7 +129,7 @@ export struct ConversationList {
   loadMoreConvers(){
     if(JuggleIm.instance.getConnStatus()==ConnStatus.connected) {
       JuggleIm.instance.getConversationManager()
-        .queryConversations(10, this.minConverSortTime, false, (code, convers) => {
+        .queryConversations(20, this.minConverSortTime, false, (code, convers) => {
           convers.forEach((conver) => {
             this.conversationList.push(toConverViewItem(conver))
             this.recordConverTime(conver.converTime)
@@ -148,7 +143,7 @@ export struct ConversationList {
     Flex({ direction: FlexDirection.Column }) {
       HomeTopSearch({ title: HomeConstants.CONVERSATION_TITLE })
         .height('13%')
-      List({scroller:this.scroller}) {
+      List() {
         ForEach(this.conversationList, (item: ConversationViewItem, index: number) => {
           ListItem() {
             ConversationItem(item)

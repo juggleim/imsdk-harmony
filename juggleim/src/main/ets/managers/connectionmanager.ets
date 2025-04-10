@@ -1,4 +1,4 @@
-import { JuggleIm } from '../../../../Index'
+import { JuggleIm } from '../juggleim'
 import { PreferenceUtil } from '../commons/preferenceutil'
 import { JimDbManager } from '../dbs/dbmanager'
 import {ImClient,ConnStatusListener} from '../imclients/imclient'

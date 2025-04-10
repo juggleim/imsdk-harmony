@@ -1,17 +1,17 @@
-import { JuggleIm } from "../../../../Index";
 import { JimUtil } from "../commons/jimutil";
 import { JimDbManager } from "../dbs/dbmanager";
 import { Conversation, ConversationInfo } from "../entries/conversation";
 import { GroupInfo } from "../entries/group";
-import { Message, MessageContent, MessageSentState } from "../entries/message";
+import { Message } from "../entries/message";
 import { MsgHandler } from "../entries/msghandler";
 import { UserInfo } from "../entries/user";
 import { ConnStatus, ImClient } from "../imclients/imclient";
 import { immessage } from "../improto/immessage";
-import { MsgFlag, MsgFlagTool } from "../improto/msgflag";
+import { MsgFlagTool } from "../improto/msgflag";
 import Long from 'long'
 import { ConversationAddListener,ConversationUpdateListener,ConversationDeleteListener,TotalUnreadCountUpdateListener } from "./conversationmanager";
 import { MsgReceivedListener } from "./messagemanager";
+import { JuggleIm } from "../juggleim";
 
 function promiseSyncConvers(mgr:MsgSyncManager):Promise<boolean>{
   return new Promise((resolve)=>{
