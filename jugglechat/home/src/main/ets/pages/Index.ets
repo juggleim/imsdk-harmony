@@ -23,7 +23,7 @@ import { HomeConstants } from '../constants/HomeConstants';
 import { HomeTab } from '../views/HomeTab';
 import { SocialCircle } from 'socialcircle';
 import { deviceInfo } from '@kit.BasicServicesKit';
-import { initJuggleIm } from '../jim/JimService';
+import { initJuggleIm } from '../jim/jimsdk';
 
 @Entry
 @Component
