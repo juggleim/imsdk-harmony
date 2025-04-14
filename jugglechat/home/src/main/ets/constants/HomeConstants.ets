@@ -44,7 +44,7 @@ export class HomeConstants {
    * Contacts list detail
    */
   static readonly CONTACTS_NAME = $r('app.string.Contacts');
-  static readonly CONTACTS_LIST = [$r('app.string.group'), $r('app.string.card')];
+  static readonly CONTACTS_LIST = [$r('app.string.group'), $r('app.string.new_friends')];
   static readonly CONTACTS_DEFAULT_SELECTED_INDEX = 0;
   static readonly CONTACTS_DEFAULT_SELECTED_NAME = $r('app.string.Alan');
   /**

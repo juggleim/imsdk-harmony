@@ -24,12 +24,14 @@ import { HomeTab } from '../views/HomeTab';
 import { SocialCircle } from 'socialcircle';
 import { deviceInfo } from '@kit.BasicServicesKit';
 import { initJuggleIm } from '../jim/jimsdk';
+import { MeDetail } from './MeDetail';
 
 @Entry
 @Component
 export struct Index {
   @StorageProp('currentBreakpoint') @Watch('watchCurrentBreakpoint') currentBreakpoint: string = BreakpointConstants.BREAKPOINT_SM;
   @Provide('pageInfo') pageInfo: NavPathStack = new NavPathStack();
+  @State currentContactUserId:string = ''
   @State currentConversationUserName: string = '';
   @State currentContactUserName: string = '';
   @State currentContactUserIcon: Resource = HomeConstants.DEFAULT_AVATAR;
@@ -60,6 +62,7 @@ export struct Index {
       ConversationDetailNone();
     } else if (name === 'ContactsDetail') {
       ContactsDetail({
+        currentContactUserId: this.currentContactUserId,
         currentContactUserName: this.currentContactUserName,
         currentContactUserIcon: this.currentContactUserIcon
       });
@@ -107,6 +110,7 @@ export struct Index {
           } else if (this.currentPageIndex === 1) {
             Flex({ direction: FlexDirection.Column, justifyContent: FlexAlign.Center }) {
               ContactsList({
+                currentContactUserId:$currentContactUserId,
                 currentContactUserName: $currentContactUserName,
                 currentConversationUserName: $currentConversationUserName,
                 currentContactUserIcon: $currentContactUserIcon
@@ -140,7 +144,7 @@ export struct Index {
       /**
        * SocialCircle page
        */
-      Flex({ direction: FlexDirection.Column }) {
+      Flex({ direction: FlexDirection.Column, justifyContent: FlexAlign.Center }) {
         SocialCircle()
           .flexGrow(BaseConstants.FLEX_GROW_ONE)
         HomeTab({ currentPageIndex: $currentPageIndex })
@@ -176,8 +180,7 @@ export struct Index {
        * Me page
        */
       Flex({ direction: FlexDirection.Column }) {
-        Column()
-          .flexGrow(BaseConstants.FLEX_GROW_ONE)
+        MeDetail().flexGrow(BaseConstants.FLEX_GROW_ONE)
         HomeTab({ currentPageIndex: $currentPageIndex })
           .width(Adaptive.HomeTabWidth(this.currentBreakpoint))
           .height(Adaptive.HomeTabHeight(this.currentBreakpoint))
@@ -187,7 +190,6 @@ export struct Index {
       .visibility(this.currentPageIndex === CurrentPage.ME && this.currentBreakpoint !==
       BreakpointConstants.BREAKPOINT_LG ? Visibility.Visible : Visibility.None)
       .padding({
-        top: deviceInfo.deviceType === BaseConstants.DEVICE_2IN1 ? $r('app.float.zero') : $r('app.float.device_padding_top'),
         bottom: deviceInfo.deviceType !== BaseConstants.DEVICE_2IN1
           && this.currentBreakpoint !== BreakpointConstants.BREAKPOINT_LG ?
         $r('app.float.tab_content_pb') : $r('app.float.zero')

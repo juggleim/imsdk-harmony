@@ -14,19 +14,42 @@
  */
 
 import { BaseConstants, BreakpointConstants } from 'base';
+import { CommonUtil } from '../../jim/common';
 
 @Component
 export struct ContactsItem {
   @StorageProp('currentBreakpoint') currentBreakpoint: string = BreakpointConstants.BREAKPOINT_SM;
-  private name?: Resource;
-  private icon?: Resource;
+  private name?: ResourceStr;
+  private icon?: ResourceStr;
+
+  private getDefaultBackgroundColor():string{
+    return CommonUtil.getBackgroundColor(this.name as string)
+  }
+
+  private getNameFirstChar():string{
+    let n = this.name as string
+    if(n.length>0){
+      return n.charAt(0)
+    }else{
+      return ''
+    }
+  }
 
   build() {
     Flex({ alignItems: ItemAlign.Center, justifyContent: FlexAlign.SpaceBetween }) {
       Column() {
-        Image(this.icon)
-          .height($r('app.float.avatar_image_size'))
-          .width($r('app.float.avatar_image_size'))
+        if(this.icon!='') {
+          Image(this.icon)
+            .height($r('app.float.avatar_image_size'))
+            .width($r('app.float.avatar_image_size'))
+        }else{
+          Stack(){
+            Text(this.getNameFirstChar()).fontColor(Color.White)
+          }.backgroundColor(this.getDefaultBackgroundColor())
+          .width(45)
+          .height(45)
+          .borderRadius(30)
+        }
       }
       .width($r('app.float.avatar_image_size'))
       .margin({ left: $r('app.float.icon_margin_two'), right: $r('app.float.icon_margin_one') })

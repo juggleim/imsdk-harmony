@@ -1,22 +1,20 @@
 import { LoginResp } from "./entries/login"
 import { UserManager } from "./usermanager"
 import http from "@ohos.net.http";
-import { doHttp } from "./httputil";
+import { doHttp, JimServerHeaders } from "./httputil";
 import { PreferenceUtil } from "../preferenceutil";
+import { FriendManager } from "./friendmanager";
 
 export type LoginCallback = (code:number,resp:LoginResp)=>void
 
+export class JimServerConfig{
+  serverUrl:string
+  appkey:string
+  auth:string = ''
 
-
-export class JimServer{
-  static instance = new JimServer()
-  private serverUrl:string = PreferenceUtil.getJChatServer()
-  private auth:string = ''
-  private appkey:string = PreferenceUtil.getAppkey()
-
-  private userManager:UserManager
   constructor() {
-    this.userManager = new UserManager()
+    this.serverUrl = PreferenceUtil.getJChatServer()
+    this.appkey = PreferenceUtil.getAppkey()
   }
 
   public getAuth(){
@@ -37,9 +35,40 @@ export class JimServer{
     return this.appkey
   }
 
+  public getCommonHeaders():JimServerHeaders{
+    let retHeader:JimServerHeaders = {
+      appkey:this.getAppkey(),
+      Authorization:this.getAuth()
+    }
+    return retHeader
+  }
+}
+
+
+export class JimServer{
+  static instance = new JimServer()
+
+  private config:JimServerConfig
+
+  private userManager:UserManager
+  private friendManager:FriendManager
+  constructor() {
+    this.config = new JimServerConfig()
+    this.userManager = new UserManager(this.config)
+    this.friendManager = new FriendManager(this.config)
+  }
+
+  public getUserManager():UserManager{
+    return this.userManager
+  }
+
+  public getFriendManager():FriendManager{
+    return this.friendManager
+  }
+
   public phoneLogin(phone:string,verCode:string,callback:LoginCallback){
-    doHttp(this.serverUrl+"/jim/sms_login",http.RequestMethod.POST,{
-      appkey:this.appkey
+    doHttp(this.config.getServerUrl()+"/jim/sms_login",http.RequestMethod.POST,{
+      appkey:this.config.getAppkey()
     },JSON.stringify({"phone":phone,"code":verCode}),(code,data)=>{
       let resp = data as LoginResp
       callback(code,resp)

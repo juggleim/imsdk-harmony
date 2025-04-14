@@ -5,6 +5,7 @@ let prefName = 'jchat_pref'
 let authKey = 'jchat_auth'
 
 export interface CacheAuth{
+  user_id:string
   server_auth:string
   im_token:string
 }
@@ -39,11 +40,12 @@ export class PreferenceUtil{
     }
   }
 
-  static setCacheAuth(serverAuth:string, imToken:string){
+  static setCacheAuth(userId:string, serverAuth:string, imToken:string){
     let ctx = getContext()
     let optionos:preferences.Options = {name:prefName}
     let pref = preferences.getPreferencesSync(ctx,optionos)
     pref.putSync(authKey,JSON.stringify({
+      user_id : userId,
       server_auth : serverAuth,
       im_token : imToken
     }))

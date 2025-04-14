@@ -15,20 +15,41 @@
 
 import { Adaptive, BaseConstants, BreakpointConstants } from 'base';
 import { Alphabets, ContactsListData, ContactsDataInterface } from '../viewmodel/ConstactsViewModel';
+import { ConversationViewItem,ConversationDetailParams } from '../viewmodel/ConversationViewModel';
 import { ContactsItem } from '../views/Contacts/ContactsItem';
 import { HomeConstants } from '../constants/HomeConstants';
 import { HomeTopSearch } from '../views/common/HomeTopSearch';
+import { ObservedArray } from '../jim/common';
+import { JimServer } from '../jim/jimserver/jimserver';
 
 @Component
 export struct ContactsList {
   @StorageProp('currentBreakpoint') currentBreakpoint: string = BreakpointConstants.BREAKPOINT_SM;
-  @Link currentContactUserName: Resource;
-  @Link currentContactUserIcon: Resource;
+  @Link currentContactUserId:string
+  @Link currentContactUserName: ResourceStr;
+  @Link currentContactUserIcon: ResourceStr;
   @Link currentConversationUserName: string;
   @Consume('pageInfo') pageInfo: NavPathStack;
   @State selectedIndex: number = HomeConstants.CONTACTS_DEFAULT_SELECTED_INDEX;
   @State private currentIndex: number = 0;
   private listScroller: Scroller = new Scroller();
+  @State contactList:ObservedArray<ContactsDataInterface> = []
+
+  aboutToAppear(): void {
+    JimServer.instance.getFriendManager().QueryFriends(1,50,'',(users)=>{
+      console.log("jchat_contact_code:",users.items.length)
+      this.contactList.push(ContactsListData[0])
+      users.items.forEach((val)=>{
+        console.log("jchat_contact_list:",JSON.stringify(val))
+        this.contactList.push({
+          user_id:val.user_id,
+          name:val.nickname,
+          en_name:val.pinyin as string,
+          icon:val.avatar
+        })
+      })
+    })
+  }
 
   /**
    * Find checked contact
@@ -61,17 +82,22 @@ export struct ContactsList {
           .height(Adaptive.ContactItemHeight(this.currentBreakpoint))
           .backgroundColor(Color.White)
 
-          ForEach(ContactsListData, (item: ContactsDataInterface, index: number) => {
+          ForEach(this.contactList, (item: ContactsDataInterface, index: number) => {
             ListItem() {
               ContactsItem({ name: item.name, icon: item.icon })
                 .onClick(() => {
                   if (this.pageInfo.size() > 1) {
                     this.pageInfo.pop();
                   }
-                  this.pageInfo.pushPath({ name: 'ContactsDetail' });
-                  this.currentContactUserName = item.name;
-                  this.currentContactUserIcon = item.icon;
-                  this.currentConversationUserName = '';
+
+                  // this.pageInfo.pushPath({ name: 'ContactsDetail' });
+                  // this.currentContactUserId = item.user_id
+                  // this.currentContactUserName = item.name;
+                  // this.currentContactUserIcon = item.icon;
+
+                  this.pageInfo.pushPath({ name: 'ConversationDetail',param:new ConversationDetailParams(item.user_id,item.user_id,1)});
+
+                  // this.currentConversationUserName = '';
                   this.currentIndex = index;
                 })
                 .height(BaseConstants.FULL_HEIGHT)

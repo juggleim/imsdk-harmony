@@ -16,13 +16,32 @@ import { Adaptive, BaseConstants, BreakpointConstants, StandardIcon } from 'base
 import { HomeConstants } from '../constants/HomeConstants';
 import { SocialCirclePictures } from '../viewmodel/SocialCircleViewModel';
 import { deviceInfo } from '@kit.BasicServicesKit';
+import { CommonUtil } from '../jim/common';
 
 @Component
 export struct ContactsDetail {
   @StorageProp('currentBreakpoint') currentBreakpoint: string = BreakpointConstants.BREAKPOINT_SM;
+  @Prop currentContactUserId: string
   @Prop currentContactUserName: string
-  @Prop currentContactUserIcon: Resource
+  @Prop currentContactUserIcon: ResourceStr
   @Consume('pageInfo') pageInfo: NavPathStack;
+
+  aboutToAppear(): void {
+    console.log("contws:",this.currentContactUserId,this.currentContactUserName)
+  }
+
+  private getDefaultBackgroundColor():string{
+    return CommonUtil.getBackgroundColor(this.currentContactUserName as string)
+  }
+
+  private getNameFirstChar():string{
+    let n = this.currentContactUserName as string
+    if(n.length>0){
+      return n.charAt(0)
+    }else{
+      return ''
+    }
+  }
 
   build() {
     NavDestination() {
@@ -48,15 +67,32 @@ export struct ContactsDetail {
           top: deviceInfo.deviceType === BaseConstants.DEVICE_2IN1 ? $r('app.float.zero') : $r('app.float.device_padding_top')
         })
 
-        Image(this.currentContactUserIcon)
-          .height($r('app.float.contacts_detail_avatar_height'))
-          .margin({ top: $r('app.float.contacts_detail_avatar_top') })
+        if(this.currentContactUserIcon!='') {
+          Image(this.currentContactUserIcon)
+            .height($r('app.float.contacts_detail_avatar_height'))
+            .margin({ top: $r('app.float.contacts_detail_avatar_top') })
+            .zIndex(HomeConstants.CONTACTS_DETAIL_AVATAR_Z_INDEX)
+            .border({
+              width: $r('app.float.contacts_detail_avatar_border_width'),
+              color: Color.White,
+              radius: $r('app.float.contacts_detail_avatar_border_radius')
+            })
+        }else{
+          Stack(){
+            Text(this.getNameFirstChar()).fontColor(Color.White).fontSize(58)
+          }.backgroundColor(this.getDefaultBackgroundColor())
+          .height(124)
+          .width(124)
+          .margin({top:84})
           .zIndex(HomeConstants.CONTACTS_DETAIL_AVATAR_Z_INDEX)
           .border({
-            width: $r('app.float.contacts_detail_avatar_border_width'),
-            color: Color.White,
-            radius: $r('app.float.contacts_detail_avatar_border_radius')
+            width:5,
+            color:Color.White,
+            radius:100
           })
+          .borderRadius(200)
+        }
+
         Column() {
           Column() {
             Column() {

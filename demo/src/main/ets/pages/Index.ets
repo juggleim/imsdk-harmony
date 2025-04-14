@@ -74,14 +74,9 @@ struct Index{
           JimServer.instance.phoneLogin(this.phone,this.verCode,(code,resp)=>{
             console.log("http_util_codex:",code,JSON.stringify(resp))
             if(code==0&&resp.authorization!=''&&resp.im_token!=''){
-              PreferenceUtil.setCacheAuth(resp.authorization,resp.im_token)
-
+              PreferenceUtil.setCacheAuth(resp.user_id,resp.authorization,resp.im_token)
               router.replaceUrl({
-                url:"pages/Home",
-                params:{
-                  'uid':'userid1',
-                  'token':'token1'
-                }
+                url:"pages/Home"
               })
             }else{
               promptAction.showToast({
