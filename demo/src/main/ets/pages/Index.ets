@@ -1,12 +1,22 @@
-
 import { promptAction, router } from '@kit.ArkUI'
-import { JimServer } from 'home'
+import { JimServer, PreferenceUtil } from 'home'
+import { JuggleIm } from 'juggleim'
 
 @Entry
 @Component
 struct Index{
   @State phone:string = ''
   @State verCode:string = ''
+
+  aboutToAppear(): void {
+    let cacheAuth = PreferenceUtil.getCacheAuth()
+    console.log("http_util:",JSON.stringify(cacheAuth))
+    if(cacheAuth!=undefined){
+      router.replaceUrl({
+        url:"pages/Home"
+      })
+    }
+  }
 
   build() {
     Row(){
@@ -21,6 +31,7 @@ struct Index{
           .align(Alignment.Center)
 
         Text('JuggleChat').fontSize(35).textAlign(TextAlign.Center).margin({bottom:100}).width('80%')
+
 
         TextInput({
           placeholder:'手机号'
@@ -52,26 +63,34 @@ struct Index{
         }.align(Alignment.Center).width('80%')
 
         Button('登录').margin({top:30}).onClick(()=>{
-          // if(this.phone == '' || this.verCode == ''){
-          //   promptAction.showToast({
-          //     message:"手机号和验证码，不能为空",
-          //     duration:1000,
-          //     bottom:100
-          //   })
-          //   return
-          // }
-          this.phone = '13832928831'
-          this.verCode = '000000'
+          if(this.phone == '' || this.verCode == ''){
+            promptAction.showToast({
+              message:"手机号和验证码，不能为空",
+              duration:1000,
+              bottom:100
+            })
+            return
+          }
           JimServer.instance.phoneLogin(this.phone,this.verCode,(code,resp)=>{
-            console.log("http_util_codex:",JSON.stringify(resp))
+            console.log("http_util_codex:",code,JSON.stringify(resp))
+            if(code==0&&resp.authorization!=''&&resp.im_token!=''){
+              PreferenceUtil.setCacheAuth(resp.authorization,resp.im_token)
+
+              router.replaceUrl({
+                url:"pages/Home",
+                params:{
+                  'uid':'userid1',
+                  'token':'token1'
+                }
+              })
+            }else{
+              promptAction.showToast({
+                message:"登录失败",
+                duration:1000,
+                bottom:100
+              })
+            }
           })
-          // router.replaceUrl({
-          //   url:"pages/Home",
-          //   params:{
-          //     'uid':'userid1',
-          //     'token':'token1'
-          //   }
-          // })
         }).width('80%')
 
         Image($r('app.media.jim_logo_full'))

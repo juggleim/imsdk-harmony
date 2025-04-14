@@ -12,6 +12,7 @@ import { MsgHandler } from './entries/msghandler';
 
 export class JimConfig{
   address:string = ''
+  healthCheckAddress:string = ''
   appkey:string = ''
   platform:string = 'Harmony'
   protoId:string = 'jug9le1m'
@@ -48,7 +49,8 @@ export class JuggleIm{
   }
 
   async init(address:string, appkey:string):Promise<void>{
-    this.config.address = address
+    this.config.address = address+"/im"
+    this.config.healthCheckAddress = address + "/health"
     this.config.appkey = appkey
     this.config.deviceId = PreferenceUtil.getDeviceId()
   }
