@@ -25,6 +25,7 @@ import { SocialCircle } from 'socialcircle';
 import { deviceInfo } from '@kit.BasicServicesKit';
 import { initJuggleIm } from '../jim/jimsdk';
 import { MeDetail } from './MeDetail';
+import FriendVerify from '../views/MySettings/FriendVerify';
 
 @Entry
 @Component
@@ -39,6 +40,7 @@ export struct Index {
   @State currentFeatureIndex: Number = CurrentFeature.HOME;
   @State isSplitAppletScreen: boolean = BaseConstants.SPLIT_APPLET_SCREEN;
   @State isSplitDocumentScreen: boolean = BaseConstants.SPLIT_DOCUMENT_SCREEN;
+  @Provide('mySettingPageInfo') mySettingPageInfo:NavPathStack = new NavPathStack()
 
   watchCurrentBreakpoint() {
     if (this.currentBreakpoint === BreakpointConstants.BREAKPOINT_SM &&
@@ -68,6 +70,13 @@ export struct Index {
       });
     } else {
       ConversationDetailNone();
+    }
+  }
+
+  @Builder
+  MySettingsPageMap(name: string) {
+    if (name === 'FriendVerify') {
+      FriendVerify()
     }
   }
 
@@ -180,7 +189,9 @@ export struct Index {
        * Me page
        */
       Flex({ direction: FlexDirection.Column }) {
-        MeDetail().flexGrow(BaseConstants.FLEX_GROW_ONE)
+        Navigation(this.mySettingPageInfo) {
+          MeDetail().flexGrow(BaseConstants.FLEX_GROW_ONE)
+        }.navDestination(this.MySettingsPageMap)
         HomeTab({ currentPageIndex: $currentPageIndex })
           .width(Adaptive.HomeTabWidth(this.currentBreakpoint))
           .height(Adaptive.HomeTabHeight(this.currentBreakpoint))
