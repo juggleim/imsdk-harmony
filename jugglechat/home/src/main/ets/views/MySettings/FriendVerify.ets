@@ -1,19 +1,78 @@
+import { StandardIcon } from 'base';
 import { BaseConstants } from 'base/src/main/ets/constants/BaseConstants';
-import { deviceInfo } from '@kit.BasicServicesKit';
+import { SettingTop } from './SettingTop';
 
 @Component
 export default struct FriendVerify{
+  @Consume('mySettingPageInfo') mySettingPageInfo:NavPathStack
+  @State isOpen:boolean = true
+
   build() {
     NavDestination(){
-      Flex({justifyContent:FlexAlign.Center, alignItems:ItemAlign.Center}){
-        Image($r('app.media.ic_none_message'))
-          .width($r('app.float.conversation_none_icon_width'))
-          .height($r('app.float.conversation_none_icon_height'))
+      Flex({direction:FlexDirection.Column,alignItems:ItemAlign.Center}){
+        Row(){
+          SettingTop({ settingTitle: '是否开启好友验证' })
+        }.width(BaseConstants.FULL_WIDTH)
+        .height(60)
+        .alignItems(VerticalAlign.Top)
+        .backgroundColor(Color.White)
+        .padding({top:20})
+
+        Row(){
+          Column(){
+            Text('开启').fontSize(18)
+          }
+          .width(80)
+          .alignItems(HorizontalAlign.Center)
+
+          Column(){
+            StandardIcon({ icon: $r('app.media.ic_public_phone') })
+              .margin({ right:10 })
+              .visibility(this.isOpen?Visibility.Visible:Visibility.None)
+          }.width('75%')
+          .alignItems(HorizontalAlign.End)
+        }.height(60)
+        .width('90%')
+        .backgroundColor('#F1F3F5')
+        .margin({
+          top:60
+        })
+        .borderRadius({
+          topLeft: 6,
+          topRight: 6
+        }).onClick(()=>{
+          this.isOpen = true
+        })
+
+        Divider().width('90%')
+
+        Row(){
+          Column(){
+            Text('关闭').fontSize(18)
+          }
+          .width(80)
+          .alignItems(HorizontalAlign.Center)
+
+          Column(){
+            StandardIcon({ icon: $r('app.media.ic_public_phone') })
+              .margin({ right:10 })
+              .visibility(this.isOpen?Visibility.None:Visibility.Visible)
+          }.width('75%')
+          .alignItems(HorizontalAlign.End)
+        }.height(60)
+        .width('90%')
+        .backgroundColor('#F1F3F5')
+        .borderRadius({
+          bottomLeft: 6,
+          bottomRight: 6
+        }).onClick(()=>{
+          this.isOpen = false
+        })
       }
-      .backgroundColor($r('app.color.conversation_none_icon_bg_color'))
+      .backgroundColor(Color.White)
+      .width(BaseConstants.FULL_WIDTH)
       .height(BaseConstants.FULL_HEIGHT)
-    }.padding({
-      top: deviceInfo.deviceType === BaseConstants.DEVICE_2IN1 ? $r('app.float.zero') : $r('app.float.device_padding_top')
-    })
+    }
+    .hideTitleBar(true)
   }
 }

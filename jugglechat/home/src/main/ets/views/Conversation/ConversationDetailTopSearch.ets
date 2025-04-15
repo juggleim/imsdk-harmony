@@ -28,6 +28,7 @@ export struct ConversationDetailTopSearch {
       StandardIcon({ icon: $r('app.media.ic_public_back') })
         .onClick(() => {
           if (this.currentBreakpoint === BreakpointConstants.BREAKPOINT_SM) {
+            console.log("xxxxx:")
             this.pageInfo.clear();
           } else if (this.pageInfo.size() === 1) {
             this.pageInfo.clear();

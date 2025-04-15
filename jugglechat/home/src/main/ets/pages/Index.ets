@@ -26,6 +26,9 @@ import { deviceInfo } from '@kit.BasicServicesKit';
 import { initJuggleIm } from '../jim/jimsdk';
 import { MeDetail } from './MeDetail';
 import FriendVerify from '../views/MySettings/FriendVerify';
+import GlobalUndisturb from '../views/MySettings/GlobalUndisturb';
+import LanguageSetting from '../views/MySettings/LanguageSetting';
+import MyFavorite from '../views/MySettings/MyFavorite';
 
 @Entry
 @Component
@@ -77,6 +80,12 @@ export struct Index {
   MySettingsPageMap(name: string) {
     if (name === 'FriendVerify') {
       FriendVerify()
+    }else if(name === 'GlobalUndisturb'){
+      GlobalUndisturb()
+    }else if(name === 'LanguageSetting'){
+      LanguageSetting()
+    }else if(name === 'MyFavorite'){
+      MyFavorite()
     }
   }
 

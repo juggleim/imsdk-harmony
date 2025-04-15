@@ -5,8 +5,6 @@ import { deviceInfo } from "@kit.BasicServicesKit";
 import { CommonUtil } from "../jim/common";
 import { PreferenceUtil } from "../jim/preferenceutil";
 import { JimServer } from "../jim/jimserver/jimserver";
-import { SocialCirclePictures } from '../viewmodel/SocialCircleViewModel';
-import FriendVerify from "../views/MySettings/FriendVerify";
 
 
 @Component
@@ -182,7 +180,7 @@ export struct MeDetail {
             if (this.mySettingPageInfo.size() > 1) {
               this.mySettingPageInfo.pop()
             }
-            this.mySettingPageInfo.pushPath({name:'FriendVerify'})
+            this.mySettingPageInfo.pushPath({name:'GlobalUndisturb'})
           })
 
           Column(){
@@ -227,7 +225,7 @@ export struct MeDetail {
             if (this.mySettingPageInfo.size() > 1) {
               this.mySettingPageInfo.pop()
             }
-            this.mySettingPageInfo.pushPath({name:'FriendVerify'})
+            this.mySettingPageInfo.pushPath({name:'LanguageSetting'})
           })
 
           Column(){
@@ -272,7 +270,7 @@ export struct MeDetail {
             if (this.mySettingPageInfo.size() > 1) {
               this.mySettingPageInfo.pop()
             }
-            this.mySettingPageInfo.pushPath({name:'FriendVerify'})
+            this.mySettingPageInfo.pushPath({name:'MyFavorite'})
           })
 
           Column(){
