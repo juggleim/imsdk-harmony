@@ -2,7 +2,7 @@ import {immessage} from  '../improto/immessage'
 import {
   Message, MessageContent,MessageSentState
 } from '../entries/message'
-import { Conversation } from '../entries/conversation'
+import { Conversation, ConversationInfo } from '../entries/conversation'
 import { MsgFlagTool } from '../improto/msgflag'
 import { ImClient } from '../imclients/imclient'
 import { CommonCallback } from './commoncallback'
@@ -10,6 +10,8 @@ import { HashMap } from '@kit.ArkTS'
 import { JimDbManager } from '../dbs/dbmanager'
 import { MsgHandler } from '../entries/msghandler'
 import { MsgSyncManager } from './msgsyncmanager'
+import { JimUtil } from '../commons/jimutil'
+import { JuggleIm } from '../juggleim'
 
 export type MessageCallback = (code:number,msg:Message|null)=>void
 export type QryMessagesCallback = (code:number,msgs:Message[],hasMore:boolean)=>void
@@ -104,18 +106,31 @@ export class MessageManager{
     }else if (conver.conversationType==2){
       method = 'g_msg'
     }
+    let clientUid:string = JimUtil.getUuid()
     let flags = MsgFlagTool.toFlag(msg.getFlag())
     let upMsg = immessage.UpMsg.create({
-      "msgType":msg.getMsgType(),
-      "msgContent":msg.encode(),
-      "flags": flags
+      msgType:msg.getMsgType(),
+      msgContent:msg.encode(),
+      flags: flags,
+      clientUid:clientUid
     })
+
     let message = new Message()
     message.conversation = conver
     message.msgContent = msg
     message.msgType = msg.getMsgType()
-
+    message.clientId = clientUid
+    message.senderId = JuggleIm.instance.userId
+    message.sentTime = new Date().getTime()
+    message.flags = msg.getFlagNumber()
     message.state = MessageSentState.sending
+
+    //save in db
+    let msgDao = JimDbManager.instance.getMessageDao()
+    let msgDbId = msgDao.insert(message)
+    //update conversation
+    this.msgSyncMgr.updConver(message)
+    console.log("sendmsg_ret:",msgDbId)
     let data = immessage.UpMsg.encode(upMsg).finish()
     this.imclient.publish(method,targetId,data,(code,pubAck)=>{
       if(code==0){
@@ -130,9 +145,13 @@ export class MessageManager{
           message.msgSeqNo = pubAck.msgSeqNo
         }
         message.state = MessageSentState.success
+        msgDao.updateMsgState(msgDbId,message.state,message.messageId,message.sentTime,message.msgSeqNo)
+        this.msgSyncMgr.updConver(message)
         callback(code,message)
       }else{
         message.state = MessageSentState.failed
+        msgDao.updateMsgState(msgDbId,message.state)
+        this.msgSyncMgr.updConver(message)
         callback(code,message)
       }
     })
@@ -163,7 +182,7 @@ export class MessageManager{
           remoteMsgs.forEach((msg)=>{
             //check exist
             let msgDao = JimDbManager.instance.getMessageDao()
-            if(!msgDao.existByMsgId(msg.messageId)){
+            if(!msgDao.existByMsgId(msg.messageId,msg.clientId)){
               //save msg
               msgDao.insert(msg)
             }

@@ -368,7 +368,7 @@ export class MsgSyncManager{
       if(msgFlag.isStorage){
         let msgDao = JimDbManager.instance.getMessageDao()
         // check exist
-        if(!msgDao.existByMsgId(msg.messageId)){
+        if(!msgDao.existByMsgId(msg.messageId,msg.clientId)){
           //save msg
           let aff = msgDao.insert(msg)
           if(aff>0&&msg.sentTime>this.getLatestConverSyncTime()) {
@@ -379,7 +379,6 @@ export class MsgSyncManager{
             if(dbConver===undefined){//add
               dbConver = newConverInfo
             }else{//update
-              dbConver.syncTime = newConverInfo.syncTime
               dbConver.converTime = newConverInfo.converTime
               dbConver.lastMessage = newConverInfo.lastMessage
               isAdd = false
@@ -415,7 +414,6 @@ export class MsgSyncManager{
     converInfo.conversation = new Conversation(msg.conversation.conversationId,msg.conversation.conversationType)
     converInfo.lastMessage = msg
     converInfo.converTime = msg.sentTime
-    converInfo.syncTime = msg.sentTime
     console.log("jimsdk_syncmsg_conver:",JSON.stringify(converInfo))
     return converInfo
   }
@@ -498,6 +496,29 @@ export class MsgSyncManager{
     })
   }
 
+  public updConver(message:Message){
+    let converDao = JimDbManager.instance.getConversationDao()
+    if(converDao.existByConver(message.conversation)){
+      converDao.updateByMessage(message)
+      let conver = converDao.getConver(message.conversation)
+      if(conver!=undefined) {
+        let convers: ConversationInfo[] = []
+        convers.push(conver)
+        this.triggerConversationUpdate(convers)
+      }
+    }else{
+      let converInfo = new ConversationInfo()
+      converInfo.conversation = message.conversation
+      converInfo.converTime = message.sentTime
+      converInfo.lastMessage = message
+      converDao.upsert(converInfo)
+
+      let convers:ConversationInfo[] = []
+      convers.push(converInfo)
+      this.triggerConversationAdd(convers)
+    }
+  }
+
   private recordLatestConverSyncTime(time:number){
     if(time>this.latestConverSyncTime){
       this.latestConverSyncTime = time
@@ -545,7 +566,6 @@ export class MsgSyncManager{
     converInfo.conversation = new Conversation(conver.targetId as string, conver.channelType as number)
     converInfo.unreadCount = JimUtil.toNumber(conver.unreadCount as Long)
     converInfo.converTime = JimUtil.toNumber(conver.sortTime as number)
-    converInfo.syncTime = JimUtil.toNumber(conver.syncTime as number)
     converInfo.isTop = (conver.isTop as number) > 0
     converInfo.topTime = JimUtil.toNumber(conver.topUpdatedTime as number)
     converInfo.isMute = (conver.undisturbType as number) > 0

@@ -13,8 +13,7 @@
  * limitations under the License.
  */
 
-import { Adaptive, BaseConstants, BreakpointConstants } from 'base';
-import { ConversationDetailBottom } from '../views/Conversation/ConversationDetailBottom';
+import { Adaptive, BaseConstants, BreakpointConstants, StandardIcon } from 'base';
 import {ConversationDetailItem} from '../views/Conversation/ConversationDetailItem';
 import { ConversationDetailTopSearch } from '../views/Conversation/ConversationDetailTopSearch';
 import { deviceInfo } from '@kit.BasicServicesKit';
@@ -24,6 +23,8 @@ import { ObservedArray } from '../jim/common';
 import { JuggleIm } from 'juggleim';
 import { Conversation } from 'juggleim/src/main/ets/entries/conversation';
 import { MsgReceivedListener, QueryMsgOptions } from 'juggleim/src/main/ets/managers/messagemanager';
+import { HomeConstants } from '../constants/HomeConstants';
+import { TextMessage } from 'juggleim/src/main/ets/entries/message';
 
 @Component
 export struct ConversationDetail {
@@ -39,6 +40,7 @@ export struct ConversationDetail {
   @State refreshing:boolean = false
   private scroller:Scroller = new Scroller()
   private msgReceiveListener:MsgReceivedListener = async (message)=>{}
+  @State private text:string = ''
 
   @Builder
   refreshContent() {
@@ -146,7 +148,59 @@ export struct ConversationDetail {
           },200)
         })
         Blank()
-        ConversationDetailBottom()
+        // ConversationDetailBottom()
+        Row(){
+          Column(){
+            Column() {
+              StandardIcon({ icon: $r('app.media.ic_public_add_norm') })
+            }
+            .flexBasis(HomeConstants.FLEX_BASIS_AUTO)
+            .padding({
+              left:10,
+              right:10
+            })
+          }
+          Blank()
+          Column(){
+            TextInput({text:this.text})
+              .width('78%')
+              .placeholderColor($r('app.color.text_input_default_color'))
+              .caretColor($r('app.color.text_input_default_care_color'))
+              .backgroundColor($r('app.color.text_input_default_background_color'))
+              .borderRadius(HomeConstants.CONVERSATION_DETAIL_BOTTOM_TEXT_RADIUS)
+              .flexGrow(BaseConstants.FLEX_GROW_ONE)
+              .padding({ right: $r('app.float.conversation_detail_bottom_text_padding') })
+              .backgroundColor(Color.White)
+              .onChange((v)=>{
+                this.text = v
+              })
+          }
+          Column() {
+            StandardIcon({ icon: $r('app.media.ic_public_email_send') }).onClick(async ()=>{
+              let selfName:string = ''
+              let selfIcon:string = ''
+              let txtMsg:TextMessage = new TextMessage()
+              txtMsg.content = this.text
+              await JuggleIm.instance.getUserInfoManager().getUserInfo(JuggleIm.instance.userId).then((u)=>{
+                selfName = u.nickname
+                selfIcon = u.userPortrait
+              })
+              let viewMsg = new MessageViewItem('','',selfName,selfIcon,txtMsg,1)
+              viewMsg.isReceived = false
+              this.msgList.push(viewMsg)
+              this.text = ''
+              this.scroller.scrollEdge(Edge.Bottom)
+              //send msg
+              JuggleIm.instance.getMessageManager().sendMessage(txtMsg,new Conversation(this.conversationId,this.conversationType),(code,msg)=>{
+
+              })
+            })
+          }
+          .padding({
+            left:10,
+            right:10
+          })
+        }.width(BaseConstants.FULL_WIDTH)
       }
       .height(BaseConstants.FULL_HEIGHT)
       .width(BaseConstants.FULL_WIDTH)
@@ -158,4 +212,6 @@ export struct ConversationDetail {
     }
     .hideTitleBar(true)
   }
+
+
 }

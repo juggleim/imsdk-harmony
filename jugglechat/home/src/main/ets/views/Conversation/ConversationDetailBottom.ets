@@ -27,7 +27,7 @@ export struct ConversationDetailBottom {
   build() {
     Flex({ alignItems: ItemAlign.Center }) {
       Column() {
-        StandardIcon({ icon: $r('app.media.ic_public_emoji') })
+        StandardIcon({ icon: $r('app.media.ic_public_add_norm') })
       }
       .flexBasis(HomeConstants.FLEX_BASIS_AUTO)
       .padding({
@@ -71,7 +71,7 @@ export struct ConversationDetailBottom {
       }
 
       Column() {
-        StandardIcon({ icon: $r('app.media.ic_public_add_norm') })
+        StandardIcon({ icon: $r('app.media.ic_public_email_send') })
       }
       .padding({
         right: $r('app.float.conversation_detail_bottom_padding'),

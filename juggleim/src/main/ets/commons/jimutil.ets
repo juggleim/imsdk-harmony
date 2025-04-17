@@ -64,4 +64,8 @@ export class JimUtil{
       return 0
     }
   }
+
+  static getUuid():string{
+    return `${util.generateRandomUUID().replaceAll("-","")}`
+  }
 }

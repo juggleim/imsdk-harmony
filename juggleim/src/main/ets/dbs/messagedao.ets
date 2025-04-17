@@ -65,24 +65,26 @@ export class MessageDao{
   }
 
   insert(msg:Message):number{
+    console.log("sendmsg_ret_start:",JSON.stringify(msg))
     let valueBucket = this.getValuesBucket(msg)
     try{
       let row = JimDbManager.instance.getDb()?.insertSync(this.tableName,valueBucket)
+      console.log("sendmsg_ret_row:",row)
       if(row!==undefined){
         return row
       }
       return 0
     }catch (e) {
-      console.error(`jimsdk_db_failed [${this.tableName}] err:${e.message}`)
-      console.error(`jimsdk_syncmsg_db_failed [${this.tableName}] err:${e.message}`)
+      console.error(`sendmsg_ret [${this.tableName}] err:${e.message}`)
       return 0
     }
   }
 
-  existByMsgId(msgId:string):boolean{
-    let sql = `SELECT id FROM ${this.tableName} WHERE msg_id=?`
+  existByMsgId(msgId:string,clientId:string):boolean{
+    let sql = `SELECT id FROM ${this.tableName} WHERE msg_id=? or client_id=?`
     let args:Array<relationalStore.ValueType> = []
     args.push(msgId)
+    args.push(clientId)
     let resultSet:relationalStore.ResultSet|undefined
     try{
       resultSet = JimDbManager.instance.getDb()?.querySqlSync(sql,args)
@@ -115,17 +117,44 @@ export class MessageDao{
     return 0
   }
 
+  updateMsgState(dbId:number,state:number,msgId?:string,msgTime?:number,msgSeq?:number):number{
+    let sql = `UPDATE ${this.tableName} SET state=?`
+    let args:Array<relationalStore.ValueType> = []
+    args.push(state)
+    if(msgId!=undefined){
+      sql = sql + ` ,msg_id=?`
+      args.push(msgId)
+    }
+    if(msgTime!=undefined){
+      sql = sql + ` ,msg_time=?`
+      args.push(msgTime)
+    }
+    if(msgSeq!=undefined){
+      sql = sql + ` ,msg_seq_no=?`
+      args.push(msgSeq)
+    }
+    sql = sql + ` WHERE id=?`
+    args.push(dbId)
+    try{
+      let vt = JimDbManager.instance.getDb()?.executeSync(sql,args)
+      return vt as number
+    }catch (e) {
+      console.error(`jimsdk_db_fail. [${this.tableName}] err:${e.message}`)
+    }
+    return 0
+  }
+
   private getValuesBucket(msg:Message):relationalStore.ValuesBucket{
     let valuesBucket:relationalStore.ValuesBucket = {
       "conver_id":msg.conversation?.conversationId as string,
       "conver_type":msg.conversation?.conversationType as number,
-      "client_id":msg.clientId,
+      "client_id":msg.clientId!=''?msg.clientId:null,
       "sender_id":msg.senderId,
       "direction":msg.direction,
-      "msg_id":msg.messageId,
+      "msg_id":msg.messageId!=''?msg.messageId:null,
       "msg_seq_no": JimUtil.toNumber(msg.msgSeqNo),
       "msg_index":msg.msgUnreadIndex,
-      "msg_type":msg.msgType,
+      "msg_type":msg.msgContent.getMsgType(),
       "sent_time":JimUtil.toNumber(msg.sentTime),
       "msg_content": JimUtil.uint8ArrayToString(msg.msgContent.encode()),
       "state":msg.state,

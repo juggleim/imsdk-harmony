@@ -1,4 +1,5 @@
 import {JuggleIm} from 'juggleim'
+import { ConnStatus } from 'juggleim/src/main/ets/imclients/imclient'
 import { PreferenceUtil } from './preferenceutil'
 
 export async function initJuggleIm(connectCallback:(status:number,code:number)=>void){

@@ -9,6 +9,8 @@ import { UserInfoManager } from './managers/userinfomanager';
 import { GroupInfoManager } from './managers/groupinfomanager';
 import { MsgSyncManager } from './managers/msgsyncmanager';
 import { MsgHandler } from './entries/msghandler';
+import { Conversation, ConversationInfo } from './entries/conversation';
+import { Message } from './entries/message';
 
 export class JimConfig{
   address:string = ''
