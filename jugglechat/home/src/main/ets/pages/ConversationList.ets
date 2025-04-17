@@ -132,7 +132,6 @@ export struct ConversationList {
         .queryConversations(20, this.minConverSortTime, false, (code, convers) => {
           convers.forEach((conver) => {
             this.conversationList.push(toConverViewItem(conver))
-            console.log("test_conver_set:",conver.converTime,conver.id,JSON.stringify(conver.conversation))
             this.recordConverTime(conver.converTime)
           })
           this.conversationList = this.conversationList.slice().sort((a,b)=>b.converTime - a.converTime)

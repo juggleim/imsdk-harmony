@@ -54,8 +54,8 @@ export class MsgHandler{
     message.conversation = new Conversation(downMsg.targetId as string,downMsg.channelType as number)
     message.messageId = downMsg.msgId as string
     message.clientId = downMsg.clientUid as string
-    message.msgType = downMsg.msgType as string
-    message.msgContent = MsgHandler.constructByMsgType(message.msgType,downMsg.msgContent as Uint8Array)
+    let msgType = downMsg.msgType as string
+    message.msgContent = MsgHandler.constructByMsgType(msgType,downMsg.msgContent as Uint8Array)
 
     message.sentTime = JimUtil.toNumber(downMsg.msgTime as number)
     message.msgSeqNo = JimUtil.toNumber(downMsg.msgSeqNo as number)

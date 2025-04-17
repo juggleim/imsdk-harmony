@@ -359,9 +359,9 @@ export class MsgSyncManager{
     }
 
     if(msgFlag.isCmd){
-      if(msg.msgType == JimMsgType.RecallCmd){
+      if(msg.msgContent.getMsgType() == JimMsgType.RecallCmd){
         this.handleRecallCmdMsg(msg)
-      }else if(msg.msgType == JimMsgType.ModifyMsg){
+      }else if(msg.msgContent.getMsgType() == JimMsgType.ModifyMsg){
         this.handleModifyCmdMsg(msg)
       }
     }else{
@@ -578,8 +578,8 @@ export class MsgSyncManager{
         new Conversation(conver.targetId as string, conver.channelType as number)
       converInfo.lastMessage.clientId = conver.msg.clientUid as string
       converInfo.lastMessage.messageId = conver.msg.msgId as string
-      converInfo.lastMessage.msgType = conver.msg.msgType as string
-      converInfo.lastMessage.msgContent = MsgHandler.constructByMsgType(conver.msg.msgType as string,conver.msg.msgContent as Uint8Array)
+      let msgType = conver.msg.msgType as string
+      converInfo.lastMessage.msgContent = MsgHandler.constructByMsgType(msgType,conver.msg.msgContent as Uint8Array)
       converInfo.lastMessage.sentTime = JimUtil.toNumber(conver.msg.msgTime as number)
       converInfo.lastMessage.msgSeqNo = JimUtil.toNumber(conver.msg.msgSeqNo as number)
       converInfo.lastMessage.msgUnreadIndex = JimUtil.toNumber(conver.msg.unreadIndex as number)
@@ -630,9 +630,8 @@ export class MsgSyncManager{
     let recallInfoContent = new RecallInfoMessage()
     recallInfoContent.exts = recallCmdMsg.exts
     if(oldMsg!=null){
-      oldMsg.msgType = JimMsgType.RecallInfo
       oldMsg.msgContent = recallInfoContent
-      msgDao.updateMsgContent(oldMsg.messageId,oldMsg.msgType,oldMsg.msgContent)
+      msgDao.updateMsgContent(oldMsg.messageId,oldMsg.msgContent)
       this.triggerMsgRecall(oldMsg)
     }
   }
@@ -642,11 +641,12 @@ export class MsgSyncManager{
     let msgDao = JimDbManager.instance.getMessageDao()
     let oldMsg = msgDao.getMessage(modifyMsg.msgId)
     if(oldMsg!=null){
+      let newMsgType:string = oldMsg.msgContent.getMsgType()
       if(modifyMsg.newMsgType!=''){
-        oldMsg.msgType = modifyMsg.newMsgType
+        newMsgType = modifyMsg.newMsgType
       }
-      oldMsg.msgContent = MsgHandler.constructByMsgType(oldMsg.msgType,modifyMsg.newMsgContent)
-      msgDao.updateMsgContent(oldMsg.messageId,oldMsg.msgType,oldMsg.msgContent)
+      oldMsg.msgContent = MsgHandler.constructByMsgType(newMsgType,modifyMsg.newMsgContent)
+      msgDao.updateMsgContent(oldMsg.messageId,oldMsg.msgContent)
       this.triggerMsgModify(oldMsg)
     }
   }

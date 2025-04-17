@@ -118,7 +118,6 @@ export class MessageManager{
     let message = new Message()
     message.conversation = conver
     message.msgContent = msg
-    message.msgType = msg.getMsgType()
     message.clientId = clientUid
     message.senderId = JuggleIm.instance.userId
     message.sentTime = new Date().getTime()

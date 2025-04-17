@@ -102,10 +102,10 @@ export class MessageDao{
     return false
   }
 
-  updateMsgContent(msgId:string,msgType:string,msgContent:MessageContent):number{
+  updateMsgContent(msgId:string,msgContent:MessageContent):number{
     let sql = `UPDATE ${this.tableName} SET msg_type=?, msg_content=? WHERE msg_id=?`
     let args:Array<relationalStore.ValueType> = []
-    args.push(msgType)
+    args.push(msgContent.getMsgType())
     args.push(JimUtil.uint8ArrayToString(msgContent.encode()))
     args.push(msgId)
     try{
@@ -179,11 +179,11 @@ export class MessageDao{
     message.messageId = JimDbUtil.toString(resultSet,'msg_id')
     message.msgSeqNo = JimDbUtil.toNumber(resultSet,'msg_seq_no')
     message.msgUnreadIndex = JimDbUtil.toNumber(resultSet,'msg_index')
-    message.msgType = JimDbUtil.toString(resultSet,'msg_type')
+    let msgType = JimDbUtil.toString(resultSet,'msg_type')
     message.sentTime = JimDbUtil.toNumber(resultSet,'sent_time')
     //content
     let content = JimDbUtil.toString(resultSet,'msg_content')
-    message.msgContent = MsgHandler.constructByMsgType(message.msgType, JimUtil.stringToUint8Array(content))
+    message.msgContent = MsgHandler.constructByMsgType(msgType, JimUtil.stringToUint8Array(content))
     message.state = JimDbUtil.toNumber(resultSet,'state')
     message.flags = JimDbUtil.toNumber(resultSet,'flags')
     message.hasRead = JimDbUtil.toNumber(resultSet,"has_read")>0

@@ -52,7 +52,7 @@ export class ConversationDao{
     args.push(conver.lastMessage.msgSeqNo)
     args.push(conver.lastReadMsgIndex)
     args.push(conver.lastMessage.msgUnreadIndex)
-    args.push(conver.lastMessage.msgType)
+    args.push(conver.lastMessage.msgContent.getMsgType())
     args.push(JimUtil.uint8ArrayToString(conver.lastMessage.msgContent.encode()))
     args.push(conver.lastMessage.clientId)
     args.push(conver.lastMessage.direction)
@@ -169,7 +169,7 @@ export class ConversationDao{
       "last_msg_seq_no":conver.lastMessage.msgSeqNo,
       "last_read_msg_index":conver.lastReadMsgIndex,
       "last_msg_index":conver.lastMessage.msgUnreadIndex,
-      "last_msg_type":conver.lastMessage.msgType,
+      "last_msg_type":conver.lastMessage.msgContent.getMsgType(),
       "last_msg_content":JimUtil.uint8ArrayToString(conver.lastMessage.msgContent.encode()),
       "last_msg_client_id":conver.lastMessage.clientId,
       "last_msg_direction":conver.lastMessage.direction,
@@ -199,11 +199,11 @@ export class ConversationDao{
     msg.msgSeqNo = JimDbUtil.toNumber(resultSet,"last_msg_seq_no")
     conver.lastReadMsgIndex = JimDbUtil.toNumber(resultSet,"last_read_msg_index")
     msg.msgUnreadIndex = JimDbUtil.toNumber(resultSet,"last_msg_index")
-    msg.msgType = JimDbUtil.toString(resultSet,"last_msg_type")
+    let msgType = JimDbUtil.toString(resultSet,"last_msg_type")
     //content
     let dataStr = JimDbUtil.toString(resultSet,"last_msg_content")
     let data = JimUtil.stringToUint8Array(dataStr)
-    msg.msgContent = MsgHandler.constructByMsgType(msg.msgType, data)
+    msg.msgContent = MsgHandler.constructByMsgType(msgType, data)
     msg.clientId = JimDbUtil.toString(resultSet,"last_msg_client_id")
     msg.direction = JimDbUtil.toNumber(resultSet,"last_msg_direction")
     msg.state = JimDbUtil.toNumber(resultSet,"last_msg_state")

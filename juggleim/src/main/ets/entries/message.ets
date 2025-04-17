@@ -51,7 +51,7 @@ export class Message{
   conversation:Conversation = new Conversation('',0)
   clientId:string = ''
   messageId:string = ''
-  msgType:string = ''
+  // msgType:string = ''
   msgContent:MessageContent = new MessageContent()
   sentTime:number = 0
   msgSeqNo:number = 0
