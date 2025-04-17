@@ -66,9 +66,7 @@ export class ConversationManager{
     if(!isPositive&&startTime<=0){
       startTime = new Date().getTime()
     }
-    console.log("jimsdk_qryconvers:",startTime,count,isPositive)
     let convers = JimDbManager.instance.getConversationDao().queryConversations(startTime,count,isPositive)
-    console.log("jimsdk_qryconvers:",convers.length)
     callback(0,convers)
   }
 

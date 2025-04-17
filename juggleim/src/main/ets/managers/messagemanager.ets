@@ -14,12 +14,6 @@ import { MsgSyncManager } from './msgsyncmanager'
 export type MessageCallback = (code:number,msg:Message|null)=>void
 export type QryMessagesCallback = (code:number,msgs:Message[],hasMore:boolean)=>void
 
-export type MsgReceivedListener = (msg:Message)=>void
-export type MsgRecalledListener = (msg:Message)=>void
-export type MsgModifiedListener = (msg:Message)=>void
-export type MsgDeletedListener = (conver:Conversation,msgIds:string[])=>void
-export type MsgCleanedListener = (conver:Conversation,cleanTime:number,senderId:string)=>void
-
 export class QueryMsgOptions{
   count:number = 20
   startTime:number = 0
@@ -43,6 +37,12 @@ export class SearchParams{
   endTime:number = 0
 }
 
+export type MsgReceivedListener = (msg:Message)=>void
+export type MsgRecalledListener = (msg:Message)=>void
+export type MsgModifiedListener = (msg:Message)=>void
+export type MsgDeletedListener = (conver:Conversation,msgIds:string[])=>void
+export type MsgCleanedListener = (conver:Conversation,cleanTime:number,senderId:string)=>void
+
 export class MessageManager{
   private imclient:ImClient
   private msgSyncMgr:MsgSyncManager
@@ -50,93 +50,46 @@ export class MessageManager{
   constructor(imclient:ImClient,mgr:MsgSyncManager) {
     this.imclient = imclient
     this.msgSyncMgr = mgr
-    this.msgSyncMgr.addMsgReceivedListener((msg)=>{
-      //handle msg
-      this.triggerMsgReceive(msg)
-    })
   }
 
-  private msgReceivedListeners:MsgReceivedListener[] = new Array()
-  private msgRecalledListeners:MsgRecalledListener[] = new Array()
-  private msgModifiedListeners:MsgModifiedListener[] = new Array()
-  private msgDeletedListeners:MsgDeletedListener[] = new Array()
-  private msgCleanedListeners:MsgCleanedListener[] = new Array()
-
   addMsgReceivedListener(listener:MsgReceivedListener){
-    this.msgReceivedListeners.push(listener)
+    this.msgSyncMgr.addMsgReceivedListener(listener)
   }
 
   removeMsgReceivedListener(listener:MsgReceivedListener){
-    for(let i=0;i<this.msgReceivedListeners.length;i++){
-      if(this.msgReceivedListeners[i]===listener){
-        this.msgReceivedListeners.splice(i,1)
-        break
-      }
-    }
-  }
-
-  private triggerMsgReceive(msg:Message){
-    this.msgReceivedListeners.forEach((listener)=>{
-      listener(msg)
-    })
+    this.msgSyncMgr.removeMsgReceivedListener(listener)
   }
 
   addMsgRecalledListener(listener:MsgRecalledListener){
-    this.msgRecalledListeners.push(listener)
+    this.msgSyncMgr.addMsgRecalledListener(listener)
   }
 
   removeMsgRecalledListener(listener:MsgRecalledListener){
-    for(let i=0;i<this.msgRecalledListeners.length;i++){
-      if(this.msgRecalledListeners[i]===listener){
-        this.msgRecalledListeners.splice(i,1)
-        break
-      }
-    }
-  }
-
-  private triggerMsgRecalled(msg:Message){
-    this.msgRecalledListeners.forEach((listener)=>{
-      listener(msg)
-    })
+    this.msgSyncMgr.removeMsgRecalledListener(listener)
   }
 
   addMsgModifiedListener(listener:MsgModifiedListener){
-    this.msgModifiedListeners.push(listener)
+    this.msgSyncMgr.addMsgModifiedListener(listener)
   }
 
   removeMsgModifiedListener(listener:MsgModifiedListener){
-    for(let i=0;i<this.msgModifiedListeners.length;i++){
-      if(this.msgModifiedListeners[i]===listener){
-        this.msgModifiedListeners.splice(i,1)
-        break
-      }
-    }
+    this.msgSyncMgr.removeMsgModifiedListener(listener)
   }
 
   addMsgDeletedListener(listener:MsgDeletedListener){
-    this.msgDeletedListeners.push(listener)
+    this.msgSyncMgr.addMsgDeletedListener(listener)
   }
 
   removeMsgDeletedListener(listener:MsgDeletedListener){
-    for(let i=0;i<this.msgDeletedListeners.length;i++){
-      if(this.msgDeletedListeners[i]===listener){
-        this.msgDeletedListeners.splice(i,1)
-        break
-      }
-    }
+    this.msgSyncMgr.removeMsgDeletedListener(listener)
   }
 
   addMsgCleanedListener(listener:MsgCleanedListener){
-    this.msgCleanedListeners.push(listener)
+    this.msgSyncMgr.addMsgCleanedListener(listener)
   }
 
   removeMsgCleanedListener(listener:MsgCleanedListener){
-    for(let i=0;i<this.msgCleanedListeners.length;i++){
-      if(this.msgCleanedListeners[i]===listener){
-        this.msgCleanedListeners.splice(i,1)
-        break
-      }
-    }
+    this.msgSyncMgr.removeMsgCleanedListener(listener)
   }
 
   public registerMessage(msgType:string, constructor:Function){

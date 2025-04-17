@@ -1,5 +1,5 @@
 import { immessage } from "../improto/immessage"
-import { RecallCmdMessage, ReadNtfMessage, ClearUnreadMessage } from "./cmdmsg"
+import { RecallCmdMessage, ReadNtfMessage, ClearUnreadMessage, ModifyMessage } from "./cmdmsg"
 import { MessageContent, TextMessage, MergeMessage, VoiceMessage, ImageMessage, FileMessage, VideoMessage, RecallInfoMessage,
   Message } from "./message"
 import { Conversation } from "./conversation"
@@ -25,6 +25,8 @@ export class MsgHandler{
     MsgHandler.registerMessage(JimMsgType.RecallCmd,RecallCmdMessage)
     MsgHandler.registerMessage(JimMsgType.ReadNtf,ReadNtfMessage)
     MsgHandler.registerMessage(JimMsgType.ClearUnread,ClearUnreadMessage)
+    MsgHandler.registerMessage(JimMsgType.ModifyMsg,ModifyMessage)
+
   }
 
   static registerMessage(msgType:string,constructor:Function){

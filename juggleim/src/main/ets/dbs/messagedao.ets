@@ -1,4 +1,4 @@
-import { Message } from "../entries/message";
+import { Message, MessageContent } from "../entries/message";
 import { relationalStore } from "@kit.ArkData";
 import { JimUtil } from "../commons/jimutil";
 import { MsgFlagTool } from "../improto/msgflag";
@@ -11,6 +11,25 @@ export class MessageDao{
   static instance:MessageDao = new MessageDao()
   private tableName:string = 'messages'
   private constructor() {
+  }
+
+  getMessage(msgId:string):Message|null{
+    let sql = `SELECT * FROM ${this.tableName} WHERE msg_id=?`
+    let args:Array<relationalStore.ValueType> = []
+    args.push(msgId)
+    let resultSet:relationalStore.ResultSet|undefined
+    try{
+      resultSet = JimDbManager.instance.getDb()?.querySqlSync(sql,args)
+      if(resultSet?.goToNextRow()){
+        let msg = this.toMessage(resultSet)
+        return msg
+      }
+    }catch (e){
+      console.error(`faild to query msg. [${this.tableName}] err:${e.message}`)
+    }finally {
+      resultSet?.close()
+    }
+    return null
   }
 
   queryMessages(converId:string,converType:number,start:number,count:number,isPositive:boolean):Message[]{
@@ -79,6 +98,21 @@ export class MessageDao{
       resultSet?.close()
     }
     return false
+  }
+
+  updateMsgContent(msgId:string,msgType:string,msgContent:MessageContent):number{
+    let sql = `UPDATE ${this.tableName} SET msg_type=?, msg_content=? WHERE msg_id=?`
+    let args:Array<relationalStore.ValueType> = []
+    args.push(msgType)
+    args.push(JimUtil.uint8ArrayToString(msgContent.encode()))
+    args.push(msgId)
+    try{
+      let vt = JimDbManager.instance.getDb()?.executeSync(sql,args)
+      return vt as number
+    }catch (e) {
+      console.error(`jimsdk_db_fail. [${this.tableName}] err:${e.message}`)
+    }
+    return 0
   }
 
   private getValuesBucket(msg:Message):relationalStore.ValuesBucket{

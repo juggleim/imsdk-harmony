@@ -64,12 +64,10 @@ export class ImClient{
     if(JimUtil.isEmpty(JuggleIm.instance.config.address ?? '')||
     JimUtil.isEmpty(JuggleIm.instance.config.appkey ?? '')||
     JimUtil.isEmpty(token ?? '')){
-      console.error("jimsdk_noinit")
       return
     }
     this.token = token
     if (this.status === ConnStatus.connecting||this.status === ConnStatus.connected){
-      console.log("jimsdk_connecting");
       return
     }
     this.status = ConnStatus.connecting
@@ -77,7 +75,6 @@ export class ImClient{
 
     this.wsSocket = webSocket.createWebSocket()
     this.wsSocket.on('open',(err,value)=>{
-      console.log("jimsdk_open:",JSON.stringify(err),JSON.stringify(value))
       let wsMsg = newConnectMessage(imconnect.ConnectMsgBody.create({
         "protoId":JuggleIm.instance.config.protoId,
         "appkey":JuggleIm.instance.config.appkey,
@@ -86,14 +83,12 @@ export class ImClient{
         "deviceId":JuggleIm.instance.config.deviceId
       }))
       this.writeImWsMessage(wsMsg)
-      console.log("jimsdk_after_send")
     })
     this.wsSocket.on('error',(err)=>{
       console.log("jimsdk_connect_error:",JSON.stringify(err))
     })
 
     this.wsSocket.on('message',(err,value)=>{
-      console.log("jimsdk_receive:",value)
       if (typeof value === 'string'){
 
       }else{
@@ -102,7 +97,6 @@ export class ImClient{
         this.onReceive(msg)
       }
     })
-    console.log("jimsdk_begin")
     this.wsSocket.connect(JuggleIm.instance.config.address)
       .then((value)=>{
         console.log("jimsdk_connect_succ:",JSON.stringify(value))

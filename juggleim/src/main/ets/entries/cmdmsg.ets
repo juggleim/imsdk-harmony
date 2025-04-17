@@ -16,9 +16,7 @@ export class RecallCmdMessage extends MessageContent{
   constructor() {
     super()
     this.setMsgType(JimMsgType.RecallCmd)
-    let msgFlag = new MsgFlag()
-    msgFlag.isCmd = true
-    this.setMsgFlag(msgFlag)
+    this.setMsgFlag({isCmd:true})
   }
 
   encode(): Uint8Array {
@@ -60,9 +58,7 @@ export class ReadNtfMessage extends MessageContent{
   constructor() {
     super()
     this.setMsgType(JimMsgType.ReadNtf)
-    let msgFlag = new MsgFlag()
-    msgFlag.isCmd = true
-    this.setMsgFlag(msgFlag)
+    this.setMsgFlag({isCmd:true})
   }
 
   encode(): Uint8Array {
@@ -96,9 +92,7 @@ export class ClearUnreadMessage extends  MessageContent{
   constructor() {
     super()
     this.setMsgType(JimMsgType.ClearUnread)
-    let msgFlag = new MsgFlag()
-    msgFlag.isCmd = true
-    this.setMsgFlag(msgFlag)
+    this.setMsgFlag({isCmd:true})
   }
 
   encode(): Uint8Array {
@@ -112,5 +106,48 @@ export class ClearUnreadMessage extends  MessageContent{
     let str = JimUtil.uint8ArrayToString(data)
     let t = JSON.parse(str) as IClearUnreadMessage
     this.conversations = t.conversations
+  }
+}
+
+interface IModifyMessage{
+  msg_type:string
+  msg_id:string
+  msg_time:number
+  msg_seq:number
+  msg_content:Uint8Array
+}
+
+export class ModifyMessage extends MessageContent{
+  newMsgType:string = ''
+  msgId:string = ''
+  msgTime:number = 0
+  msgSeq:number = 0
+  newMsgContent:Uint8Array = JimUtil.stringToUint8Array('')
+
+  constructor() {
+    super()
+    this.setMsgType(JimMsgType.ModifyMsg)
+    this.setMsgFlag({isCmd:true})
+  }
+
+  encode(): Uint8Array {
+    let str = JSON.stringify({
+      msg_type:this.newMsgType,
+      msg_id:this.msgId,
+      msg_time:this.msgTime,
+      msg_seq:this.msgSeq,
+      msg_content:this.newMsgContent
+    })
+    return JimUtil.stringToUint8Array(str)
+  }
+
+  decode(data: Uint8Array): void {
+    let str = JimUtil.uint8ArrayToString(data)
+    let t = JSON.parse(str) as IModifyMessage
+    this.newMsgType = t.msg_type
+    this.msgId = t.msg_id
+    this.msgTime = t.msg_time
+    this.msgSeq = t.msg_seq
+    this.newMsgContent = t.msg_content
   }
 }

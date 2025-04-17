@@ -16,7 +16,7 @@ export class MessageContent{
   private msgFlag:MsgFlag
   constructor() {
     this.msgType = "jg:unknown"
-    this.msgFlag = new MsgFlag()
+    this.msgFlag = {}
   }
 
   getMsgType():string{
@@ -83,10 +83,7 @@ export class TextMessage extends MessageContent{
   constructor() {
     super()
     this.setMsgType(JimMsgType.Text)
-    let msgFlag = new MsgFlag()
-    msgFlag.isStorage = true
-    msgFlag.isCount = true
-    this.setMsgFlag(msgFlag)
+    this.setMsgFlag({isStorage:true,isCount:true})
   }
 
   encode():Uint8Array{
@@ -131,10 +128,7 @@ export class MergeMessage extends  MessageContent{
   constructor() {
     super()
     this.setMsgType(JimMsgType.Merge)
-    let msgFlag = new MsgFlag()
-    msgFlag.isStorage = true
-    msgFlag.isCount = true
-    this.setMsgFlag(msgFlag)
+    this.setMsgFlag({isStorage:true,isCount:true})
   }
 
   encode():Uint8Array{
@@ -172,10 +166,7 @@ export class VoiceMessage extends MessageContent{
   constructor() {
     super()
     this.setMsgType(JimMsgType.Voice)
-    let msgFlag = new MsgFlag()
-    msgFlag.isStorage = true
-    msgFlag.isCount = true
-    this.setMsgFlag(msgFlag)
+    this.setMsgFlag({isStorage:true,isCount:true})
   }
 
   encode():Uint8Array{
@@ -217,10 +208,7 @@ export class ImageMessage extends MessageContent{
   constructor() {
     super()
     this.setMsgType(JimMsgType.Image)
-    let msgFlag = new MsgFlag()
-    msgFlag.isStorage = true
-    msgFlag.isCount = true
-    this.setMsgFlag(msgFlag)
+    this.setMsgFlag({isStorage:true,isCount:true})
   }
 
   encode():Uint8Array{
@@ -264,10 +252,7 @@ export class FileMessage extends MessageContent{
   constructor() {
     super()
     this.setMsgType(JimMsgType.File)
-    let msgFlag = new MsgFlag()
-    msgFlag.isStorage=true
-    msgFlag.isCount = true
-    this.setMsgFlag(msgFlag)
+    this.setMsgFlag({isStorage:true,isCount:true})
   }
 
   encode():Uint8Array{
@@ -313,10 +298,7 @@ export class VideoMessage extends MessageContent{
   constructor() {
     super()
     this.setMsgType(JimMsgType.Video)
-    let msgFlag = new MsgFlag()
-    msgFlag.isStorage=true
-    msgFlag.isCount = true
-    this.setMsgFlag(msgFlag)
+    this.setMsgFlag({isStorage:true,isCount:true})
   }
 
   encode():Uint8Array{
@@ -354,10 +336,7 @@ export class RecallInfoMessage extends MessageContent{
   constructor() {
     super()
     this.setMsgType(JimMsgType.RecallInfo)
-    let msgFlag = new MsgFlag()
-    msgFlag.isStorage=true
-    msgFlag.isCount = true
-    this.setMsgFlag(msgFlag)
+    this.setMsgFlag({isStorage:true,isCount:true})
   }
 
   encode(): Uint8Array {

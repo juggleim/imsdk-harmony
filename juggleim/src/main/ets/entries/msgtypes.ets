@@ -13,4 +13,6 @@ export class JimMsgType{
   static RecallCmd:string = 'jg:recall'
   static ReadNtf:string = 'jg:readntf'
   static ClearUnread:string = 'jg:clearunread'
+  static ModifyMsg:string = 'jg:modify'
+  static DelMsgs:string = `jg:delmsgs`
 }

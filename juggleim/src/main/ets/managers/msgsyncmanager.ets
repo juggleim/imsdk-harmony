@@ -2,16 +2,20 @@ import { JimUtil } from "../commons/jimutil";
 import { JimDbManager } from "../dbs/dbmanager";
 import { Conversation, ConversationInfo } from "../entries/conversation";
 import { GroupInfo } from "../entries/group";
-import { Message } from "../entries/message";
+import { Message, RecallInfoMessage } from "../entries/message";
 import { MsgHandler } from "../entries/msghandler";
 import { UserInfo } from "../entries/user";
 import { ConnStatus, ImClient } from "../imclients/imclient";
 import { immessage } from "../improto/immessage";
-import { MsgFlagTool } from "../improto/msgflag";
+import { MsgFlag, MsgFlagTool } from "../improto/msgflag";
 import Long from 'long'
 import { ConversationAddListener,ConversationUpdateListener,ConversationDeleteListener,TotalUnreadCountUpdateListener } from "./conversationmanager";
-import { MsgReceivedListener } from "./messagemanager";
 import { JuggleIm } from "../juggleim";
+import {
+  MsgCleanedListener,
+  MsgDeletedListener, MsgModifiedListener, MsgRecalledListener, MsgReceivedListener } from "./messagemanager";
+import { JimMsgType } from "../entries/msgtypes";
+import { ModifyMessage, RecallCmdMessage } from "../entries/cmdmsg";
 
 function promiseSyncConvers(mgr:MsgSyncManager):Promise<boolean>{
   return new Promise((resolve)=>{
@@ -67,6 +71,10 @@ export class MsgSyncManager{
 
   //message
   private msgReceivedListeners:MsgReceivedListener[] = new Array()
+  private msgRecalledListeners:MsgRecalledListener[] = new Array()
+  private msgModifiedListeners:MsgModifiedListener[] = new Array()
+  private msgDeletedListeners:MsgDeletedListener[] = new Array()
+  private msgCleanedListeners:MsgCleanedListener[] = new Array()
 
   constructor(imclient:ImClient) {
     this.imclient = imclient
@@ -166,6 +174,70 @@ export class MsgSyncManager{
     this.msgReceivedListeners.forEach((listener)=>{
       listener(msg)
     })
+  }
+
+  addMsgRecalledListener(listener:MsgRecalledListener){
+    this.msgRecalledListeners.push(listener)
+  }
+
+  removeMsgRecalledListener(listener:MsgRecalledListener){
+    for(let i=0;i<this.msgRecalledListeners.length;i++){
+      if(this.msgRecalledListeners[i]===listener){
+        this.msgRecalledListeners.splice(i,1)
+        break
+      }
+    }
+  }
+
+  private triggerMsgRecall(msg:Message){
+    this.msgRecalledListeners.forEach((listener)=>{
+      listener(msg)
+    })
+  }
+
+  addMsgModifiedListener(listener:MsgModifiedListener){
+    this.msgModifiedListeners.push(listener)
+  }
+
+  removeMsgModifiedListener(listener:MsgModifiedListener){
+    for(let i=0;i<this.msgModifiedListeners.length;i++){
+      if(this.msgModifiedListeners[i]===listener){
+        this.msgModifiedListeners.splice(i,1)
+        break
+      }
+    }
+  }
+
+  private triggerMsgModify(msg:Message){
+    this.msgModifiedListeners.forEach((listener)=>{
+      listener(msg)
+    })
+  }
+
+  addMsgDeletedListener(listener:MsgDeletedListener){
+    this.msgDeletedListeners.push(listener)
+  }
+
+  removeMsgDeletedListener(listener:MsgDeletedListener){
+    for(let i=0;i<this.msgDeletedListeners.length;i++){
+      if(this.msgDeletedListeners[i]===listener){
+        this.msgDeletedListeners.splice(i,1)
+        break
+      }
+    }
+  }
+
+  addMsgCleanedListener(listener:MsgCleanedListener){
+    this.msgCleanedListeners.push(listener)
+  }
+
+  removeMsgCleanedListener(listener:MsgCleanedListener){
+    for(let i=0;i<this.msgCleanedListeners.length;i++){
+      if(this.msgCleanedListeners[i]===listener){
+        this.msgCleanedListeners.splice(i,1)
+        break
+      }
+    }
   }
 
   private onDirectMsgReceived(index:number,data:Uint8Array){
@@ -269,14 +341,12 @@ export class MsgSyncManager{
   public handleMsg(downMsg:immessage.IDownMsg,callback:(isFinish:boolean)=>void){
     let msg = MsgHandler.downMsg2Message(downMsg)
     let msgFlag = MsgFlagTool.parseFlag(msg.flags)
-    let isTrigger:boolean = true
-    if(msgFlag.isState){
+    let isSend:boolean = false
+    if(downMsg.senderId ==JuggleIm.instance.userId){
+      isSend = true
+    }
 
-    }else{
-      let isSend:boolean = false
-      if(downMsg.senderId ==JuggleIm.instance.userId){
-        isSend = true
-      }
+    if(!msgFlag.isState){
       if(isSend){
         if((downMsg.msgTime as number) < this.getLatestSendboxMsgTime()){
           return
@@ -286,53 +356,55 @@ export class MsgSyncManager{
           return
         }
       }
-      if(msgFlag.isCmd){
-        //handle cmd msg
-      }else{
-        if(msgFlag.isStorage){
-          let msgDao = JimDbManager.instance.getMessageDao()
-          // check exist
-          if(!msgDao.existByMsgId(msg.messageId)){
-            //save msg
-            console.log("jimsdk_qryhismsg_sync:",msg.messageId,msg.clientId)
-            console.log("jimsdk_qryhismsg_sync:",JSON.stringify(msg))
-            let aff = msgDao.insert(msg)
-            if(aff>0&&msg.sentTime>this.getLatestConverSyncTime()) {
-              //check conver exist
-              let dbConver = JimDbManager.instance.getConversationDao().getConver(new Conversation(msg.conversation.conversationId,msg.conversation.conversationType))
-              let newConverInfo = this.msg2Conver(msg)
-              let isAdd:boolean = true
-              if(dbConver===undefined){//add
-                dbConver = newConverInfo
-              }else{//update
-                dbConver.syncTime = newConverInfo.syncTime
-                dbConver.converTime = newConverInfo.converTime
-                dbConver.lastMessage = newConverInfo.lastMessage
-                isAdd = false
-              }
-              //update conver
-              JimDbManager.instance.getConversationDao().upsert(dbConver as ConversationInfo)
-              this.recordLatestConverSyncTime(dbConver.converTime)
-              let convers:ConversationInfo[] = new Array()
-              convers.push(dbConver)
-              if(isAdd){
-                this.triggerConversationAdd(convers)
-              }else{
-                this.triggerConversationUpdate(convers)
-              }
+    }
+
+    if(msgFlag.isCmd){
+      if(msg.msgType == JimMsgType.RecallCmd){
+        this.handleRecallCmdMsg(msg)
+      }else if(msg.msgType == JimMsgType.ModifyMsg){
+        this.handleModifyCmdMsg(msg)
+      }
+    }else{
+      if(msgFlag.isStorage){
+        let msgDao = JimDbManager.instance.getMessageDao()
+        // check exist
+        if(!msgDao.existByMsgId(msg.messageId)){
+          //save msg
+          let aff = msgDao.insert(msg)
+          if(aff>0&&msg.sentTime>this.getLatestConverSyncTime()) {
+            //check conver exist
+            let dbConver = JimDbManager.instance.getConversationDao().getConver(new Conversation(msg.conversation.conversationId,msg.conversation.conversationType))
+            let newConverInfo = this.msg2Conver(msg)
+            let isAdd:boolean = true
+            if(dbConver===undefined){//add
+              dbConver = newConverInfo
+            }else{//update
+              dbConver.syncTime = newConverInfo.syncTime
+              dbConver.converTime = newConverInfo.converTime
+              dbConver.lastMessage = newConverInfo.lastMessage
+              isAdd = false
             }
-          }else{
-            isTrigger = false
+            //update conver
+            JimDbManager.instance.getConversationDao().upsert(dbConver as ConversationInfo)
+            this.recordLatestConverSyncTime(dbConver.converTime)
+            let convers:ConversationInfo[] = new Array()
+            convers.push(dbConver)
+            if(isAdd){
+              this.triggerConversationAdd(convers)
+            }else{
+              this.triggerConversationUpdate(convers)
+            }
           }
+          this.triggerMsgReceive(msg)
         }
       }
+    }
+    //unpdate msg sync time
+    if(!msgFlag.isState){
       if(isSend){
         this.recordLatestSendboxMsgTime(msg.sentTime,msg.flags)
       }else {
         this.recordLatestInboxMsgTime(msg.sentTime, msg.flags)
-      }
-      if(isTrigger){
-        this.triggerMsgReceive(msg)
       }
     }
     callback(true)
@@ -528,5 +600,34 @@ export class MsgSyncManager{
       converInfo.lastMessage.referMsgId = conver.msg.referMsg?.msgId as string
     }
     return converInfo
+  }
+
+  private handleRecallCmdMsg(msg:Message){
+    let recallCmdMsg = msg.msgContent as RecallCmdMessage
+    let msgDao = JimDbManager.instance.getMessageDao()
+    let oldMsg = msgDao.getMessage(recallCmdMsg.msgId)
+    //recallinfo
+    let recallInfoContent = new RecallInfoMessage()
+    recallInfoContent.exts = recallCmdMsg.exts
+    if(oldMsg!=null){
+      oldMsg.msgType = JimMsgType.RecallInfo
+      oldMsg.msgContent = recallInfoContent
+      msgDao.updateMsgContent(oldMsg.messageId,oldMsg.msgType,oldMsg.msgContent)
+      this.triggerMsgRecall(oldMsg)
+    }
+  }
+
+  private handleModifyCmdMsg(msg:Message){
+    let modifyMsg = msg.msgContent as ModifyMessage
+    let msgDao = JimDbManager.instance.getMessageDao()
+    let oldMsg = msgDao.getMessage(modifyMsg.msgId)
+    if(oldMsg!=null){
+      if(modifyMsg.newMsgType!=''){
+        oldMsg.msgType = modifyMsg.newMsgType
+      }
+      oldMsg.msgContent = MsgHandler.constructByMsgType(oldMsg.msgType,modifyMsg.newMsgContent)
+      msgDao.updateMsgContent(oldMsg.messageId,oldMsg.msgType,oldMsg.msgContent)
+      this.triggerMsgModify(oldMsg)
+    }
   }
 }
