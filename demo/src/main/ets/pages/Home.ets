@@ -24,7 +24,6 @@ struct Second{
         }
         .width(BaseConstants.FULL_HEIGHT)
         .height(BaseConstants.FULL_HEIGHT)
-
       }
       .height(BaseConstants.FULL_PERCENT)
       .width(BaseConstants.FULL_PERCENT)

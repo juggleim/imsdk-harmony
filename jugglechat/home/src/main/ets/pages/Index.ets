@@ -104,6 +104,7 @@ export struct Index {
             left: $r('app.float.home_tab_padding_left')
           })
           .visibility(this.currentBreakpoint === BreakpointConstants.BREAKPOINT_LG ? Visibility.Visible : Visibility.None)
+          .expandSafeArea([SafeAreaType.SYSTEM],[SafeAreaEdge.TOP])
         Navigation(this.pageInfo) {
           if (this.currentPageIndex === 0) {
             Flex({ direction: FlexDirection.Column, justifyContent: FlexAlign.Center }) {
@@ -236,5 +237,6 @@ export struct Index {
     .height(BaseConstants.FULL_HEIGHT)
     .width(BaseConstants.FULL_WIDTH)
     .backgroundColor($r('app.color.background_color_grey_two'))
+    .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.BOTTOM])
   }
 }

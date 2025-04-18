@@ -133,22 +133,27 @@ export struct ConversationDetail {
       Flex({ direction: FlexDirection.Column }) {
         ConversationDetailTopSearch({ currentConversationUserName: $currentConversationUserName, })
           .height(Adaptive.ContactItemHeight(this.currentBreakpoint))
-        Refresh({refreshing:$$this.refreshing,builder:this.refreshContent}){
-          List({scroller:this.scroller}){
-            ForEach(this.msgList,(item:MessageViewItem,index:number)=>{
-              ListItem(){
+          .zIndex(1)
+          .backgroundColor(Color.White)
+          .expandSafeArea([SafeAreaType.SYSTEM, SafeAreaType.KEYBOARD], [SafeAreaEdge.TOP])
+
+        Refresh({ refreshing: $$this.refreshing, builder: this.refreshContent }) {
+          List({ scroller: this.scroller }) {
+            ForEach(this.msgList, (item: MessageViewItem, index: number) => {
+              ListItem() {
                 ConversationDetailItem(item)
               }
             })
           }
-        }.onRefreshing(()=>{
-          setTimeout(()=>{
+        }.onRefreshing(() => {
+          setTimeout(() => {
             this.loadMoreMsgs()
             this.refreshing = false
-          },200)
+          }, 200)
         })
+
         Blank()
-        // ConversationDetailBottom()
+
         Row(){
           Column(){
             Column() {
@@ -209,9 +214,8 @@ export struct ConversationDetail {
         bottom: deviceInfo.deviceType !== BaseConstants.DEVICE_2IN1 ?
         $r('app.float.tab_content_pb') : $r('app.float.zero')
       })
+      .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM])
     }
     .hideTitleBar(true)
   }
-
-
 }

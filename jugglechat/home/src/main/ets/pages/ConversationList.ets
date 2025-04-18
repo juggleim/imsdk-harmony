@@ -176,7 +176,6 @@ export struct ConversationList {
       .width(BaseConstants.FULL_WIDTH)
       .height(BaseConstants.FULL_HEIGHT)
     }
-
     .height(BaseConstants.FULL_HEIGHT)
     .width(BaseConstants.FULL_WIDTH)
   }

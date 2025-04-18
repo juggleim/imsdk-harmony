@@ -28,7 +28,6 @@ export struct ConversationDetailTopSearch {
       StandardIcon({ icon: $r('app.media.ic_public_back') })
         .onClick(() => {
           if (this.currentBreakpoint === BreakpointConstants.BREAKPOINT_SM) {
-            console.log("xxxxx:")
             this.pageInfo.clear();
           } else if (this.pageInfo.size() === 1) {
             this.pageInfo.clear();
@@ -47,6 +46,6 @@ export struct ConversationDetailTopSearch {
     }
     .width(BaseConstants.FULL_WIDTH)
     .height(BaseConstants.FULL_HEIGHT)
-    .padding({ left: $r('app.float.icon_margin_two'), right: $r('app.float.icon_margin_two'),top: deviceInfo.deviceType === BaseConstants.DEVICE_2IN1 ? $r('app.float.zero') : $r('app.float.device_padding_top') })
+    .padding({ left: $r('app.float.icon_margin_two'), right: $r('app.float.icon_margin_two') })
   }
 }
