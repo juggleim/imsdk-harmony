@@ -25,6 +25,7 @@ import { FileMsgBubble } from './MsgBubbles/FileMsgBubble';
 import { VideoMsgBubble } from './MsgBubbles/VideoMsgBubble';
 import { VoiceMsgBubble } from './MsgBubbles/VoiceMsgBubble';
 import { CommonUtil } from '../jim/common';
+import { build } from '@ohos/protobufjs';
 
 @Component
 export struct MessageBubble {
@@ -125,12 +126,24 @@ export struct MessageBubble {
     .margin({ left: $r('app.float.message_bubble_left'), right: $r('app.float.message_bubble_right') })
   }
 
+  private downTime:number = 0
   @Builder
   MessageContent() {
     if(this.getMsgType() == JimMsgType.Text){
       TextMsgBubble({
         txtMsg:this.msgContent as TextMessage
       })
+        // .onTouch((event)=>{
+        // if(event.type==TouchType.Down){
+        //   this.downTime = new Date().getTime()
+        // }else if(event.type == TouchType.Up){
+        //   let upTime = new Date().getTime()
+        //   if((upTime-this.downTime)>1000){
+        //
+        //     console.log("xxxxxxxxxxxxxxxx")
+        //   }
+        // }
+      // })
     } else if (this.getMsgType() == JimMsgType.Image){
       ImageMsgBubble({
         imgMsg:this.msgContent as ImageMessage
