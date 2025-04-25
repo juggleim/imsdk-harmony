@@ -260,6 +260,10 @@ export class MsgSyncManager{
     }
   }
 
+  private resetCompleteFirstSync(){
+    this.afterFirstSync = false
+  }
+
   private completeFirstSync(){
     this.afterFirstSync = true
   }
@@ -539,6 +543,7 @@ export class MsgSyncManager{
       if (!JimDbManager.instance.hasInit) {
         JuggleIm.instance.initDb(userId)
       }
+      JuggleIm.instance.getMsgSyncManager().resetCompleteFirstSync()
       let isContinue:boolean = true
       //sync convers
       for(;isContinue;) {

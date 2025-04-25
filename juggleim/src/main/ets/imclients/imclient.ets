@@ -46,6 +46,7 @@ export class ImClient{
   index:number = 0
   status:number = ConnStatus.unknown
   token:string = ''
+  userId:string = ''
   wsSocket?:webSocket.WebSocket
   private connectStatusListeners:ConnStatusListener[] = new Array()
   private connectTimeoutId:number = 0
@@ -116,7 +117,8 @@ export class ImClient{
   }
 
   reconnect(){
-
+    this.disconnect(false)
+    this.connect(this.token)
   }
 
   disconnect(isLogout:boolean){
@@ -124,6 +126,7 @@ export class ImClient{
       clearInterval(this.pingTaskId)
     }
     this.close()
+    this.setConnectStatus(ConnStatus.disconnected,0,this.userId)
   }
 
   private close(){
@@ -163,6 +166,7 @@ export class ImClient{
           let uid = wsMsg.ConnectAckMsgBody?.userId as string
           JuggleIm.instance.userInfo.userId = uid
           JuggleIm.instance.userId = uid
+          this.userId = uid
           PreferenceUtil.setUserIdByToken(JuggleIm.instance.config.appkey,this.token,uid)
           //start ping
           this.pingTaskId = setInterval(()=>{
