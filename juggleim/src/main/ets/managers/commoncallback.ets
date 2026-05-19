@@ -1,1 +1,1 @@
-export type CommonCallback = (code:number)=>void
+export { CommonCallback } from '../interfaces/commoncallback'

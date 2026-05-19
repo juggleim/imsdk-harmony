@@ -1,4 +1,4 @@
-import { VoiceMessage } from "juggleim/src/main/ets/entries/message"
+import { VoiceMessage } from 'juggleim'
 
 @Component
 export struct VoiceMsgBubble{

@@ -5,47 +5,41 @@ import {
 import { Conversation, ConversationInfo } from '../entries/conversation'
 import { MsgFlagTool } from '../improto/msgflag'
 import { ImClient } from '../imclients/imclient'
-import { CommonCallback } from './commoncallback'
+import { CommonCallback } from '../interfaces/commoncallback'
 import { HashMap } from '@kit.ArkTS'
 import { JimDbManager } from '../dbs/dbmanager'
 import { MsgHandler } from '../entries/msghandler'
 import { MsgSyncManager } from './msgsyncmanager'
 import { JimUtil } from '../commons/jimutil'
 import { JuggleIm } from '../juggleim'
+import { IMessageManager } from '../interfaces/imessagemanager'
+import {
+  ClearMsgOptions,
+  MessageCallback,
+  MsgCleanedListener,
+  MsgDeletedListener,
+  MsgModifiedListener,
+  MsgReceivedListener,
+  MsgRecalledListener,
+  QryMessagesCallback,
+  QueryMsgOptions,
+  SearchParams
+} from '../interfaces/messagetypes'
 
-export type MessageCallback = (code:number,msg:Message|null)=>void
-export type QryMessagesCallback = (code:number,msgs:Message[],hasMore:boolean)=>void
+export {
+  ClearMsgOptions,
+  MessageCallback,
+  MsgCleanedListener,
+  MsgDeletedListener,
+  MsgModifiedListener,
+  MsgReceivedListener,
+  MsgRecalledListener,
+  QryMessagesCallback,
+  QueryMsgOptions,
+  SearchParams
+} from '../interfaces/messagetypes'
 
-export class QueryMsgOptions{
-  count:number = 20
-  startTime:number = 0
-  isPositive:boolean = false
-  constructor() {
-  }
-}
-
-export class ClearMsgOptions{
-  cleanTime:number = 0
-  cleanScope:number = 0
-  senderId:string = ''
-  cleanTimeOffset:number = 0
-}
-
-export class SearchParams{
-  conver?:Conversation
-  keywords:string = ""
-  msgTypes:string[] = []
-  startTime:number = 0
-  endTime:number = 0
-}
-
-export type MsgReceivedListener = (msg:Message)=>void
-export type MsgRecalledListener = (msg:Message)=>void
-export type MsgModifiedListener = (msg:Message)=>void
-export type MsgDeletedListener = (conver:Conversation,msgIds:string[])=>void
-export type MsgCleanedListener = (conver:Conversation,cleanTime:number,senderId:string)=>void
-
-export class MessageManager{
+export class MessageManager implements IMessageManager{
   private imclient:ImClient
   private msgSyncMgr:MsgSyncManager
 

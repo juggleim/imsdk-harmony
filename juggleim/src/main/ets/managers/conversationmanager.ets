@@ -2,27 +2,36 @@ import {JuggleIm} from '../juggleim'
 import { Conversation, ConversationInfo } from "../entries/conversation"
 import {immessage} from  '../improto/immessage'
 import { ImClient } from '../imclients/imclient'
-import {CommonCallback} from './commoncallback'
+import {CommonCallback} from '../interfaces/commoncallback'
 import { JimDbManager } from '../dbs/dbmanager'
 import { MsgHandler } from '../entries/msghandler'
 import { MsgSyncManager } from './msgsyncmanager'
+import { IConversationManager } from '../interfaces/iconversationmanager'
+import {
+  ConversationAddListener,
+  ConversationCallback,
+  ConversationDeleteListener,
+  ConversationInsertCallback,
+  ConversationsCallback,
+  ConversationUpdateListener,
+  TopConverSortType,
+  TotalUnreadCountCallback,
+  TotalUnreadCountUpdateListener
+} from '../interfaces/conversationtypes'
 
-export type ConversationCallback = (code:number,conver:ConversationInfo|null)=>void
-export type ConversationsCallback = (code:number,convers:ConversationInfo[])=>void
-export type ConversationInsertCallback = (code:number,conver:ConversationInfo|null)=>void
-export type TotalUnreadCountCallback = (code:number,count:number)=>void
+export {
+  ConversationAddListener,
+  ConversationCallback,
+  ConversationDeleteListener,
+  ConversationInsertCallback,
+  ConversationsCallback,
+  ConversationUpdateListener,
+  TopConverSortType,
+  TotalUnreadCountCallback,
+  TotalUnreadCountUpdateListener
+} from '../interfaces/conversationtypes'
 
-export enum TopConverSortType{
-  ByTopTime,
-  BySortTime
-}
-
-export type ConversationAddListener = (convers:ConversationInfo[])=>void
-export type ConversationUpdateListener = (convers:ConversationInfo[])=>void
-export type ConversationDeleteListener = (convers:ConversationInfo[])=>void
-export type TotalUnreadCountUpdateListener = (count:number)=>void
-
-export class ConversationManager{
+export class ConversationManager implements IConversationManager{
   private imclient:ImClient
   private msgSyncMgr:MsgSyncManager
 

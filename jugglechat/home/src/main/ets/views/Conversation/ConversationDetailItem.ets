@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 
-import { MessageContent } from 'juggleim/src/main/ets/entries/message';
+import { MessageContent } from 'juggleim';
 import { MessageBubble } from '../MessageBubble';
 
 @Component

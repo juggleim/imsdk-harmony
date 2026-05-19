@@ -3,10 +3,12 @@ import { UserInfo } from "../entries/user";
 import { ImClient } from "../imclients/imclient";
 import { immessage } from "../improto/immessage";
 import { JimUtil } from "../commons/jimutil";
+import { IUserInfoManager } from '../interfaces/iuserinfomanager'
+import { UserInfoCallback } from '../interfaces/userinfotypes'
 
-export type UserInfoCallback = (code:number,userInfo:UserInfo)=>void
+export { UserInfoCallback } from '../interfaces/userinfotypes'
 
-export class UserInfoManager{
+export class UserInfoManager implements IUserInfoManager{
   private imclient:ImClient
   constructor(imclient:ImClient) {
     this.imclient = imclient

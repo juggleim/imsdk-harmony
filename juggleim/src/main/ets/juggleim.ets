@@ -11,6 +11,11 @@ import { MsgSyncManager } from './managers/msgsyncmanager';
 import { MsgHandler } from './entries/msghandler';
 import { Conversation, ConversationInfo } from './entries/conversation';
 import { Message } from './entries/message';
+import { IConnectionManager } from './interfaces/iconnectionmanager'
+import { IConversationManager } from './interfaces/iconversationmanager'
+import { IMessageManager } from './interfaces/imessagemanager'
+import { IUserInfoManager } from './interfaces/iuserinfomanager'
+import { IGroupInfoManager } from './interfaces/igroupinfomanager'
 
 export class JimConfig{
   address:string = ''
@@ -51,8 +56,17 @@ export class JuggleIm{
   }
 
   async init(address:string, appkey:string):Promise<void>{
-    this.config.address = address+"/im"
-    this.config.healthCheckAddress = address + "/health"
+    let normalizedAddress = address
+    if(normalizedAddress.endsWith('/')){
+      normalizedAddress = normalizedAddress.substring(0,normalizedAddress.length - 1)
+    }
+    if(normalizedAddress.endsWith('/im')){
+      this.config.address = normalizedAddress
+      this.config.healthCheckAddress = normalizedAddress.substring(0,normalizedAddress.length - 3) + '/health'
+    }else{
+      this.config.address = normalizedAddress+"/im"
+      this.config.healthCheckAddress = normalizedAddress + "/health"
+    }
     this.config.appkey = appkey
     this.config.deviceId = PreferenceUtil.getDeviceId()
   }
@@ -68,11 +82,11 @@ export class JuggleIm{
     return this.imclient.status
   }
 
-  getConnectionManager():ConnectionManager{
+  getConnectionManager():IConnectionManager{
     return this.connectManager
   }
 
-  getMessageManager():MessageManager{
+  getMessageManager():IMessageManager{
     return this.messageManager
   }
 
@@ -80,16 +94,15 @@ export class JuggleIm{
     return this.msgSyncManager
   }
 
-  getConversationManager():ConversationManager{
+  getConversationManager():IConversationManager{
     return this.converManager
   }
 
-  getUserInfoManager():UserInfoManager{
+  getUserInfoManager():IUserInfoManager{
     return this.userInfoManager
   }
 
-  getGroupInfoManager():GroupInfoManager{
+  getGroupInfoManager():IGroupInfoManager{
     return this.groupInfoManager
   }
 }
-

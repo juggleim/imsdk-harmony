@@ -14,11 +14,10 @@
  */
 
 import { BaseConstants, BreakpointConstants } from 'base'
-import { FileMessage, ImageMessage, MessageContent, TextMessage,
+import { FileMessage, ImageMessage, JimMsgType, MessageContent, TextMessage,
   VideoMessage,
-  VoiceMessage} from 'juggleim/src/main/ets/entries/message';
+  VoiceMessage} from 'juggleim';
 import { HomeConstants } from '../constants/HomeConstants';
-import { JimMsgType } from 'juggleim/src/main/ets/entries/msgtypes';
 import { TextMsgBubble } from './MsgBubbles/TextMsgBubble';
 import { ImageMsgBubble } from './MsgBubbles/ImageMsgBubble';
 import { FileMsgBubble } from './MsgBubbles/FileMsgBubble';

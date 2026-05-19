@@ -20,11 +20,14 @@ import { deviceInfo } from '@kit.BasicServicesKit';
 import { ConversationDetailParams } from '../viewmodel/ConversationViewModel';
 import {MessageViewItem} from '../viewmodel/MessageViewModel'
 import { ObservedArray } from '../jim/common';
-import { JuggleIm } from 'juggleim';
-import { Conversation } from 'juggleim/src/main/ets/entries/conversation';
-import { MsgReceivedListener, QueryMsgOptions } from 'juggleim/src/main/ets/managers/messagemanager';
+import {
+  Conversation,
+  JuggleIm,
+  MsgReceivedListener,
+  QueryMsgOptions,
+  TextMessage
+} from 'juggleim';
 import { HomeConstants } from '../constants/HomeConstants';
-import { TextMessage } from 'juggleim/src/main/ets/entries/message';
 
 @Component
 export struct ConversationDetail {

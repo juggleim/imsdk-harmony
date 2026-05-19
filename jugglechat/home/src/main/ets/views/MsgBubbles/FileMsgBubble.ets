@@ -1,5 +1,5 @@
 import { IntroduceText, NormalText } from "base"
-import { FileMessage } from "juggleim/src/main/ets/entries/message"
+import { FileMessage } from 'juggleim'
 import { HomeConstants } from "../../constants/HomeConstants"
 
 @Component

@@ -18,9 +18,8 @@ import { BusinessError } from '@kit.BasicServicesKit';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { Logger } from 'base';
 import { JuggleIm } from 'juggleim';
-import { ConversationInfo } from 'juggleim/src/main/ets/entries/conversation';
-import { FileMessage, ImageMessage, TextMessage, VideoMessage,
-  VoiceMessage } from 'juggleim/src/main/ets/entries/message';
+import { ConversationInfo, FileMessage, ImageMessage, TextMessage, VideoMessage,
+  VoiceMessage } from 'juggleim';
 import { CommonUtil } from '../jim/common';
 
 @Observed

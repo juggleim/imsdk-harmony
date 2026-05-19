@@ -1,4 +1,4 @@
-import { MessageContent } from "juggleim/src/main/ets/entries/message"
+import { MessageContent } from 'juggleim'
 
 @Observed
 class MessageViewItem{

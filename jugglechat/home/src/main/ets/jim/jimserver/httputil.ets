@@ -1,14 +1,18 @@
 import http from "@ohos.net.http";
 
 export interface JimServerHeaders{
-  appkey:string
+  AppKey?:string
+  appkey?:string
   Authorization?:string
+  'Content-Type'?:string
+  'x-amz-acl'?:string
 }
 
-export type HttpCallback = (code:number,data?:Object)=>void
+export type HttpCallback = (code:number,data?:Object,msg?:string)=>void
 
 export function doHttp(url:string,method:http.RequestMethod,header?:JimServerHeaders,data?:string,callback?:HttpCallback) {
   let httpRequest = http.createHttp()
+  console.log("jim_http_request:", url, JSON.stringify(header ?? {}), data ?? '')
   httpRequest.request(url,{
     method:method,
     extraData:data,
@@ -18,18 +22,23 @@ export function doHttp(url:string,method:http.RequestMethod,header?:JimServerHea
     connectTimeout:5000,
   },(err,data)=>{
     if(err){
+      console.log("jim_http_error:", url, JSON.stringify(err))
       if(callback){
-        callback(-1,'')
+        callback(-1,'',err.message)
       }
     }else{
       let retCode:number = 0
+      let retMsg:string = ''
       if(data.responseCode!=200){
         retCode = -2
+        retMsg = `HTTP ${data.responseCode}`
       }else{
         retCode = data.result["code"] as number
+        retMsg = data.result["msg"] as string
       }
+      console.log("jim_http_response:", url, data.responseCode, retCode, retMsg, JSON.stringify(data.result["data"]))
       if(callback){
-        callback(retCode,data.result["data"])
+        callback(retCode,data.result["data"],retMsg)
       }
     }
     httpRequest.destroy()

@@ -7,6 +7,7 @@
   "license": "",
   "dependencies": {
     "base": "file:../jugglechat/base",
+    "@ohos/crypto-js": "^2.0.4-rc.1",
     "home": "file:../jugglechat/home",
     "juggleim": "file:../juggleim",
     "long": "^5.2.1"

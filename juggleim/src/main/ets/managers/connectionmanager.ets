@@ -2,9 +2,10 @@ import { JuggleIm } from '../juggleim'
 import { PreferenceUtil } from '../commons/preferenceutil'
 import { JimDbManager } from '../dbs/dbmanager'
 import {ImClient,ConnStatusListener} from '../imclients/imclient'
+import { IConnectionManager } from '../interfaces/iconnectionmanager'
 
 
-export class ConnectionManager {
+export class ConnectionManager implements IConnectionManager {
   private imclient:ImClient
 
   constructor(imclient:ImClient) {
@@ -19,6 +20,10 @@ export class ConnectionManager {
       }
     }
     this.imclient.connect(token)
+  }
+
+  disconnect(){
+    this.imclient.disconnect(true)
   }
 
   addConnectStatusListener(l:ConnStatusListener){

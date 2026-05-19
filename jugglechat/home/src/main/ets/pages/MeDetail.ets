@@ -1,3 +1,4 @@
+import { promptAction, router } from '@kit.ArkUI'
 import { Adaptive, BaseConstants, BreakpointConstants } from "base";
 import { StandardIcon } from 'base/src/main/ets/views/image/StandardIcon';
 import { HomeConstants } from "../constants/HomeConstants";
@@ -5,6 +6,7 @@ import { deviceInfo } from "@kit.BasicServicesKit";
 import { CommonUtil } from "../jim/common";
 import { PreferenceUtil } from "../jim/preferenceutil";
 import { JimServer } from "../jim/jimserver/jimserver";
+import { JuggleIm } from 'juggleim'
 
 
 @Component
@@ -42,6 +44,23 @@ export struct MeDetail {
     } else {
       return ''
     }
+  }
+
+  private logout() {
+    JuggleIm.instance.getConnectionManager().disconnect()
+    PreferenceUtil.cleanCacheAuth()
+    JimServer.instance.clearAuth()
+    JuggleIm.instance.userId = ''
+    JuggleIm.instance.userInfo.userId = ''
+    this.mySettingPageInfo.clear()
+    promptAction.showToast({
+      message: '已退出登录',
+      duration: 1000,
+      bottom: 100
+    })
+    router.replaceUrl({
+      url: 'pages/Index'
+    })
   }
 
   build() {
@@ -396,10 +415,7 @@ export struct MeDetail {
             bottomLeft:6,
             bottomRight:6,
           }).onClick(()=>{
-            if (this.mySettingPageInfo.size() > 1) {
-              this.mySettingPageInfo.pop()
-            }
-            this.mySettingPageInfo.pushPath({name:'FriendVerify'})
+            this.logout()
           })
         }
         .margin(this.currentBreakpoint === BreakpointConstants.BREAKPOINT_SM ? {} : {

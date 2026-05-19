@@ -20,13 +20,14 @@ import { HomeTopSearch } from '../views/common/HomeTopSearch';
 import { HomeConstants } from '../constants/HomeConstants';
 import { deviceInfo } from '@kit.BasicServicesKit';
 import { ObservedArray} from '../jim/common'
-import {JuggleIm} from 'juggleim'
-import { ConnStatus } from 'juggleim/src/main/ets/imclients/imclient';
-import { toConverViewItem } from '../viewmodel/ConversationViewModel'
 import {
+  ConnStatus,
   ConversationAddListener,
   ConversationDeleteListener,
-  ConversationUpdateListener } from 'juggleim/src/main/ets/managers/conversationmanager';
+  ConversationUpdateListener,
+  JuggleIm
+} from 'juggleim'
+import { toConverViewItem } from '../viewmodel/ConversationViewModel'
 
 @Component
 export struct ConversationList {

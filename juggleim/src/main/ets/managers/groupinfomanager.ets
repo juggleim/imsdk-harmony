@@ -3,8 +3,9 @@ import { GroupInfo } from "../entries/group";
 import { ImClient } from "../imclients/imclient";
 import { immessage } from "../improto/immessage";
 import { JimUtil } from "../commons/jimutil";
+import { IGroupInfoManager } from '../interfaces/igroupinfomanager'
 
-export class GroupInfoManager{
+export class GroupInfoManager implements IGroupInfoManager{
   private imclient:ImClient
   constructor(imclient:ImClient) {
     this.imclient = imclient
