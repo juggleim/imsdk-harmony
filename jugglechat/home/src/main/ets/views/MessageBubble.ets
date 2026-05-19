@@ -14,7 +14,7 @@
  */
 
 import { BaseConstants, BreakpointConstants } from 'base'
-import { FileMessage, ImageMessage, JimMsgType, MessageContent, TextMessage,
+import { FileMessage, ImageMessage, JimMsgType, MergeMessage, MessageContent, RecallInfoMessage, TextMessage,
   VideoMessage,
   VoiceMessage} from 'juggleim';
 import { HomeConstants } from '../constants/HomeConstants';
@@ -24,7 +24,7 @@ import { FileMsgBubble } from './MsgBubbles/FileMsgBubble';
 import { VideoMsgBubble } from './MsgBubbles/VideoMsgBubble';
 import { VoiceMsgBubble } from './MsgBubbles/VoiceMsgBubble';
 import { CommonUtil } from '../jim/common';
-import { build } from '@ohos/protobufjs';
+import { buildMessagePreview } from '../viewmodel/MessageViewModel';
 
 @Component
 export struct MessageBubble {
@@ -36,6 +36,9 @@ export struct MessageBubble {
   private selfName?:string
   private selfIcon?:string
   private msgContent?:MessageContent
+  private referenceText?:string
+  private previewText?:string
+  private msgType?:string
   private msgTime?:number
 
   private getMsgType():string{
@@ -74,14 +77,14 @@ export struct MessageBubble {
               .fill(Color.White)
               .visibility(this.isReceived ? Visibility.Visible : Visibility.None)
             Path()
-              .commands('M23 1 L0 28 L-10 1 Z')
+              .commands('M0 1 L32 1 L42 18 Z')
               .fillOpacity(HomeConstants.CONVERSATION_DETAIL_FILL_OPACITY)
               .stroke(Color.White)
               .strokeWidth(HomeConstants.CONVERSATION_DETAIL_STROKE_WIDTH)
               .fill(Color.White)
               .visibility(this.isReceived ? Visibility.None : Visibility.Visible)
               .zIndex(HomeConstants.CONTACTS_DETAIL_AVATAR_Z_INDEX)
-              .margin({ right: $r('app.float.conversation_detail_path_right') })
+              .margin({ right: -10 })
             Column() {
               this.MessageContent()
             }
@@ -128,21 +131,29 @@ export struct MessageBubble {
   private downTime:number = 0
   @Builder
   MessageContent() {
+    if(this.referenceText != undefined && this.referenceText != ''){
+      Column() {
+        Text('引用')
+          .fontSize(10)
+          .fontColor('#999999')
+        Text(this.referenceText)
+          .fontSize(BaseConstants.FONT_SIZE_TWELVE)
+          .fontColor('#666666')
+          .maxLines(2)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
+      }
+      .alignItems(HorizontalAlign.Start)
+      .width('100%')
+      .padding(8)
+      .margin({ bottom: 8 })
+      .backgroundColor('#F3F4F6')
+      .borderRadius(8)
+    }
+
     if(this.getMsgType() == JimMsgType.Text){
       TextMsgBubble({
         txtMsg:this.msgContent as TextMessage
       })
-        // .onTouch((event)=>{
-        // if(event.type==TouchType.Down){
-        //   this.downTime = new Date().getTime()
-        // }else if(event.type == TouchType.Up){
-        //   let upTime = new Date().getTime()
-        //   if((upTime-this.downTime)>1000){
-        //
-        //     console.log("xxxxxxxxxxxxxxxx")
-        //   }
-        // }
-      // })
     } else if (this.getMsgType() == JimMsgType.Image){
       ImageMsgBubble({
         imgMsg:this.msgContent as ImageMessage
@@ -159,8 +170,22 @@ export struct MessageBubble {
       VoiceMsgBubble({
         voiceMsg:this.msgContent as VoiceMessage
       })
+    } else if(this.getMsgType() == JimMsgType.Merge){
+      Text(buildMessagePreview(this.msgContent as MergeMessage))
+        .fontSize(BaseConstants.FONT_SIZE_TWELVE)
+        .fontFamily(BaseConstants.FONT_FAMILY_NORMAL)
+        .fontWeight(BaseConstants.FONT_WEIGHT_FOUR)
+        .lineHeight($r('app.float.conversation_default_text_line'))
+        .fontColor($r('app.color.conversation_default_text_color'))
+    } else if(this.getMsgType() == JimMsgType.RecallInfo){
+      Text(buildMessagePreview(this.msgContent as RecallInfoMessage))
+        .fontSize(BaseConstants.FONT_SIZE_TWELVE)
+        .fontFamily(BaseConstants.FONT_FAMILY_NORMAL)
+        .fontWeight(BaseConstants.FONT_WEIGHT_FOUR)
+        .lineHeight($r('app.float.conversation_default_text_line'))
+        .fontColor('#999999')
     } else {
-      Text('Unknown')
+      Text(buildMessagePreview(this.msgContent))
         .fontSize(BaseConstants.FONT_SIZE_TWELVE)
         .fontFamily(BaseConstants.FONT_FAMILY_NORMAL)
         .fontWeight(BaseConstants.FONT_WEIGHT_FOUR)

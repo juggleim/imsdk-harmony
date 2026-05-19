@@ -2,6 +2,7 @@ import { JimUtil } from '../commons/jimutil'
 import { MsgFlag, MsgFlagTool } from '../improto/msgflag'
 import { Conversation } from './conversation'
 import { JimMsgType } from './msgtypes'
+import { MessageMentionInfo, PushData } from './messageoptions'
 
 export class MessageSentState{
   static none:number = 0
@@ -65,6 +66,12 @@ export class Message{
   isDeleted:boolean = false
   searchContent:string = ''
   referMsgId:string = ''
+  referredMessage:Message | null = null
+  mentionInfo?:MessageMentionInfo
+  pushData?:PushData
+  lifeTime:number = 0
+  lifeTimeAfterRead:number = 0
+  destroyTime:number = 0
 
   state:number = MessageSentState.none
 

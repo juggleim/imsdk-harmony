@@ -6,6 +6,7 @@ import { JimDbManager } from "./dbmanager";
 import { JimDbUtil } from "./dbutil";
 import { Conversation } from "../entries/conversation";
 import { MsgHandler } from "../entries/msghandler";
+import { MessageOptionUtil } from "../commons/messageoptionutil";
 
 export class MessageDao{
   static instance:MessageDao = new MessageDao()
@@ -126,7 +127,7 @@ export class MessageDao{
       args.push(msgId)
     }
     if(msgTime!=undefined){
-      sql = sql + ` ,msg_time=?`
+      sql = sql + ` ,sent_time=?`
       args.push(msgTime)
     }
     if(msgSeq!=undefined){
@@ -157,12 +158,14 @@ export class MessageDao{
       "msg_type":msg.msgContent.getMsgType(),
       "sent_time":JimUtil.toNumber(msg.sentTime),
       "msg_content": JimUtil.uint8ArrayToString(msg.msgContent.encode()),
+      "ext": MessageOptionUtil.encodeMessageExt(msg),
       "state":msg.state,
       "flags":MsgFlagTool.toFlag(msg.msgContent.getFlag()),
       "has_read":msg.hasRead?1:0,
       "read_count":msg.readCount,
       "member_count":msg.memberCount,
       "search_content":msg.searchContent,
+      "mention_info": MessageOptionUtil.encodeMentionInfo(msg.mentionInfo),
       "refer_msg_id":msg.referMsgId
     }
     return valuesBucket
@@ -191,7 +194,15 @@ export class MessageDao{
     message.memberCount = JimDbUtil.toNumber(resultSet, "member_count")
     message.isDeleted = JimDbUtil.toNumber(resultSet,"is_deleted")>0
     message.searchContent = JimDbUtil.toString(resultSet,"search_content")
+    message.mentionInfo = MessageOptionUtil.decodeMentionInfo(JimDbUtil.toString(resultSet,"mention_info"))
     message.referMsgId = JimDbUtil.toString(resultSet, "refer_msg_id")
+    if(message.referMsgId != ''){
+      let referMessage = this.getMessage(message.referMsgId)
+      if(referMessage != null){
+        message.referredMessage = referMessage
+      }
+    }
+    MessageOptionUtil.decodeMessageExt(JimDbUtil.toString(resultSet, "ext"), message)
     return message
   }
 }

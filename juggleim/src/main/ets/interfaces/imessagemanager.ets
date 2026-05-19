@@ -1,5 +1,6 @@
 import { Conversation } from '../entries/conversation'
 import { MessageContent } from '../entries/message'
+import { MessageOptions } from '../entries/messageoptions'
 import { CommonCallback } from './commoncallback'
 import {
   ClearMsgOptions,
@@ -28,6 +29,7 @@ export interface IMessageManager {
   removeMsgCleanedListener(listener: MsgCleanedListener): void
   registerMessage(msgType: string, constructor: Function): void
   sendMessage(msg: MessageContent, conver: Conversation, callback: MessageCallback): void
+  sendMessage(msg: MessageContent, conver: Conversation, options: MessageOptions, callback: MessageCallback): void
   sendMediaMessage(msg: MessageContent, conver: Conversation): void
   queryMessages(conver: Conversation, options: QueryMsgOptions, callback: QryMessagesCallback): void
   queryLocalMessages(conver: Conversation, options: QueryMsgOptions, callback: QryMessagesCallback): void

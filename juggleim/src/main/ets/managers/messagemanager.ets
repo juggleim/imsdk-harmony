@@ -13,6 +13,8 @@ import { MsgSyncManager } from './msgsyncmanager'
 import { JimUtil } from '../commons/jimutil'
 import { JuggleIm } from '../juggleim'
 import { IMessageManager } from '../interfaces/imessagemanager'
+import { MessageOptions } from '../entries/messageoptions'
+import { MessageOptionUtil } from '../commons/messageoptionutil'
 import {
   ClearMsgOptions,
   MessageCallback,
@@ -92,7 +94,20 @@ export class MessageManager implements IMessageManager{
     MsgHandler.registerMessage(msgType, constructor)
   }
 
-  sendMessage(msg:MessageContent,conver:Conversation,callback:MessageCallback){
+  sendMessage(msg:MessageContent,conver:Conversation,callback:MessageCallback): void
+  sendMessage(msg:MessageContent,conver:Conversation,options:MessageOptions,callback:MessageCallback): void
+  sendMessage(msg:MessageContent,conver:Conversation,arg3:MessageCallback|MessageOptions,arg4?:MessageCallback): void{
+    let callback:MessageCallback
+    let options:MessageOptions|undefined
+    if(typeof arg3 === 'function'){
+      callback = arg3
+    }else{
+      options = arg3
+      if(arg4 == undefined){
+        return
+      }
+      callback = arg4
+    }
     let targetId = conver.conversationId
     let method:string = ""
     if(conver.conversationType == 1){
@@ -102,13 +117,6 @@ export class MessageManager implements IMessageManager{
     }
     let clientUid:string = JimUtil.getUuid()
     let flags = MsgFlagTool.toFlag(msg.getFlag())
-    let upMsg = immessage.UpMsg.create({
-      msgType:msg.getMsgType(),
-      msgContent:msg.encode(),
-      flags: flags,
-      clientUid:clientUid
-    })
-
     let message = new Message()
     message.conversation = conver
     message.msgContent = msg
@@ -117,6 +125,18 @@ export class MessageManager implements IMessageManager{
     message.sentTime = new Date().getTime()
     message.flags = msg.getFlagNumber()
     message.state = MessageSentState.sending
+
+    let referMsg = this.applyMessageOptions(message, options)
+
+    let upMsg = immessage.UpMsg.create({
+      msgType:msg.getMsgType(),
+      msgContent:msg.encode(),
+      flags: flags,
+      clientUid:clientUid,
+      pushData: MessageOptionUtil.toProtoPushData(message.pushData),
+      mentionInfo: MessageOptionUtil.toProtoMentionInfo(message.mentionInfo),
+      referMsg: referMsg != undefined ? MessageOptionUtil.toProtoDownMsg(referMsg) : undefined
+    })
 
     //save in db
     let msgDao = JimDbManager.instance.getMessageDao()
@@ -137,6 +157,9 @@ export class MessageManager implements IMessageManager{
         if(typeof pubAck.msgSeqNo == 'number'){
           message.msgSeqNo = pubAck.msgSeqNo
         }
+        if(message.lifeTime > 0){
+          message.destroyTime = message.sentTime + message.lifeTime
+        }
         message.state = MessageSentState.success
         msgDao.updateMsgState(msgDbId,message.state,message.messageId,message.sentTime,message.msgSeqNo)
         this.msgSyncMgr.updConver(message)
@@ -148,6 +171,34 @@ export class MessageManager implements IMessageManager{
         callback(code,message)
       }
     })
+  }
+
+  private applyMessageOptions(message:Message,options?:MessageOptions):Message|undefined{
+    if(options == undefined){
+      return undefined
+    }
+    if(options.mentionInfo != undefined){
+      message.mentionInfo = options.mentionInfo
+    }
+    if(options.pushData != undefined){
+      message.pushData = options.pushData
+    }
+    message.lifeTime = options.lifeTime
+    message.lifeTimeAfterRead = options.lifeTimeAfterRead
+    if(message.lifeTime > 0){
+      message.destroyTime = message.sentTime + message.lifeTime
+    }
+    if(options.referredMessageId == ''){
+      return undefined
+    }
+    message.referMsgId = options.referredMessageId
+    let referMsg = JimDbManager.instance.getMessageDao().getMessage(options.referredMessageId)
+    if(referMsg != null){
+      message.referredMessage = referMsg
+      message.referMsgId = referMsg.messageId
+      return referMsg
+    }
+    return undefined
   }
 
   sendMediaMessage(msg:MessageContent,conver:Conversation){}

@@ -23,6 +23,9 @@ export struct ConversationDetailItem {
   private selfName?:string
   private selfIcon?:string
   private msgContent?:MessageContent
+  private referenceText?:string
+  private previewText?:string
+  private msgType?:string
 
   private isReceived?: boolean = false;
   private msgTime:number=0
@@ -35,6 +38,9 @@ export struct ConversationDetailItem {
         selfName:this.selfName,
         selfIcon:this.selfIcon,
         msgContent:this.msgContent,
+        referenceText:this.referenceText,
+        previewText:this.previewText,
+        msgType:this.msgType,
         isReceived: this.isReceived,
         msgTime:this.msgTime
       })

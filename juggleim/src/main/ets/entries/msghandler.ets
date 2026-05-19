@@ -8,6 +8,7 @@ import { UserInfo } from "./user"
 import { JuggleIm } from "../../../../Index"
 import { GroupInfo } from "./group"
 import { JimMsgType } from "./msgtypes"
+import { MessageOptionUtil } from "../commons/messageoptionutil"
 
 export class MsgHandler{
   private static msgTypeMap:Map<string,Function> = new Map()
@@ -41,6 +42,7 @@ export class MsgHandler{
       msgContent.decode(data)
       return msgContent
     }else{
+      console.warn(`jimsdk_unknown_msg_type: ${msgType}`)
       return new MessageContent()
     }
   }
@@ -63,9 +65,12 @@ export class MsgHandler{
     message.senderId = downMsg.senderId as string
     message.memberCount = JimUtil.toNumber(downMsg.memberCount as number)
     message.searchContent = downMsg.SearchText as string
-    message.referMsgId = downMsg.referMsg as string
-
     message.flags = JimUtil.toNumber(downMsg.flags as number)
+    let referMessage:Message|undefined
+    if(downMsg.referMsg != undefined && downMsg.referMsg != null){
+      referMessage = MsgHandler.downMsg2ReferenceMessage(downMsg.referMsg)
+    }
+    MessageOptionUtil.applyProtoOptions(message, downMsg, referMessage)
 
     //check userinfo
     if(downMsg.channelType===immessage.ChannelType.Private){
@@ -89,6 +94,23 @@ export class MsgHandler{
       }
     }
 
+    return message
+  }
+
+  private static downMsg2ReferenceMessage(downMsg:immessage.IDownMsg):Message{
+    let message = new Message()
+    message.conversation = new Conversation(downMsg.targetId as string,downMsg.channelType as number)
+    message.messageId = downMsg.msgId as string
+    message.clientId = downMsg.clientUid as string
+    message.senderId = downMsg.senderId as string
+    message.msgContent = MsgHandler.constructByMsgType(downMsg.msgType as string,downMsg.msgContent as Uint8Array)
+    message.sentTime = JimUtil.toNumber(downMsg.msgTime as number)
+    message.msgSeqNo = JimUtil.toNumber(downMsg.msgSeqNo as number)
+    message.msgUnreadIndex = JimUtil.toNumber(downMsg.unreadIndex as number)
+    message.memberCount = JimUtil.toNumber(downMsg.memberCount as number)
+    message.searchContent = downMsg.SearchText as string
+    message.flags = JimUtil.toNumber(downMsg.flags as number)
+    MessageOptionUtil.applyProtoOptions(message, downMsg)
     return message
   }
 }

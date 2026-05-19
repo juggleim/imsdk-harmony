@@ -18,16 +18,36 @@ import {ConversationDetailItem} from '../views/Conversation/ConversationDetailIt
 import { ConversationDetailTopSearch } from '../views/Conversation/ConversationDetailTopSearch';
 import { deviceInfo } from '@kit.BasicServicesKit';
 import { ConversationDetailParams } from '../viewmodel/ConversationViewModel';
-import {MessageViewItem} from '../viewmodel/MessageViewModel'
+import { ConversationViewItem, toConverViewItem } from '../viewmodel/ConversationViewModel';
+import { cloneMessageContent, isDisplayableMessage, MessageViewItem } from '../viewmodel/MessageViewModel'
 import { ObservedArray } from '../jim/common';
 import {
   Conversation,
   JuggleIm,
+  Message,
+  MessageMentionInfo,
+  MessageOptions,
+  MentionType,
   MsgReceivedListener,
   QueryMsgOptions,
-  TextMessage
+  TextMessage,
+  UserInfo
 } from 'juggleim';
 import { HomeConstants } from '../constants/HomeConstants';
+import { promptAction } from '@kit.ArkUI'
+
+@Observed
+class MentionCandidate {
+  memberId:string
+  name:string
+  portrait:string
+
+  constructor(memberId:string, name:string, portrait:string) {
+    this.memberId = memberId
+    this.name = name
+    this.portrait = portrait
+  }
+}
 
 @Component
 export struct ConversationDetail {
@@ -37,13 +57,25 @@ export struct ConversationDetail {
   @Prop conversationId:string
   @Prop conversationType:number
   @Consume('pageInfo') pageInfo: NavPathStack;
-  @State msgList:ObservedArray<MessageViewItem>=[]
+  @State msgList:ObservedArray<MessageViewItem>=new ObservedArray<MessageViewItem>([])
   private maxMsgTime:number = 0
   private minMsgTime:number = Number.MAX_SAFE_INTEGER
   @State refreshing:boolean = false
   private scroller:Scroller = new Scroller()
   private msgReceiveListener:MsgReceivedListener = async (message)=>{}
   @State private text:string = ''
+  @State private showMessageActionPanel:boolean = false
+  @State private showForwardPanel:boolean = false
+  @State private selectedMessageIndex:number = -1
+  @State private quotedMessageId:string = ''
+  @State private quotedPreview:string = ''
+  @State private quotedSender:string = ''
+  @State private forwardTargets:ObservedArray<ConversationViewItem> = new ObservedArray<ConversationViewItem>([])
+  @State private mentionCandidates:ObservedArray<MentionCandidate> = new ObservedArray<MentionCandidate>([])
+  @State private filteredMentionCandidates:ObservedArray<MentionCandidate> = new ObservedArray<MentionCandidate>([])
+  @State private showMentionPanel:boolean = false
+  private selectedMentionMap:Map<string, MentionCandidate> = new Map()
+  private touchStartTimeMap:Map<string,number> = new Map()
 
   @Builder
   refreshContent() {
@@ -61,6 +93,324 @@ export struct ConversationDetail {
     }
   }
 
+  private getConversation():Conversation{
+    return new Conversation(this.conversationId,this.conversationType)
+  }
+
+  private isGroupConversation():boolean{
+    return this.conversationType == 2
+  }
+
+  private getItemKey(item:MessageViewItem):string{
+    if(item.messageId != ''){
+      return item.messageId
+    }
+    return item.clientId
+  }
+
+  private async createViewItem(message:Message):Promise<MessageViewItem>{
+    let senderName:string = ''
+    let senderIcon:string = ''
+    await JuggleIm.instance.getUserInfoManager().getUserInfo(message.senderId).then((u)=>{
+      senderName = u.nickname
+      senderIcon = u.userPortrait
+    })
+    let selfName:string = ''
+    let selfIcon:string = ''
+    await JuggleIm.instance.getUserInfoManager().getUserInfo(JuggleIm.instance.userId).then((u)=>{
+      selfName = u.nickname
+      selfIcon = u.userPortrait
+    })
+    let viewMsg = new MessageViewItem(message,senderName,senderIcon,selfName,selfIcon)
+    if(JuggleIm.instance.userId == message.senderId){
+      viewMsg.isReceived = false
+    }
+    return viewMsg
+  }
+
+  private upsertViewItem(viewItem:MessageViewItem):void{
+    let currentKey = this.getItemKey(viewItem)
+    let foundIndex = this.msgList.findIndex((item)=>{
+      return this.getItemKey(item) == currentKey ||
+        (viewItem.messageId != '' && item.messageId == viewItem.messageId) ||
+        (viewItem.clientId != '' && item.clientId == viewItem.clientId)
+    })
+    if(foundIndex >= 0){
+      this.msgList[foundIndex] = viewItem
+    }else{
+      this.msgList.push(viewItem)
+    }
+    this.msgList = new ObservedArray<MessageViewItem>(this.msgList.slice().sort((a,b)=>a.msgTime-b.msgTime))
+  }
+
+  private async appendMessage(message:Message, scrollToBottom:boolean):Promise<void>{
+    if(!isDisplayableMessage(message)){
+      return
+    }
+    let viewMsg = await this.createViewItem(message)
+    this.upsertViewItem(viewMsg)
+    this.recordMsgTime(message.sentTime)
+    if(scrollToBottom){
+      this.scroller.scrollEdge(Edge.Bottom)
+    }
+  }
+
+  private getSelectedMessage():MessageViewItem|undefined{
+    if(this.selectedMessageIndex < 0 || this.selectedMessageIndex >= this.msgList.length){
+      return undefined
+    }
+    return this.msgList[this.selectedMessageIndex]
+  }
+
+  private showToast(message:string):void{
+    promptAction.showToast({
+      message:message,
+      duration:1500,
+      bottom:100
+    })
+  }
+
+  private closePanels():void{
+    this.showMessageActionPanel = false
+    this.showForwardPanel = false
+  }
+
+  private openMessageActions(index:number):void{
+    this.selectedMessageIndex = index
+    this.showForwardPanel = false
+    this.showMessageActionPanel = true
+  }
+
+  private quoteSelectedMessage():void{
+    let item = this.getSelectedMessage()
+    if(item == undefined){
+      return
+    }
+    if(item.messageId == ''){
+      this.showToast('消息仍在发送，暂时不能引用')
+      return
+    }
+    this.quotedMessageId = item.messageId
+    this.quotedPreview = item.previewText
+    this.quotedSender = item.isReceived ? item.senderName : item.selfName
+    this.closePanels()
+  }
+
+  private cancelQuote():void{
+    this.quotedMessageId = ''
+    this.quotedPreview = ''
+    this.quotedSender = ''
+  }
+
+  private clearMentionState():void{
+    this.showMentionPanel = false
+    this.filteredMentionCandidates = new ObservedArray<MentionCandidate>([])
+    this.selectedMentionMap.clear()
+  }
+
+  private async loadMentionCandidates():Promise<void>{
+    if(!this.isGroupConversation()){
+      return
+    }
+    let localMembers = JuggleIm.instance.getGroupInfoManager().getLocalGroupMembers(this.conversationId)
+    if(localMembers.length > 0){
+      await this.buildMentionCandidates(localMembers.map((member)=>member.memberId))
+      return
+    }
+    JuggleIm.instance.getGroupInfoManager().queryGroupMembers(this.conversationId, async (code, members)=>{
+      if(code == 0){
+        let memberIds:string[] = []
+        members.forEach((member)=>{
+          memberIds.push(member.memberId)
+        })
+        await this.buildMentionCandidates(memberIds)
+      }
+    })
+  }
+
+  private async buildMentionCandidates(memberIds:string[]):Promise<void>{
+    let candidates:MentionCandidate[] = []
+    for(let i = 0; i < memberIds.length; i++){
+      let user = await JuggleIm.instance.getUserInfoManager().getUserInfo(memberIds[i])
+      let displayName = user.nickname != '' ? user.nickname : memberIds[i]
+      candidates.push(new MentionCandidate(memberIds[i], displayName, user.userPortrait))
+    }
+    this.mentionCandidates = new ObservedArray<MentionCandidate>(candidates)
+  }
+
+  private getMentionKeyword():string{
+    let lastAt = this.text.lastIndexOf('@')
+    if(lastAt < 0){
+      return ''
+    }
+    let suffix = this.text.substring(lastAt + 1)
+    if(suffix.indexOf(' ') >= 0 || suffix.indexOf('\n') >= 0){
+      return ''
+    }
+    return suffix
+  }
+
+  private updateMentionPanel():void{
+    if(!this.isGroupConversation()){
+      this.showMentionPanel = false
+      return
+    }
+    let lastAt = this.text.lastIndexOf('@')
+    if(lastAt < 0){
+      this.showMentionPanel = false
+      this.filteredMentionCandidates = new ObservedArray<MentionCandidate>([])
+      return
+    }
+    let keyword = this.getMentionKeyword().toLowerCase()
+    let list:MentionCandidate[] = []
+    this.mentionCandidates.forEach((candidate)=>{
+      if(keyword == '' || candidate.name.toLowerCase().indexOf(keyword) >= 0 || candidate.memberId.toLowerCase().indexOf(keyword) >= 0){
+        list.push(candidate)
+      }
+    })
+    this.filteredMentionCandidates = new ObservedArray<MentionCandidate>(list)
+    this.showMentionPanel = list.length > 0
+  }
+
+  private selectMentionCandidate(candidate:MentionCandidate):void{
+    let lastAt = this.text.lastIndexOf('@')
+    if(lastAt < 0){
+      return
+    }
+    let prefix = this.text.substring(0, lastAt)
+    this.text = `${prefix}@${candidate.name} `
+    this.selectedMentionMap.set(candidate.memberId, candidate)
+    this.showMentionPanel = false
+    this.filteredMentionCandidates = new ObservedArray<MentionCandidate>([])
+  }
+
+  private buildMentionOptions(text:string):MessageMentionInfo | undefined{
+    if(!this.isGroupConversation() || this.selectedMentionMap.size == 0){
+      return undefined
+    }
+    let users:UserInfo[] = []
+    this.selectedMentionMap.forEach((candidate)=>{
+      let token = `@${candidate.name}`
+      if(text.indexOf(token) >= 0){
+        let user = new UserInfo()
+        user.userId = candidate.memberId
+        user.nickname = candidate.name
+        user.userPortrait = candidate.portrait
+        users.push(user)
+      }
+    })
+    if(users.length == 0){
+      return undefined
+    }
+    let mentionInfo = new MessageMentionInfo()
+    mentionInfo.mentionType = MentionType.Someone
+    mentionInfo.targetUsers = users
+    return mentionInfo
+  }
+
+  private loadForwardTargets():void{
+    JuggleIm.instance.getConversationManager().queryConversations(20, 0, false, (code, convers)=>{
+      if(code != 0){
+        this.showToast(`会话加载失败: ${code}`)
+        return
+      }
+      let targets:ConversationViewItem[] = []
+      convers.forEach((conver)=>{
+        targets.push(toConverViewItem(conver))
+      })
+      this.forwardTargets = new ObservedArray<ConversationViewItem>(targets)
+      this.showMessageActionPanel = false
+      this.showForwardPanel = true
+    })
+  }
+
+  private forwardSelectedMessage():void{
+    let item = this.getSelectedMessage()
+    if(item == undefined){
+      return
+    }
+    let forwardMsg = cloneMessageContent(item.msgContent)
+    if(forwardMsg == null){
+      this.showToast('当前消息类型暂不支持转发')
+      return
+    }
+    this.loadForwardTargets()
+  }
+
+  private sendForwardMessage(target:ConversationViewItem):void{
+    let item = this.getSelectedMessage()
+    if(item == undefined){
+      return
+    }
+    let forwardMsg = cloneMessageContent(item.msgContent)
+    if(forwardMsg == null){
+      this.showToast('当前消息类型暂不支持转发')
+      return
+    }
+    JuggleIm.instance.getMessageManager().sendMessage(forwardMsg, new Conversation(target.converId, target.converType), (code, msg)=>{
+      if(code == 0){
+        this.showToast('已转发')
+        this.closePanels()
+      }else{
+        this.showToast(`转发失败: ${code}`)
+      }
+    })
+  }
+
+  private async sendTextMessage():Promise<void>{
+    let content = this.text.trim()
+    if(content == ''){
+      this.showToast('不能发送空消息')
+      return
+    }
+    let txtMsg:TextMessage = new TextMessage()
+    txtMsg.content = content
+    let mentionInfo = this.buildMentionOptions(content)
+    this.text = ''
+    this.showMentionPanel = false
+
+    if(this.quotedMessageId != ''){
+      let options = new MessageOptions()
+      options.referredMessageId = this.quotedMessageId
+      if(mentionInfo != undefined){
+        options.mentionInfo = mentionInfo
+      }
+      JuggleIm.instance.getMessageManager().sendMessage(txtMsg, this.getConversation(), options, async (code, msg)=>{
+        if(code == 0 && msg != null){
+          await this.appendMessage(msg, false)
+        }else{
+          this.showToast(`发送失败: ${code}`)
+        }
+      })
+      this.cancelQuote()
+      this.selectedMentionMap.clear()
+      return
+    }
+
+    if(mentionInfo != undefined){
+      let options = new MessageOptions()
+      options.mentionInfo = mentionInfo
+      JuggleIm.instance.getMessageManager().sendMessage(txtMsg, this.getConversation(), options, async (code, msg)=>{
+        if(code == 0 && msg != null){
+          await this.appendMessage(msg, false)
+        }else{
+          this.showToast(`发送失败: ${code}`)
+        }
+      })
+      this.selectedMentionMap.clear()
+      return
+    }
+
+    JuggleIm.instance.getMessageManager().sendMessage(txtMsg, this.getConversation(), async (code, msg)=>{
+      if(code == 0 && msg != null){
+        await this.appendMessage(msg, false)
+      }else{
+        this.showToast(`发送失败: ${code}`)
+      }
+    })
+    this.selectedMentionMap.clear()
+  }
+
   aboutToAppear(): void {
     let param = this.pageInfo.getParamByIndex(0) as ConversationDetailParams
     this.conversationId = param.conversationId
@@ -69,30 +419,13 @@ export struct ConversationDetail {
 
     this.msgReceiveListener = async (message)=>{
       let conver = message.conversation
-      let currentUserId = JuggleIm.instance.userInfo.userId
       if(conver?.conversationId===param.conversationId){
-        let senderName:string = ''
-        let senderIcon:string = ''
-        await JuggleIm.instance.getUserInfoManager().getUserInfo(message.senderId).then((u)=>{
-          senderName = u.nickname
-          senderIcon = u.userPortrait
-        })
-        let selfName:string = ''
-        let selfIcon:string = ''
-        await JuggleIm.instance.getUserInfoManager().getUserInfo(JuggleIm.instance.userId).then((u)=>{
-          selfName = u.nickname
-          selfIcon = u.userPortrait
-        })
-        let viewMsg = new MessageViewItem(senderName,senderIcon,selfName,selfIcon,message.msgContent,message.sentTime)
-        if(currentUserId==message.senderId){
-          viewMsg.isReceived = false
-        }
-        this.msgList.push(viewMsg)
-        this.scroller.scrollEdge(Edge.Bottom)
+        await this.appendMessage(message, true)
       }
     }
 
     JuggleIm.instance.getMessageManager().addMsgReceivedListener(this.msgReceiveListener)
+    this.loadMentionCandidates()
     this.loadMoreMsgs()
   }
 
@@ -105,119 +438,300 @@ export struct ConversationDetail {
     options.count = 10
     options.startTime = this.minMsgTime
     options.isPositive = false
-    JuggleIm.instance.getMessageManager().queryMessages(new Conversation(this.conversationId,this.conversationType),options,(code,msgs)=>{
-      let currentUserId = JuggleIm.instance.userInfo.userId
-      msgs.forEach(async (msg)=>{
-        let senderName:string = ''
-        let senderIcon:string = ''
-        await JuggleIm.instance.getUserInfoManager().getUserInfo(msg.senderId).then((u)=>{
-          senderName = u.nickname
-          senderIcon = u.userPortrait
-        })
-        let selfName:string = ''
-        let selfIcon:string = ''
-        await JuggleIm.instance.getUserInfoManager().getUserInfo(JuggleIm.instance.userId).then((u)=>{
-          selfName = u.nickname
-          selfIcon = u.userPortrait
-        })
-        let viewMsg = new MessageViewItem(senderName,senderIcon,selfName,selfIcon,msg.msgContent,msg.sentTime)
-        if(currentUserId==msg.senderId){
-          viewMsg.isReceived = false
-        }
-        this.msgList.push(viewMsg)
-        this.recordMsgTime(msg.sentTime)
-      })
-      this.msgList = this.msgList.slice().sort((a,b)=>a.msgTime-b.msgTime)
+    JuggleIm.instance.getMessageManager().queryMessages(new Conversation(this.conversationId,this.conversationType),options,async (code,msgs)=>{
+      for(let i = 0;i < msgs.length;i++){
+        await this.appendMessage(msgs[i], false)
+      }
     })
   }
 
   build() {
     NavDestination() {
-      Flex({ direction: FlexDirection.Column }) {
-        ConversationDetailTopSearch({ currentConversationUserName: $currentConversationUserName, })
-          .height(Adaptive.ContactItemHeight(this.currentBreakpoint))
-          .zIndex(1)
-          .backgroundColor(Color.White)
-          .expandSafeArea([SafeAreaType.SYSTEM, SafeAreaType.KEYBOARD], [SafeAreaEdge.TOP])
+      Stack({ alignContent: Alignment.Bottom }) {
+        Flex({ direction: FlexDirection.Column }) {
+          ConversationDetailTopSearch({ currentConversationUserName: $currentConversationUserName, })
+            .height(Adaptive.ContactItemHeight(this.currentBreakpoint))
+            .zIndex(1)
+            .backgroundColor(Color.White)
+            .expandSafeArea([SafeAreaType.SYSTEM, SafeAreaType.KEYBOARD], [SafeAreaEdge.TOP])
 
-        Refresh({ refreshing: $$this.refreshing, builder: this.refreshContent }) {
-          List({ scroller: this.scroller }) {
-            ForEach(this.msgList, (item: MessageViewItem, index: number) => {
-              ListItem() {
-                ConversationDetailItem(item)
-              }
-            })
-          }
-        }.onRefreshing(() => {
-          setTimeout(() => {
-            this.loadMoreMsgs()
-            this.refreshing = false
-          }, 200)
-        })
-
-        Blank()
-
-        Row(){
-          Column(){
-            Column() {
-              StandardIcon({ icon: $r('app.media.ic_public_add_norm') })
+          Refresh({ refreshing: $$this.refreshing, builder: this.refreshContent }) {
+            List({ scroller: this.scroller }) {
+              ForEach(this.msgList, (item: MessageViewItem, index: number) => {
+                ListItem() {
+                  ConversationDetailItem(item)
+                }
+                .onTouch((event: TouchEvent)=>{
+                  let itemKey = this.getItemKey(item)
+                  if(event.type == TouchType.Down){
+                    this.touchStartTimeMap.set(itemKey, new Date().getTime())
+                  }else if(event.type == TouchType.Up){
+                    let startTime = this.touchStartTimeMap.get(itemKey)
+                    if(startTime != undefined && (new Date().getTime() - startTime) >= 500){
+                      this.openMessageActions(index)
+                    }
+                    this.touchStartTimeMap.delete(itemKey)
+                  }else if(event.type == TouchType.Cancel){
+                    this.touchStartTimeMap.delete(itemKey)
+                  }
+                })
+                .onMouse((event: MouseEvent)=>{
+                  if(event.action == MouseAction.Press && event.button == MouseButton.Right){
+                    this.openMessageActions(index)
+                  }
+                })
+              }, (item: MessageViewItem, index: number) => `${index}_${this.getItemKey(item)}`)
             }
-            .flexBasis(HomeConstants.FLEX_BASIS_AUTO)
-            .padding({
-              left:10,
-              right:10
-            })
-          }
-          Blank()
-          Column(){
-            TextInput({text:this.text})
-              .width('78%')
-              .placeholderColor($r('app.color.text_input_default_color'))
-              .caretColor($r('app.color.text_input_default_care_color'))
-              .backgroundColor($r('app.color.text_input_default_background_color'))
-              .borderRadius(HomeConstants.CONVERSATION_DETAIL_BOTTOM_TEXT_RADIUS)
-              .flexGrow(BaseConstants.FLEX_GROW_ONE)
-              .padding({ right: $r('app.float.conversation_detail_bottom_text_padding') })
-              .backgroundColor(Color.White)
-              .onChange((v)=>{
-                this.text = v
-              })
-          }
-          Column() {
-            StandardIcon({ icon: $r('app.media.ic_public_email_send') }).onClick(async ()=>{
-              let selfName:string = ''
-              let selfIcon:string = ''
-              let txtMsg:TextMessage = new TextMessage()
-              txtMsg.content = this.text
-              await JuggleIm.instance.getUserInfoManager().getUserInfo(JuggleIm.instance.userId).then((u)=>{
-                selfName = u.nickname
-                selfIcon = u.userPortrait
-              })
-              let viewMsg = new MessageViewItem('','',selfName,selfIcon,txtMsg,1)
-              viewMsg.isReceived = false
-              this.msgList.push(viewMsg)
-              this.text = ''
-              this.scroller.scrollEdge(Edge.Bottom)
-              //send msg
-              JuggleIm.instance.getMessageManager().sendMessage(txtMsg,new Conversation(this.conversationId,this.conversationType),(code,msg)=>{
-
-              })
-            })
-          }
-          .padding({
-            left:10,
-            right:10
+          }.onRefreshing(() => {
+            setTimeout(() => {
+              this.loadMoreMsgs()
+              this.refreshing = false
+            }, 200)
           })
-        }.width(BaseConstants.FULL_WIDTH)
+
+          Blank()
+
+          Column() {
+            if(this.showMentionPanel){
+              Column() {
+                List() {
+                  ForEach(this.filteredMentionCandidates, (item:MentionCandidate, index:number)=>{
+                    ListItem() {
+                      Row() {
+                        Text(item.name)
+                          .fontSize(14)
+                          .fontColor('#111111')
+                        Blank()
+                        Text(item.memberId)
+                          .fontSize(12)
+                          .fontColor('#999999')
+                      }
+                      .width('100%')
+                      .padding({ left: 16, right: 16, top: 14, bottom: 14 })
+                    }
+                    .onClick(()=>{
+                      this.selectMentionCandidate(item)
+                    })
+                  }, (item:MentionCandidate, index:number)=>`${index}_${item.memberId}`)
+                }
+                .constraintSize({ maxHeight: 220 })
+                .divider({
+                  strokeWidth: 1,
+                  color: '#EAEAEA',
+                  startMargin: 16,
+                  endMargin: 16
+                })
+              }
+              .width('100%')
+              .backgroundColor(Color.White)
+              .borderRadius({
+                topLeft: 12,
+                topRight: 12
+              })
+              .margin({ left: 12, right: 12, bottom: 8 })
+            }
+
+            if(this.quotedMessageId != ''){
+              Row() {
+                Column() {
+                  Text(`引用 ${this.quotedSender}`)
+                    .fontSize(12)
+                    .fontColor('#666666')
+                  Text(this.quotedPreview)
+                    .fontSize(13)
+                    .maxLines(1)
+                    .textOverflow({ overflow: TextOverflow.Ellipsis })
+                }
+                .alignItems(HorizontalAlign.Start)
+                .layoutWeight(1)
+                Button('取消')
+                  .type(ButtonType.Normal)
+                  .onClick(()=>{
+                    this.cancelQuote()
+                  })
+              }
+              .width('100%')
+              .padding({ left: 16, right: 16, top: 10, bottom: 10 })
+              .backgroundColor('#F3F4F6')
+            }
+
+            Row(){
+              Column(){
+                Column() {
+                  StandardIcon({ icon: $r('app.media.ic_public_add_norm') })
+                }
+                .flexBasis(HomeConstants.FLEX_BASIS_AUTO)
+                .padding({
+                  left:10,
+                  right:10
+                })
+              }
+              Blank()
+              Column(){
+                TextInput({text:this.text})
+                  .width('78%')
+                  .placeholderColor($r('app.color.text_input_default_color'))
+                  .caretColor($r('app.color.text_input_default_care_color'))
+                  .backgroundColor($r('app.color.text_input_default_background_color'))
+                  .borderRadius(HomeConstants.CONVERSATION_DETAIL_BOTTOM_TEXT_RADIUS)
+                  .flexGrow(BaseConstants.FLEX_GROW_ONE)
+                  .padding({ right: $r('app.float.conversation_detail_bottom_text_padding') })
+                  .backgroundColor(Color.White)
+                  .onChange((v)=>{
+                    this.text = v
+                    this.updateMentionPanel()
+                  })
+              }
+              Column() {
+                StandardIcon({ icon: $r('app.media.ic_public_email_send') }).onClick(async ()=>{
+                  await this.sendTextMessage()
+                })
+              }
+              .padding({
+                left:10,
+                right:10
+              })
+            }.width(BaseConstants.FULL_WIDTH)
+          }
+        }
+        .height(BaseConstants.FULL_HEIGHT)
+        .width(BaseConstants.FULL_WIDTH)
+        .backgroundColor($r('app.color.background_color_grey'))
+        .padding({
+          bottom: deviceInfo.deviceType !== BaseConstants.DEVICE_2IN1 ?
+          $r('app.float.tab_content_pb') : $r('app.float.zero')
+        })
+        .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM])
+
+        if(this.showMessageActionPanel || this.showForwardPanel){
+          Column() {
+            Blank()
+              .layoutWeight(1)
+              .width('100%')
+              .backgroundColor('#66000000')
+              .onClick(()=>{
+                this.closePanels()
+              })
+
+            if(this.showMessageActionPanel){
+              Column() {
+                Row() {
+                  Text('引用')
+                    .fontSize(16)
+                    .fontColor('#111111')
+                  Blank()
+                }
+                .width('100%')
+                .padding({ left: 20, right: 20, top: 18, bottom: 18 })
+                .onClick(()=>{
+                  this.quoteSelectedMessage()
+                })
+                Divider()
+                  .strokeWidth(1)
+                  .color('#EAEAEA')
+
+                Row() {
+                  Text('转发')
+                    .fontSize(16)
+                    .fontColor('#111111')
+                  Blank()
+                }
+                .width('100%')
+                .padding({ left: 20, right: 20, top: 18, bottom: 18 })
+                .onClick(()=>{
+                  this.forwardSelectedMessage()
+                })
+                Divider()
+                  .strokeWidth(1)
+                  .color('#EAEAEA')
+
+                Row() {
+                  Text('取消')
+                    .fontSize(16)
+                    .fontColor('#666666')
+                  Blank()
+                }
+                .width('100%')
+                .padding({ left: 20, right: 20, top: 18, bottom: 18 })
+                .onClick(()=>{
+                  this.closePanels()
+                })
+              }
+              .width('100%')
+              .backgroundColor(Color.White)
+              .borderRadius({
+                topLeft: 16,
+                topRight: 16
+              })
+              .padding({ bottom: 24 })
+            }
+
+            if(this.showForwardPanel){
+              Column() {
+                Row() {
+                  Text('选择转发会话')
+                    .fontSize(16)
+                    .fontWeight(FontWeight.Medium)
+                    .fontColor('#111111')
+                  Blank()
+                }
+                .width('100%')
+                .padding({ left: 20, right: 20, top: 18, bottom: 14 })
+                Divider()
+                  .strokeWidth(1)
+                  .color('#EAEAEA')
+                List() {
+                  ForEach(this.forwardTargets, (item: ConversationViewItem, index: number) => {
+                    ListItem() {
+                      Row() {
+                        Text(`${item.name}`)
+                          .fontSize(15)
+                          .fontColor('#111111')
+                        Blank()
+                      }
+                      .width('100%')
+                      .padding({ left: 20, right: 20, top: 18, bottom: 18 })
+                    }
+                    .onClick(()=>{
+                      this.sendForwardMessage(item)
+                    })
+                  }, (item: ConversationViewItem, index: number) => `${index}_${item.converId}_${item.converType}`)
+                }
+                .constraintSize({ maxHeight: '50%' })
+                .divider({
+                  strokeWidth: 1,
+                  color: '#EAEAEA',
+                  startMargin: 20,
+                  endMargin: 20
+                })
+                Divider()
+                  .strokeWidth(1)
+                  .color('#EAEAEA')
+                Row() {
+                  Text('取消')
+                    .fontSize(16)
+                    .fontColor('#666666')
+                  Blank()
+                }
+                .width('100%')
+                .padding({ left: 20, right: 20, top: 18, bottom: 18 })
+                .onClick(()=>{
+                  this.closePanels()
+                })
+              }
+              .width('100%')
+              .backgroundColor(Color.White)
+              .borderRadius({
+                topLeft: 16,
+                topRight: 16
+              })
+              .padding({ bottom: 24 })
+            }
+          }
+          .width('100%')
+          .height('100%')
+        }
       }
-      .height(BaseConstants.FULL_HEIGHT)
-      .width(BaseConstants.FULL_WIDTH)
-      .backgroundColor($r('app.color.background_color_grey'))
-      .padding({
-        bottom: deviceInfo.deviceType !== BaseConstants.DEVICE_2IN1 ?
-        $r('app.float.tab_content_pb') : $r('app.float.zero')
-      })
-      .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM])
     }
     .hideTitleBar(true)
   }

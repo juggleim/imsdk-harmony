@@ -18,9 +18,9 @@ import { BusinessError } from '@kit.BasicServicesKit';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { Logger } from 'base';
 import { JuggleIm } from 'juggleim';
-import { ConversationInfo, FileMessage, ImageMessage, TextMessage, VideoMessage,
-  VoiceMessage } from 'juggleim';
+import { ConversationInfo } from 'juggleim';
 import { CommonUtil } from '../jim/common';
+import { buildMessagePreview } from './MessageViewModel';
 
 @Observed
 class ConversationViewItem {
@@ -74,20 +74,7 @@ export function toConverViewItem(conver:ConversationInfo):ConversationViewItem{
   //latest msg content
   let msgStr = ""
   if(conver.lastMessage!=undefined&&conver.lastMessage!=null) {
-    if (conver.lastMessage.msgContent instanceof TextMessage) {
-      let txtMsg = conver.lastMessage.msgContent as TextMessage
-      msgStr = txtMsg.content
-    } else if (conver.lastMessage.msgContent instanceof FileMessage) {
-      msgStr = "[File]"
-    } else if(conver.lastMessage.msgContent instanceof ImageMessage){
-      msgStr = "[Image]"
-    } else if(conver.lastMessage.msgContent instanceof VideoMessage){
-      msgStr = "[Video]"
-    } else if(conver.lastMessage.msgContent instanceof VoiceMessage){
-      msgStr = "[Voice]"
-    } else {
-      msgStr = "Unknown"
-    }
+    msgStr = buildMessagePreview(conver.lastMessage.msgContent)
   }
   //time str
   let timeStr = CommonUtil.getTimeToYYYYDDMMHHMMSS(conver.converTime)

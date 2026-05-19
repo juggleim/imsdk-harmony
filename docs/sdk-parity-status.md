@@ -27,7 +27,7 @@
 | 序号 | 优先级 | 能力 / 接口 | 当前 Harmony 状态 | Android 对齐参考 | 计划实现内容 | 验证方式 | 状态 |
 |---:|---|---|---|---|---|---|---|
 | IM-00 | P0 | 公共 API 边界与接口目录 | manager 直接作为实现暴露，UI 有 deep import | `JIM` + interfaces | 新增 `interfaces/`，统一 `Index.ets` 导出，manager return type 对齐接口 | 编译通过，现有登录/会话/文本发送不回退 | 已实现 |
-| IM-01 | P0 | `MessageOptions` | 缺失 | Android `MessageOptions` | 新增发送选项，支持引用消息、mention、pushData、生命周期预留 | 文本发送仍正常，带 options 调用不报错 | 待开始 |
+| IM-01 | P0 | `MessageOptions` | 缺失 | Android `MessageOptions` | 新增发送选项，支持引用消息、mention、pushData、生命周期预留 | 文本发送仍正常，带 options 调用不报错 | 已实现 |
 | IM-02 | P0 | `GetMessageOptions` | 当前 `QueryMsgOptions` 简化 | Android `GetMessageOptions` | 统一消息查询参数：count、time、direction、contentTypes | 会话详情历史消息正常分页 | 待开始 |
 | IM-03 | P0 | `GetConversationOptions` | 会话查询参数分散 | Android `GetConversationOptions` | 统一会话查询参数：count、time、direction、conversationTypes | 会话列表正常分页 | 待开始 |
 | IM-04 | P0 | 草稿 `setDraft / clearDraft` | 空实现 | Android `setDraft/clearDraft` | DAO 补 update draft，manager 触发会话更新 | 输入草稿退出再进恢复，清空后消失 | 待开始 |
@@ -82,3 +82,4 @@ RTC 在 IM 基础能力补齐后开始。前期先做 SDK 架构和 mock media�
 | 序号 | 状态 | 修改前对照点 | 修改后实现点 | 涉及文件 | 测试/验证 |
 |---|---|---|---|---|---|
 | IM-00 | 已实现 | `JuggleIm` 直接返回 concrete manager；`juggleim/Index.ets` 只导出 `JuggleIm` | 已补 `interfaces/` 公共类型目录、统一 `Index.ets` 导出，`get*Manager()` 返回接口类型，`home` 侧剩余 deep import 已清理 | `juggleim/Index.ets`、`juggleim/src/main/ets/interfaces/*`、`juggleim/src/main/ets/juggleim.ets`、`jugglechat/home/src/main/ets/pages/ConversationList.ets`、`jugglechat/home/src/main/ets/pages/ConversationDetail.ets` | 待验证 |
+| IM-01 | 已实现 | Harmony `sendMessage` 只有基础消息体，协议里已有 `pushData / mentionInfo / referMsg` 但公共类型和透传缺失 | 已新增 `MessageOptions / MessageMentionInfo / PushData` 公共类型；`sendMessage` 支持兼容旧签名和带 options 的新签名；引用消息、mention、pushData 已透传到 websocket，上行前本地消息也会保留相关字段，生命周期先做本地字段预留 | `juggleim/src/main/ets/entries/messageoptions.ets`、`juggleim/src/main/ets/commons/messageoptionutil.ets`、`juggleim/src/main/ets/interfaces/imessagemanager.ets`、`juggleim/src/main/ets/managers/messagemanager.ets`、`juggleim/src/main/ets/entries/msghandler.ets`、`juggleim/src/main/ets/dbs/messagedao.ets`、`juggleim/Index.ets` | 待验证 |

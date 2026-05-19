@@ -4,7 +4,7 @@ export { ConnectionStatusListener, IConnectionManager } from './src/main/ets/int
 export { IConversationManager } from './src/main/ets/interfaces/iconversationmanager'
 export { IMessageManager } from './src/main/ets/interfaces/imessagemanager'
 export { IUserInfoManager } from './src/main/ets/interfaces/iuserinfomanager'
-export { IGroupInfoManager } from './src/main/ets/interfaces/igroupinfomanager'
+export { GroupMembersCallback, IGroupInfoManager } from './src/main/ets/interfaces/igroupinfomanager'
 export { CommonCallback } from './src/main/ets/interfaces/commoncallback'
 export {
   ConversationAddListener,
@@ -46,6 +46,7 @@ export {
   VideoMessage,
   RecallInfoMessage
 } from './src/main/ets/entries/message'
+export { MessageOptions, MessageMentionInfo, MentionType, PushData } from './src/main/ets/entries/messageoptions'
 export { JimMsgType } from './src/main/ets/entries/msgtypes'
 export { UserInfo } from './src/main/ets/entries/user'
 export { GroupInfo, GroupMember } from './src/main/ets/entries/group'
