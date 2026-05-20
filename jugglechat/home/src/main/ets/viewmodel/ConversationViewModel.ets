@@ -162,4 +162,10 @@ class ConversationViewModel {
   }
 }
 
-export { ConversationViewItem, ConversationViewModel, ConversationDetailParams, ConversationRouteParams, GlobalMessageSearchParams };
+export {
+  ConversationViewItem,
+  ConversationViewModel,
+  ConversationDetailParams,
+  ConversationRouteParams,
+  GlobalMessageSearchParams
+};

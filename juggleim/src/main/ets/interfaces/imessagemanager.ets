@@ -38,6 +38,7 @@ export interface IMessageManager {
   queryMentionMessages(conver: Conversation, count: number, startTime: number, isPositive: boolean, callback: QryMessagesCallback): void
   clearMessages(conver: Conversation, options: ClearMsgOptions, callback: CommonCallback): void
   delMessages(conver: Conversation, msgIds: string[], delScope: number, callback: CommonCallback): void
+  getMessagesByMessageIds(conver: Conversation | null, msgIds: string[], callback: QryMessagesCallback): void
   getMessagesByIds(conver: Conversation | null, msgIds: string[], callback: QryMessagesCallback): void
   modifyMessage(conver: Conversation, msgId: string, msg: MessageContent, callback: MessageCallback): void
   sendReadReceipt(conver: Conversation, msgIds: string[], callback: CommonCallback): void

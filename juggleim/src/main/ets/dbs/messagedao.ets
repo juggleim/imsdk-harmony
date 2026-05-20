@@ -14,6 +14,22 @@ export class MessageDao{
   private constructor() {
   }
 
+  private ensureReferencedMessage(msg:Message):void{
+    if(msg.referredMessage == null){
+      return
+    }
+    let referMessage = msg.referredMessage
+    let referMsgId = referMessage.messageId
+    let referClientId = referMessage.clientId
+    if(referMsgId == '' && referClientId == ''){
+      return
+    }
+    if(this.existByMsgId(referMsgId, referClientId)){
+      return
+    }
+    this.insert(referMessage)
+  }
+
   getMessage(msgId:string):Message|null{
     let sql = `SELECT * FROM ${this.tableName} WHERE msg_id=?`
     let args:Array<relationalStore.ValueType> = []
@@ -31,6 +47,52 @@ export class MessageDao{
       resultSet?.close()
     }
     return null
+  }
+
+  getMessagesByMessageIds(msgIds:string[]):Message[]{
+    let requestIds:string[] = []
+    msgIds.forEach((msgId)=>{
+      let normalizedId = msgId.trim()
+      if(normalizedId != ''){
+        requestIds.push(normalizedId)
+      }
+    })
+    if(requestIds.length == 0){
+      return []
+    }
+    let placeholders:string[] = []
+    let args:Array<relationalStore.ValueType> = []
+    requestIds.forEach((msgId)=>{
+      placeholders.push('?')
+      args.push(msgId)
+    })
+    let sql = `SELECT * FROM ${this.tableName} WHERE msg_id in (${placeholders.join(',')}) or client_id in (${placeholders.join(',')})`
+    requestIds.forEach((msgId)=>{
+      args.push(msgId)
+    })
+    let resultSet:relationalStore.ResultSet|undefined
+    let queriedMessages:Message[] = []
+    try{
+      resultSet = JimDbManager.instance.getDb()?.querySqlSync(sql,args)
+      while (resultSet?.goToNextRow()){
+        queriedMessages.push(this.toMessage(resultSet))
+      }
+    }catch (e){
+      console.error(`faild to query msgs by ids. [${this.tableName}] err:${e.message}`)
+    }finally {
+      resultSet?.close()
+    }
+    let orderedMessages:Message[] = []
+    requestIds.forEach((requestId)=>{
+      for(let i = 0; i < queriedMessages.length; i++){
+        let message = queriedMessages[i]
+        if(message.messageId == requestId || message.clientId == requestId){
+          orderedMessages.push(message)
+          break
+        }
+      }
+    })
+    return orderedMessages
   }
 
   queryMessages(converId:string,converType:number,start:number,count:number,isPositive:boolean,contentTypes?:string[]):Message[]{
@@ -142,6 +204,7 @@ export class MessageDao{
 
   insert(msg:Message):number{
     console.log("sendmsg_ret_start:",JSON.stringify(msg))
+    this.ensureReferencedMessage(msg)
     let valueBucket = this.getValuesBucket(msg)
     try{
       let row = JimDbManager.instance.getDb()?.insertSync(this.tableName,valueBucket)

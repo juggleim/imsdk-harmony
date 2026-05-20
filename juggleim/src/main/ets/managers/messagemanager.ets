@@ -396,7 +396,105 @@ export class MessageManager implements IMessageManager{
     })
   }
 
-  getMessagesByIds(conver:Conversation|null,msgIds:string[],callback:QryMessagesCallback){}
+  private normalizeMessageIds(msgIds:string[]):string[]{
+    let normalizedIds:string[] = []
+    msgIds.forEach((msgId)=>{
+      let normalizedId = msgId.trim()
+      if(normalizedId != ''){
+        normalizedIds.push(normalizedId)
+      }
+    })
+    return normalizedIds
+  }
+
+  private findMessageByRequestId(messages:Message[], requestId:string):Message|null{
+    for(let i = 0; i < messages.length; i++){
+      let message = messages[i]
+      if(message.messageId == requestId || message.clientId == requestId){
+        return message
+      }
+    }
+    return null
+  }
+
+  private combineMessagesByRequestIds(requestIds:string[], localMessages:Message[], remoteMessages:Message[]):Message[]{
+    let result:Message[] = []
+    requestIds.forEach((requestId)=>{
+      let localMessage = this.findMessageByRequestId(localMessages, requestId)
+      if(localMessage != null){
+        result.push(localMessage)
+        return
+      }
+      let remoteMessage = this.findMessageByRequestId(remoteMessages, requestId)
+      if(remoteMessage != null){
+        result.push(remoteMessage)
+      }
+    })
+    return result
+  }
+
+  private queryRemoteMessagesByIds(conver:Conversation,msgIds:string[],callback:QryMessagesCallback):void{
+    let req = immessage.QryHisMsgByIdsReq.create({
+      "targetId":conver.conversationId,
+      "channelType":conver.conversationType,
+      "msgIds":msgIds
+    })
+    let data = immessage.QryHisMsgByIdsReq.encode(req).finish()
+    this.imclient.query("qry_hismsg_by_ids",conver.conversationId,data,(code,qryAck)=>{
+      let msgs:Message[] = []
+      if(code == 0){
+        let ackData = qryAck.data as Uint8Array
+        let resp = immessage.DownMsgSet.decode(ackData)
+        resp.msgs.forEach((msg)=>{
+          msgs.push(MsgHandler.downMsg2Message(msg))
+        })
+        callback(code,msgs,false)
+        return
+      }
+      callback(code,msgs,false)
+    })
+  }
+
+  getMessagesByMessageIds(conver:Conversation|null,msgIds:string[],callback:QryMessagesCallback){
+    let requestIds = this.normalizeMessageIds(msgIds)
+    if(requestIds.length == 0){
+      callback(0, [], false)
+      return
+    }
+    let msgDao = JimDbManager.instance.getMessageDao()
+    let localMessages = msgDao.getMessagesByMessageIds(requestIds)
+    let missingIds:string[] = []
+    requestIds.forEach((requestId)=>{
+      if(this.findMessageByRequestId(localMessages, requestId) == null){
+        missingIds.push(requestId)
+      }
+    })
+    if(missingIds.length == 0 || conver == null){
+      callback(0, localMessages, false)
+      return
+    }
+    this.queryRemoteMessagesByIds(conver, missingIds, (code, remoteMessages)=>{
+      if(code != 0){
+        if(localMessages.length > 0){
+          callback(0, localMessages, false)
+          return
+        }
+        callback(code, [], false)
+        return
+      }
+      this.mergeLocalMessageState(localMessages, remoteMessages)
+      remoteMessages.forEach((message)=>{
+        if(!msgDao.existByMsgId(message.messageId, message.clientId)){
+          msgDao.insert(message)
+        }
+      })
+      callback(0, this.combineMessagesByRequestIds(requestIds, localMessages, remoteMessages), false)
+    })
+  }
+
+  getMessagesByIds(conver:Conversation|null,msgIds:string[],callback:QryMessagesCallback){
+    this.getMessagesByMessageIds(conver, msgIds, callback)
+  }
 
   modifyMessage(conver:Conversation,msgId:string,msg:MessageContent,callback:MessageCallback){}
 
