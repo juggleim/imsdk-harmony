@@ -4,11 +4,27 @@ import { Message, MessageContent } from '../entries/message'
 export type MessageCallback = (code: number, msg: Message | null) => void
 export type QryMessagesCallback = (code: number, msgs: Message[], hasMore: boolean) => void
 
-export class QueryMsgOptions {
+export enum GetMessageDirection {
+  Backward = 0,
+  Forward = 1
+}
+
+export class GetMessageOptions {
+  count: number = 20
+  time: number = 0
+  direction: GetMessageDirection = GetMessageDirection.Backward
+  contentTypes: string[] = []
+  constructor() {
+  }
+}
+
+export class QueryMsgOptions extends GetMessageOptions {
   count: number = 20
   startTime: number = 0
   isPositive: boolean = false
+  contentTypes: string[] = []
   constructor() {
+    super()
   }
 }
 
@@ -25,6 +41,8 @@ export class SearchParams {
   msgTypes: string[] = []
   startTime: number = 0
   endTime: number = 0
+  count: number = 50
+  direction: GetMessageDirection = GetMessageDirection.Backward
 }
 
 export type MsgReceivedListener = (msg: Message) => void

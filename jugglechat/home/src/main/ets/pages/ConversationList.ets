@@ -142,7 +142,7 @@ export struct ConversationList {
 
   build() {
     Flex({ direction: FlexDirection.Column }) {
-      HomeTopSearch({ title: HomeConstants.CONVERSATION_TITLE })
+      HomeTopSearch({ title: HomeConstants.CONVERSATION_TITLE, enableGlobalMessageSearch: true })
         .height('13%')
       List() {
         ForEach(this.conversationList, (item: ConversationViewItem, index: number) => {
@@ -152,7 +152,7 @@ export struct ConversationList {
                 if (this.pageInfo.size() > 1) {
                   this.pageInfo.pop();
                 }
-                this.pageInfo.pushPath({ name: 'ConversationDetail',param:new ConversationDetailParams(item.userId,item.converId,item.converType)});
+                this.pageInfo.pushPath({ name: 'ConversationDetail',param:new ConversationDetailParams(item.userId,item.converId,item.converType, item.name as string)});
                 this.currentConversationUserName = item.name;
                 this.currentContactUserName = '';
                 this.currentIndex = index;

@@ -19,17 +19,18 @@ import { ConversationDetailTopSearch } from '../views/Conversation/ConversationD
 import { deviceInfo } from '@kit.BasicServicesKit';
 import { ConversationDetailParams } from '../viewmodel/ConversationViewModel';
 import { ConversationViewItem, toConverViewItem } from '../viewmodel/ConversationViewModel';
-import { cloneMessageContent, isDisplayableMessage, MessageViewItem } from '../viewmodel/MessageViewModel'
+import { cloneMessageContent, isDisplayableMessage, MessageViewItem, toMessageViewItem } from '../viewmodel/MessageViewModel'
 import { ObservedArray } from '../jim/common';
 import {
   Conversation,
+  GetMessageDirection,
+  GetMessageOptions,
   JuggleIm,
   Message,
   MessageMentionInfo,
   MessageOptions,
   MentionType,
   MsgReceivedListener,
-  QueryMsgOptions,
   TextMessage,
   UserInfo
 } from 'juggleim';
@@ -57,6 +58,7 @@ export struct ConversationDetail {
   @Prop conversationId:string
   @Prop conversationType:number
   @Consume('pageInfo') pageInfo: NavPathStack;
+  @State private conversationTitle:string = ''
   @State msgList:ObservedArray<MessageViewItem>=new ObservedArray<MessageViewItem>([])
   private maxMsgTime:number = 0
   private minMsgTime:number = Number.MAX_SAFE_INTEGER
@@ -93,8 +95,34 @@ export struct ConversationDetail {
     }
   }
 
+  private resetMessageList():void{
+    this.msgList = new ObservedArray<MessageViewItem>([])
+    this.maxMsgTime = 0
+    this.minMsgTime = Number.MAX_SAFE_INTEGER
+  }
+
   private getConversation():Conversation{
     return new Conversation(this.conversationId,this.conversationType)
+  }
+
+  private async resolveConversationTitle():Promise<void>{
+    if(this.conversationTitle != ''){
+      return
+    }
+    if(this.conversationType == 1){
+      let user = await JuggleIm.instance.getUserInfoManager().getUserInfo(this.conversationId)
+      if(user.nickname != ''){
+        this.conversationTitle = user.nickname
+        return
+      }
+    }else if(this.conversationType == 2){
+      let group = JuggleIm.instance.getGroupInfoManager().getLocalGroupInfo(this.conversationId)
+      if(group != null && group.groupName != ''){
+        this.conversationTitle = group.groupName
+        return
+      }
+    }
+    this.conversationTitle = this.currentConversationUserName
   }
 
   private isGroupConversation():boolean{
@@ -106,26 +134,6 @@ export struct ConversationDetail {
       return item.messageId
     }
     return item.clientId
-  }
-
-  private async createViewItem(message:Message):Promise<MessageViewItem>{
-    let senderName:string = ''
-    let senderIcon:string = ''
-    await JuggleIm.instance.getUserInfoManager().getUserInfo(message.senderId).then((u)=>{
-      senderName = u.nickname
-      senderIcon = u.userPortrait
-    })
-    let selfName:string = ''
-    let selfIcon:string = ''
-    await JuggleIm.instance.getUserInfoManager().getUserInfo(JuggleIm.instance.userId).then((u)=>{
-      selfName = u.nickname
-      selfIcon = u.userPortrait
-    })
-    let viewMsg = new MessageViewItem(message,senderName,senderIcon,selfName,selfIcon)
-    if(JuggleIm.instance.userId == message.senderId){
-      viewMsg.isReceived = false
-    }
-    return viewMsg
   }
 
   private upsertViewItem(viewItem:MessageViewItem):void{
@@ -147,7 +155,7 @@ export struct ConversationDetail {
     if(!isDisplayableMessage(message)){
       return
     }
-    let viewMsg = await this.createViewItem(message)
+    let viewMsg = await toMessageViewItem(message)
     this.upsertViewItem(viewMsg)
     this.recordMsgTime(message.sentTime)
     if(scrollToBottom){
@@ -168,6 +176,37 @@ export struct ConversationDetail {
       duration:1500,
       bottom:100
     })
+  }
+
+  private buildMessageQueryOptions(direction:GetMessageDirection,time:number):GetMessageOptions{
+    let options = new GetMessageOptions()
+    options.count = 20
+    options.time = time
+    options.direction = direction
+    return options
+  }
+
+  private queryMessagesByOptions(options:GetMessageOptions):void{
+    JuggleIm.instance.getMessageManager().queryMessages(this.getConversation(), options, async (code,msgs)=>{
+      if(code != 0){
+        this.showToast(`消息加载失败: ${code}`)
+        return
+      }
+      for(let i = 0;i < msgs.length;i++){
+        await this.appendMessage(msgs[i], false)
+      }
+    })
+  }
+
+  private loadInitialMsgs():void{
+    let options = this.buildMessageQueryOptions(GetMessageDirection.Backward, 0)
+    this.queryMessagesByOptions(options)
+  }
+
+  private loadOlderMsgs():void{
+    let anchorTime = this.minMsgTime == Number.MAX_SAFE_INTEGER ? 0 : this.minMsgTime
+    let options = this.buildMessageQueryOptions(GetMessageDirection.Backward, anchorTime)
+    this.queryMessagesByOptions(options)
   }
 
   private closePanels():void{
@@ -412,9 +451,10 @@ export struct ConversationDetail {
   }
 
   aboutToAppear(): void {
-    let param = this.pageInfo.getParamByIndex(0) as ConversationDetailParams
+    let param = this.pageInfo.getParamByIndex(this.pageInfo.size() - 1) as ConversationDetailParams
     this.conversationId = param.conversationId
     this.conversationType = param.converType
+    this.conversationTitle = param.title
     console.log("jimsdk_video_converid:",this.conversationId)
 
     this.msgReceiveListener = async (message)=>{
@@ -425,31 +465,25 @@ export struct ConversationDetail {
     }
 
     JuggleIm.instance.getMessageManager().addMsgReceivedListener(this.msgReceiveListener)
+    this.resolveConversationTitle()
     this.loadMentionCandidates()
-    this.loadMoreMsgs()
+    this.resetMessageList()
+    this.loadInitialMsgs()
   }
 
   aboutToDisappear(): void {
     JuggleIm.instance.getMessageManager().removeMsgReceivedListener(this.msgReceiveListener)
   }
 
-  loadMoreMsgs(){
-    let options:QueryMsgOptions = new QueryMsgOptions()
-    options.count = 10
-    options.startTime = this.minMsgTime
-    options.isPositive = false
-    JuggleIm.instance.getMessageManager().queryMessages(new Conversation(this.conversationId,this.conversationType),options,async (code,msgs)=>{
-      for(let i = 0;i < msgs.length;i++){
-        await this.appendMessage(msgs[i], false)
-      }
-    })
-  }
-
   build() {
     NavDestination() {
       Stack({ alignContent: Alignment.Bottom }) {
         Flex({ direction: FlexDirection.Column }) {
-          ConversationDetailTopSearch({ currentConversationUserName: $currentConversationUserName, })
+          ConversationDetailTopSearch({
+            currentConversationUserName: $conversationTitle,
+            conversationId: this.conversationId,
+            conversationType: this.conversationType
+          })
             .height(Adaptive.ContactItemHeight(this.currentBreakpoint))
             .zIndex(1)
             .backgroundColor(Color.White)
@@ -484,7 +518,7 @@ export struct ConversationDetail {
             }
           }.onRefreshing(() => {
             setTimeout(() => {
-              this.loadMoreMsgs()
+              this.loadOlderMsgs()
               this.refreshing = false
             }, 200)
           })

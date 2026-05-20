@@ -88,10 +88,32 @@ class ConversationDetailParams{
   converType:number
   conversationId:string
   userId:string
-  constructor(userId:string,converId:string,converType:number) {
+  title:string
+  constructor(userId:string,converId:string,converType:number, title:string = '') {
     this.userId = userId
     this.conversationId = converId
     this.converType = converType
+    this.title = title
+  }
+}
+
+class ConversationRouteParams {
+  converType:number
+  conversationId:string
+  title:string
+
+  constructor(conversationId:string, converType:number, title:string) {
+    this.conversationId = conversationId
+    this.converType = converType
+    this.title = title
+  }
+}
+
+class GlobalMessageSearchParams {
+  keywords:string
+
+  constructor(keywords:string = '') {
+    this.keywords = keywords
   }
 }
 
@@ -135,4 +157,4 @@ class ConversationViewModel {
   }
 }
 
-export { ConversationViewItem, ConversationViewModel, ConversationDetailParams };
+export { ConversationViewItem, ConversationViewModel, ConversationDetailParams, ConversationRouteParams, GlobalMessageSearchParams };

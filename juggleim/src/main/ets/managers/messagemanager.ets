@@ -1,6 +1,11 @@
 import {immessage} from  '../improto/immessage'
 import {
-  Message, MessageContent,MessageSentState
+  FileMessage,
+  MergeMessage,
+  Message,
+  MessageContent,
+  MessageSentState,
+  TextMessage
 } from '../entries/message'
 import { Conversation, ConversationInfo } from '../entries/conversation'
 import { MsgFlagTool } from '../improto/msgflag'
@@ -17,6 +22,8 @@ import { MessageOptions } from '../entries/messageoptions'
 import { MessageOptionUtil } from '../commons/messageoptionutil'
 import {
   ClearMsgOptions,
+  GetMessageDirection,
+  GetMessageOptions,
   MessageCallback,
   MsgCleanedListener,
   MsgDeletedListener,
@@ -30,6 +37,8 @@ import {
 
 export {
   ClearMsgOptions,
+  GetMessageDirection,
+  GetMessageOptions,
   MessageCallback,
   MsgCleanedListener,
   MsgDeletedListener,
@@ -124,6 +133,7 @@ export class MessageManager implements IMessageManager{
     message.senderId = JuggleIm.instance.userId
     message.sentTime = new Date().getTime()
     message.flags = msg.getFlagNumber()
+    message.searchContent = this.buildSearchContent(msg)
     message.state = MessageSentState.sending
 
     let referMsg = this.applyMessageOptions(message, options)
@@ -201,10 +211,25 @@ export class MessageManager implements IMessageManager{
     return undefined
   }
 
+  private buildSearchContent(msg:MessageContent):string{
+    let msgType = msg.getMsgType()
+    if(msgType == 'jg:text'){
+      return (msg as TextMessage).content
+    }
+    if(msgType == 'jg:file'){
+      return (msg as FileMessage).name
+    }
+    if(msgType == 'jg:merge'){
+      return (msg as MergeMessage).title
+    }
+    return ''
+  }
+
   sendMediaMessage(msg:MessageContent,conver:Conversation){}
 
-  queryMessages(conver:Conversation,options:QueryMsgOptions,callback:QryMessagesCallback){
-    this.queryLocalMessages(conver,options,(code,msgs)=>{
+  queryMessages(conver:Conversation,options:GetMessageOptions,callback:QryMessagesCallback){
+    let normalizedOptions = this.normalizeMessageOptions(options)
+    this.queryLocalMessages(conver,normalizedOptions,(code,msgs)=>{
       //check lack msgs
       let isLack:boolean = false
       let lastSeq:number = 0
@@ -220,9 +245,9 @@ export class MessageManager implements IMessageManager{
           }
         }
       })
-      if(isLack||msgs.length<options.count){
+      if(isLack||msgs.length<normalizedOptions.count){
         //query from remote
-        this.queryRemoteMessages(conver,options,(code,remoteMsgs,hasMore)=>{
+        this.queryRemoteMessages(conver,normalizedOptions,(code,remoteMsgs,hasMore)=>{
           remoteMsgs.forEach((msg)=>{
             //check exist
             let msgDao = JimDbManager.instance.getMessageDao()
@@ -234,31 +259,41 @@ export class MessageManager implements IMessageManager{
           callback(code,remoteMsgs,hasMore)
         })
       }else{
-        callback(code,msgs,msgs.length>=options.count)
+        callback(code,msgs,msgs.length>=normalizedOptions.count)
       }
     })
   }
 
-  queryLocalMessages(conver:Conversation,options:QueryMsgOptions,callback:QryMessagesCallback){
+  queryLocalMessages(conver:Conversation,options:GetMessageOptions,callback:QryMessagesCallback){
+    let normalizedOptions = this.normalizeMessageOptions(options)
     let dao = JimDbManager.instance.getMessageDao()
-    if(!options.isPositive&&options.startTime<=0){
-      options.startTime = new Date().getTime()
+    if(normalizedOptions.direction == GetMessageDirection.Backward && normalizedOptions.time<=0){
+      normalizedOptions.time = new Date().getTime()
     }
-    let msgs = dao.queryMessages(conver.conversationId,conver.conversationType,options.startTime,options.count,options.isPositive)
-    callback(0,msgs,msgs.length>=options.count)
+    let msgs = dao.queryMessages(
+      conver.conversationId,
+      conver.conversationType,
+      normalizedOptions.time,
+      normalizedOptions.count,
+      normalizedOptions.direction == GetMessageDirection.Forward,
+      normalizedOptions.contentTypes
+    )
+    callback(0,msgs,msgs.length>=normalizedOptions.count)
   }
 
-  queryRemoteMessages(conver:Conversation,options:QueryMsgOptions,callback:QryMessagesCallback){
+  queryRemoteMessages(conver:Conversation,options:GetMessageOptions,callback:QryMessagesCallback){
+    let normalizedOptions = this.normalizeMessageOptions(options)
     let order:number = 0
-    if(options.isPositive){
+    if(normalizedOptions.direction == GetMessageDirection.Forward){
       order = 1
     }
     let req = immessage.QryHisMsgsReq.create({
       "targetId":conver.conversationId,
       'channelType':conver.conversationType,
-      'startTime':options.startTime,
-      'count':options.count,
-      'order':order
+      'startTime':normalizedOptions.time,
+      'count':normalizedOptions.count,
+      'order':order,
+      'msgTypes':normalizedOptions.contentTypes
     })
     let data = immessage.QryHisMsgsReq.encode(req).finish()
     this.imclient.query("qry_hismsgs",conver.conversationId,data,(code,qryAck)=>{
@@ -274,6 +309,34 @@ export class MessageManager implements IMessageManager{
         callback(code,msgs,false)
       }
     })
+  }
+
+  private normalizeMessageOptions(options:GetMessageOptions):GetMessageOptions{
+    let normalized = new GetMessageOptions()
+    normalized.count = options.count > 0 ? options.count : 20
+    normalized.time = options.time
+    normalized.direction = options.direction
+    normalized.contentTypes = options.contentTypes != undefined ? options.contentTypes.slice() : []
+
+    if(options instanceof QueryMsgOptions){
+      let legacyOptions = options as QueryMsgOptions
+      if(legacyOptions.startTime > 0){
+        normalized.time = legacyOptions.startTime
+      }
+      if(legacyOptions.isPositive){
+        normalized.direction = GetMessageDirection.Forward
+      }else if(legacyOptions.startTime > 0 || legacyOptions.time == 0){
+        normalized.direction = GetMessageDirection.Backward
+      }
+      if(legacyOptions.contentTypes.length > 0){
+        normalized.contentTypes = legacyOptions.contentTypes.slice()
+      }
+    }
+
+    if(normalized.time <= 0 && normalized.direction == GetMessageDirection.Backward){
+      normalized.time = new Date().getTime()
+    }
+    return normalized
   }
 
   queryMentionMessages(conver:Conversation,count:number,startTime:number,isPositive:boolean,callback:QryMessagesCallback){
@@ -341,7 +404,19 @@ export class MessageManager implements IMessageManager{
     })
   }
 
-  searchMessages(params:SearchParams,callback:QryMessagesCallback){}
+  searchMessages(params:SearchParams,callback:QryMessagesCallback){
+    let dao = JimDbManager.instance.getMessageDao()
+    let msgs = dao.searchMessages(
+      params.keywords,
+      params.startTime,
+      params.endTime,
+      params.count,
+      params.direction == GetMessageDirection.Forward,
+      params.msgTypes,
+      params.conver
+    )
+    callback(0, msgs, false)
+  }
 
   setLocalAttribue(msgId:string,attribute:string){}
 

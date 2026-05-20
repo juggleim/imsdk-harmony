@@ -95,7 +95,7 @@ export struct ContactsList {
                   // this.currentContactUserName = item.name;
                   // this.currentContactUserIcon = item.icon;
 
-                  this.pageInfo.pushPath({ name: 'ConversationDetail',param:new ConversationDetailParams(item.user_id,item.user_id,1)});
+                  this.pageInfo.pushPath({ name: 'ConversationDetail',param:new ConversationDetailParams(item.user_id,item.user_id,1, item.name as string)});
 
                   // this.currentConversationUserName = '';
                   this.currentIndex = index;

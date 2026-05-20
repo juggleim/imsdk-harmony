@@ -15,12 +15,14 @@
 
 import { BaseConstants, BreakpointConstants, StandardIcon } from 'base';
 import { HomeConstants } from '../../constants/HomeConstants';
-import { deviceInfo } from '@kit.BasicServicesKit';
+import { ConversationRouteParams } from '../../viewmodel/ConversationViewModel';
 
 @Component
 export struct ConversationDetailTopSearch {
   @StorageProp('currentBreakpoint') currentBreakpoint: string = BreakpointConstants.BREAKPOINT_SM;
   @Link currentConversationUserName: string;
+  @Prop conversationId:string
+  @Prop conversationType:number
   @Consume('pageInfo') pageInfo: NavPathStack;
 
   build() {
@@ -43,6 +45,16 @@ export struct ConversationDetailTopSearch {
         .fontFamily(BaseConstants.FONT_FAMILY_MEDIUM)
         .fontColor($r('app.color.conversation_default_text_color'))
       StandardIcon({ icon: $r('app.media.ic_public_more') })
+        .onClick(()=>{
+          this.pageInfo.pushPath({
+            name: 'ConversationProfile',
+            param: new ConversationRouteParams(
+              this.conversationId,
+              this.conversationType,
+              this.currentConversationUserName || HomeConstants.CONVERSATION_DETAIL_TOP_TITLE
+            )
+          })
+        })
     }
     .width(BaseConstants.FULL_WIDTH)
     .height(BaseConstants.FULL_HEIGHT)

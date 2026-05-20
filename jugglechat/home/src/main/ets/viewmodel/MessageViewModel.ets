@@ -2,6 +2,7 @@ import {
   Conversation,
   FileMessage,
   ImageMessage,
+  JuggleIm,
   JimMsgType,
   MergeMessage,
   Message,
@@ -151,6 +152,22 @@ export function cloneMessageContent(msgContent?:MessageContent):MessageContent|n
     return target
   }
   return null
+}
+
+export async function toMessageViewItem(message:Message):Promise<MessageViewItem>{
+  let sender = await JuggleIm.instance.getUserInfoManager().getUserInfo(message.senderId)
+  let selfUser = await JuggleIm.instance.getUserInfoManager().getUserInfo(JuggleIm.instance.userId)
+  let viewMsg = new MessageViewItem(
+    message,
+    sender.nickname,
+    sender.userPortrait,
+    selfUser.nickname,
+    selfUser.userPortrait
+  )
+  if(JuggleIm.instance.userId == message.senderId){
+    viewMsg.isReceived = false
+  }
+  return viewMsg
 }
 
 export { MessageViewItem };

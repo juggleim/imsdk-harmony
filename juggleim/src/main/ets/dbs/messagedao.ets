@@ -33,11 +33,19 @@ export class MessageDao{
     return null
   }
 
-  queryMessages(converId:string,converType:number,start:number,count:number,isPositive:boolean):Message[]{
+  queryMessages(converId:string,converType:number,start:number,count:number,isPositive:boolean,contentTypes?:string[]):Message[]{
     let sql = `SELECT * FROM ${this.tableName} WHERE conver_type=? and conver_id=?`
     let args:Array<relationalStore.ValueType> = []
     args.push(converType)
     args.push(converId)
+    if(contentTypes != undefined && contentTypes.length > 0){
+      let placeholders:string[] = []
+      contentTypes.forEach((contentType)=>{
+        placeholders.push('?')
+        args.push(contentType)
+      })
+      sql = sql + ` and msg_type in (${placeholders.join(',')})`
+    }
     if(isPositive){
       sql = sql + ` and sent_time>? order by sent_time asc`
     }else{
@@ -59,6 +67,73 @@ export class MessageDao{
       return msgList
     }catch (e) {
       console.error('failed to query ',this.tableName)
+      return msgList
+    }finally {
+      resultSet?.close()
+    }
+  }
+
+  searchMessages(
+    keyword:string,
+    startTime:number,
+    endTime:number,
+    count:number,
+    isPositive:boolean,
+    contentTypes?:string[],
+    conver?:Conversation
+  ):Message[]{
+    let sql = `SELECT * FROM ${this.tableName} WHERE 1=1`
+    let args:Array<relationalStore.ValueType> = []
+    if(conver != undefined){
+      sql = sql + ` and conver_type=? and conver_id=?`
+      args.push(conver.conversationType)
+      args.push(conver.conversationId)
+    }
+    if(contentTypes != undefined && contentTypes.length > 0){
+      let placeholders:string[] = []
+      contentTypes.forEach((contentType)=>{
+        placeholders.push('?')
+        args.push(contentType)
+      })
+      sql = sql + ` and msg_type in (${placeholders.join(',')})`
+    }
+    let normalizedKeyword = keyword.trim()
+    if(normalizedKeyword != ''){
+      sql = sql + ` and (search_content like ? or msg_content like ?)`
+      let fuzzyKeyword = `%${normalizedKeyword}%`
+      args.push(fuzzyKeyword)
+      args.push(fuzzyKeyword)
+    }
+    if(startTime > 0){
+      sql = sql + ` and sent_time>=?`
+      args.push(startTime)
+    }
+    if(endTime > 0){
+      sql = sql + ` and sent_time<=?`
+      args.push(endTime)
+    }
+    if(isPositive){
+      sql = sql + ` order by sent_time asc`
+    }else{
+      sql = sql + ` order by sent_time desc`
+    }
+    if(count > 0){
+      sql = sql + ` LIMIT ${count}`
+    }
+    let resultSet:relationalStore.ResultSet|undefined
+    let msgList:Message[] = []
+    try{
+      resultSet = JimDbManager.instance.getDb()?.querySqlSync(sql, args)
+      while (resultSet?.goToNextRow()){
+        let msg = this.toMessage(resultSet)
+        msgList.push(msg)
+      }
+      if(!isPositive){
+        msgList = msgList.slice().sort((a,b)=>a.sentTime-b.sentTime)
+      }
+      return msgList
+    }catch (e) {
+      console.error('failed to search ', this.tableName)
       return msgList
     }finally {
       resultSet?.close()

@@ -16,9 +16,12 @@
 import { Adaptive, BaseConstants, BreakpointConstants, CurrentFeature, CurrentPage } from 'base';
 import ConversationDetailNone from '../views/Conversation/ConversationDetailNone';
 import { ContactsDetail } from './ContactsDetail';
+import { ConversationHistory } from './ConversationHistory';
+import { GlobalMessageSearch } from './GlobalMessageSearch';
 import { ContactsList } from './ContactsList';
 import { ConversationDetail } from './ConversationDetail';
 import { ConversationList } from './ConversationList';
+import { ConversationProfile } from './ConversationProfile';
 import { HomeConstants } from '../constants/HomeConstants';
 import { HomeTab } from '../views/HomeTab';
 import { SocialCircle } from 'socialcircle';
@@ -63,6 +66,12 @@ export struct Index {
   PageMap(name: string) {
     if (name === 'ConversationDetail') {
       ConversationDetail({ currentConversationUserName: this.currentConversationUserName, currentFeatureIndex: 1 });
+    } else if (name === 'GlobalMessageSearch') {
+      GlobalMessageSearch();
+    } else if (name === 'ConversationProfile') {
+      ConversationProfile();
+    } else if (name === 'ConversationHistory') {
+      ConversationHistory();
     } else if (name === 'ConversationDetailNone') {
       ConversationDetailNone();
     } else if (name === 'ContactsDetail') {

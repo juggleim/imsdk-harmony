@@ -16,11 +16,25 @@
 import { BaseConstants, BreakpointConstants, StandardIcon } from 'base';
 import { HomeConstants } from '../../constants/HomeConstants';
 import { deviceInfo } from '@kit.BasicServicesKit';
+import { GlobalMessageSearchParams } from '../../viewmodel/ConversationViewModel';
 
 @Component
 export struct HomeTopSearch {
   @StorageProp('currentBreakpoint') currentBreakpoint: string = BreakpointConstants.BREAKPOINT_SM;
   @Prop title: Resource;
+  @Prop enableGlobalMessageSearch:boolean = false
+  @State private searchInput:string = ''
+  @Consume('pageInfo') pageInfo: NavPathStack;
+
+  private openGlobalSearch():void{
+    if(!this.enableGlobalMessageSearch){
+      return
+    }
+    this.pageInfo.pushPath({
+      name: 'GlobalMessageSearch',
+      param: new GlobalMessageSearchParams(this.searchInput.trim())
+    })
+  }
 
   build() {
     Flex({ alignItems: ItemAlign.Center, justifyContent: FlexAlign.SpaceBetween }) {
@@ -43,6 +57,9 @@ export struct HomeTopSearch {
         Blank()
         StandardIcon({ icon: $r('app.media.ic_public_search') })
           .margin({ right: $r('app.float.phone_icon_right') })
+          .onClick(()=>{
+            this.openGlobalSearch()
+          })
       }
       Column() {
         StandardIcon({ icon: $r('app.media.ic_public_add_norm') })
@@ -60,7 +77,7 @@ export struct HomeTopSearch {
   searchBar() {
     Row() {
       Stack({ alignContent: Alignment.Start }) {
-        TextInput({ placeholder: HomeConstants.SEARCH_TEXT_INPUT })
+        TextInput({ text: this.searchInput, placeholder: HomeConstants.SEARCH_TEXT_INPUT })
           .placeholderFont({
             size: $r('app.float.text_input_default_font'),
             weight: FontWeight.Normal
@@ -76,11 +93,17 @@ export struct HomeTopSearch {
           .enableKeyboardOnFocus(HomeConstants.ENABLE_KEY_BOARD_ON_FOCUS)
           .backgroundColor($r('app.color.text_input_default_background_color'))
           .caretColor($r('app.color.text_input_default_care_color'))
+          .onChange((value:string)=>{
+            this.searchInput = value
+          })
 
         Image($r('app.media.ic_public_search'))
           .width($r('app.float.small_icon_width'))
           .height($r('app.float.small_icon_height'))
           .margin({ left: $r('app.float.add_icon_left') })
+          .onClick(()=>{
+            this.openGlobalSearch()
+          })
       }
       .alignSelf(ItemAlign.Center)
       .layoutWeight(BaseConstants.LAYOUT_WEIGHT_ONE)

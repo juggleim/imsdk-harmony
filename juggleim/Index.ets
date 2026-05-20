@@ -19,6 +19,8 @@ export {
 } from './src/main/ets/interfaces/conversationtypes'
 export {
   ClearMsgOptions,
+  GetMessageDirection,
+  GetMessageOptions,
   MessageCallback,
   MsgCleanedListener,
   MsgDeletedListener,
