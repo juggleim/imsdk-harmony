@@ -106,6 +106,10 @@ export class MsgSyncManager{
     })
   }
 
+  public notifyConversationAdd(convers:ConversationInfo[]){
+    this.triggerConversationAdd(convers)
+  }
+
   addConversationUpdateListener(listener:ConversationUpdateListener){
     this.converUpdateListeners.push(listener)
   }
@@ -125,6 +129,10 @@ export class MsgSyncManager{
     })
   }
 
+  public notifyConversationUpdate(convers:ConversationInfo[]){
+    this.triggerConversationUpdate(convers)
+  }
+
   addConversationDeleteListener(listener:ConversationDeleteListener){
     this.converDeleteListeners.push(listener)
   }
@@ -142,6 +150,10 @@ export class MsgSyncManager{
     this.converDeleteListeners.forEach((listener)=>{
       listener(convers)
     })
+  }
+
+  public notifyConversationDelete(convers:ConversationInfo[]){
+    this.triggerConversationDelete(convers)
   }
 
   addTotalUnreadCountUpdateListener(listener:TotalUnreadCountUpdateListener){

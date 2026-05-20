@@ -29,16 +29,18 @@ class ConversationViewItem {
   converType:number
   lastMsgTime:number
   converTime:number
+  isDraft:boolean
   name: ResourceStr
   msg: ResourceStr
   time: ResourceStr
   icon: ResourceStr
-  constructor(userId:string,converId:string,converType:number,lastMsgTime:number,converTime:number,name:ResourceStr,msg:ResourceStr,time:ResourceStr,icon:ResourceStr) {
+  constructor(userId:string,converId:string,converType:number,lastMsgTime:number,converTime:number,isDraft:boolean,name:ResourceStr,msg:ResourceStr,time:ResourceStr,icon:ResourceStr) {
     this.userId = userId
     this.converId = converId
     this.converType = converType
     this.lastMsgTime = lastMsgTime
     this.converTime = converTime
+    this.isDraft = isDraft
     this.name = name
     this.msg = msg
     this.time = time
@@ -73,14 +75,17 @@ export function toConverViewItem(conver:ConversationInfo):ConversationViewItem{
   }
   //latest msg content
   let msgStr = ""
-  if(conver.lastMessage!=undefined&&conver.lastMessage!=null) {
+  let isDraft = conver.draft.trim() != ''
+  if(isDraft){
+    msgStr = `[草稿] ${conver.draft}`
+  } else if(conver.lastMessage!=undefined&&conver.lastMessage!=null) {
     msgStr = buildMessagePreview(conver.lastMessage.msgContent)
   }
   //time str
   let timeStr = CommonUtil.getTimeToYYYYDDMMHHMMSS(conver.converTime)
 
   return new ConversationViewItem("", conver.conversation.conversationId,
-    conver.conversation.conversationType, conver.lastMessage.sentTime,conver.converTime, title,
+    conver.conversation.conversationType, conver.lastMessage.sentTime,conver.converTime, isDraft, title,
     msgStr, timeStr, iconUrl)
 }
 

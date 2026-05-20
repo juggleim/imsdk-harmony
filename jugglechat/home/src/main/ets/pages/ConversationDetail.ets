@@ -23,6 +23,8 @@ import { cloneMessageContent, isDisplayableMessage, MessageViewItem, toMessageVi
 import { ObservedArray } from '../jim/common';
 import {
   Conversation,
+  GetConversationDirection,
+  GetConversationOptions,
   GetMessageDirection,
   GetMessageOptions,
   JuggleIm,
@@ -207,6 +209,35 @@ export struct ConversationDetail {
     let anchorTime = this.minMsgTime == Number.MAX_SAFE_INTEGER ? 0 : this.minMsgTime
     let options = this.buildMessageQueryOptions(GetMessageDirection.Backward, anchorTime)
     this.queryMessagesByOptions(options)
+  }
+
+  private restoreDraft():void{
+    let options = new GetConversationOptions()
+    options.count = 200
+    options.time = 0
+    options.direction = GetConversationDirection.Backward
+    JuggleIm.instance.getConversationManager().queryConversations(options, (code, convers)=>{
+      if(code != 0){
+        return
+      }
+      for(let i = 0; i < convers.length; i++){
+        let item = convers[i]
+        if(item.conversation.conversationId == this.conversationId &&
+          item.conversation.conversationType == this.conversationType){
+          this.text = item.draft
+          return
+        }
+      }
+      this.text = ''
+    })
+  }
+
+  private persistDraft():void{
+    if(this.text != ''){
+      JuggleIm.instance.getConversationManager().setDraft(this.getConversation(), this.text)
+    }else{
+      JuggleIm.instance.getConversationManager().clearDraft(this.getConversation())
+    }
   }
 
   private closePanels():void{
@@ -398,6 +429,7 @@ export struct ConversationDetail {
 
   private async sendTextMessage():Promise<void>{
     let content = this.text.trim()
+    let draftText = this.text
     if(content == ''){
       this.showToast('不能发送空消息')
       return
@@ -416,8 +448,11 @@ export struct ConversationDetail {
       }
       JuggleIm.instance.getMessageManager().sendMessage(txtMsg, this.getConversation(), options, async (code, msg)=>{
         if(code == 0 && msg != null){
+          JuggleIm.instance.getConversationManager().clearDraft(this.getConversation())
           await this.appendMessage(msg, false)
         }else{
+          this.text = draftText
+          this.persistDraft()
           this.showToast(`发送失败: ${code}`)
         }
       })
@@ -431,8 +466,11 @@ export struct ConversationDetail {
       options.mentionInfo = mentionInfo
       JuggleIm.instance.getMessageManager().sendMessage(txtMsg, this.getConversation(), options, async (code, msg)=>{
         if(code == 0 && msg != null){
+          JuggleIm.instance.getConversationManager().clearDraft(this.getConversation())
           await this.appendMessage(msg, false)
         }else{
+          this.text = draftText
+          this.persistDraft()
           this.showToast(`发送失败: ${code}`)
         }
       })
@@ -442,8 +480,11 @@ export struct ConversationDetail {
 
     JuggleIm.instance.getMessageManager().sendMessage(txtMsg, this.getConversation(), async (code, msg)=>{
       if(code == 0 && msg != null){
+        JuggleIm.instance.getConversationManager().clearDraft(this.getConversation())
         await this.appendMessage(msg, false)
       }else{
+        this.text = draftText
+        this.persistDraft()
         this.showToast(`发送失败: ${code}`)
       }
     })
@@ -467,11 +508,13 @@ export struct ConversationDetail {
     JuggleIm.instance.getMessageManager().addMsgReceivedListener(this.msgReceiveListener)
     this.resolveConversationTitle()
     this.loadMentionCandidates()
+    this.restoreDraft()
     this.resetMessageList()
     this.loadInitialMsgs()
   }
 
   aboutToDisappear(): void {
+    this.persistDraft()
     JuggleIm.instance.getMessageManager().removeMsgReceivedListener(this.msgReceiveListener)
   }
 

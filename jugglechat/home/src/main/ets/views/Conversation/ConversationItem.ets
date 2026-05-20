@@ -22,6 +22,7 @@ export struct ConversationItem {
   @StorageProp('currentBreakpoint') currentBreakpoint: string = BreakpointConstants.BREAKPOINT_SM;
   private name?: ResourceStr;
   private msg?: ResourceStr;
+  private isDraft?: boolean;
   private time?: ResourceStr;
   private icon?: ResourceStr;
 
@@ -71,7 +72,7 @@ export struct ConversationItem {
           .fontWeight(BaseConstants.FONT_WEIGHT_FOUR)
           .lineHeight($r('app.float.text_line_height_one'))
           .fontFamily(BaseConstants.FONT_FAMILY_NORMAL)
-          .fontColor(Color.Grey)
+          .fontColor(this.isDraft ? '#E24A4A' : Color.Grey)
           .width(BaseConstants.FULL_WIDTH)
       }
       .flexShrink(BaseConstants.FLEX_SHRINK_ONE)

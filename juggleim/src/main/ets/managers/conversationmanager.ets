@@ -138,10 +138,34 @@ export class ConversationManager implements IConversationManager{
   }
 
   setDraft(conver:Conversation,draft:string){
-
+    let oldConver = JimDbManager.instance.getConversationDao().getConver(conver)
+    let converInfo = JimDbManager.instance.getConversationDao().setDraft(conver, draft)
+    if(converInfo != undefined){
+      if(this.isPlaceholderConversation(converInfo) && draft == ''){
+        JimDbManager.instance.getConversationDao().delConver(conver.conversationId, conver.conversationType)
+        this.msgSyncMgr.notifyConversationDelete([converInfo])
+        return
+      }
+      if(converInfo.lastMessage.sentTime <= 0 && draft != ''){
+        converInfo.converTime = new Date().getTime()
+      }
+      if(oldConver == undefined){
+        this.msgSyncMgr.notifyConversationAdd([converInfo])
+      }else{
+        this.msgSyncMgr.notifyConversationUpdate([converInfo])
+      }
+    }
   }
 
-  clearDraft(conver:Conversation){}
+  clearDraft(conver:Conversation){
+    this.setDraft(conver, '')
+  }
+
+  private isPlaceholderConversation(converInfo:ConversationInfo):boolean{
+    return converInfo.lastMessage.messageId == '' &&
+      converInfo.lastMessage.clientId == '' &&
+      converInfo.lastMessage.sentTime <= 0
+  }
 
   insertConversation(conver:Conversation,callback:ConversationInsertCallback){
     let req = immessage.Conversation.create({

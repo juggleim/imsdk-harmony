@@ -78,10 +78,18 @@ export class ConversationDao{
   }
 
   upsert(conver:ConversationInfo):number{
-    let sql = `INSERT OR REPLACE INTO ${this.tableName} (conver_id,conver_type,conver_time,last_msg_id,last_msg_time,last_msg_seq_no,last_read_msg_index,last_msg_index,last_msg_type,last_msg_content,last_msg_client_id,last_msg_direction,last_msg_state,last_msg_has_read,last_msg_sender_id,is_top,top_time,is_mute,unread_tag,mention_info,last_msg_mention_info) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
+    let sql = `INSERT OR REPLACE INTO ${this.tableName} (conver_id,conver_type,draft,conver_time,last_msg_id,last_msg_time,last_msg_seq_no,last_read_msg_index,last_msg_index,last_msg_type,last_msg_content,last_msg_client_id,last_msg_direction,last_msg_state,last_msg_has_read,last_msg_sender_id,is_top,top_time,is_mute,unread_tag,mention_info,last_msg_mention_info) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
     let args:Array<relationalStore.ValueType> = []
+    let draft = conver.draft
+    if(draft == ''){
+      let oldConver = this.getConver(conver.conversation)
+      if(oldConver != undefined){
+        draft = oldConver.draft
+      }
+    }
     args.push(conver.conversation.conversationId)
     args.push(conver.conversation.conversationType)
+    args.push(draft)
     // args.push(conver.syncTime)
     args.push(conver.converTime)
     args.push(conver.lastMessage.messageId)
@@ -111,6 +119,33 @@ export class ConversationDao{
       console.error(`jimsdk_db_fail. [${this.tableName}] err:${e.message}`)
     }
     return 0
+  }
+
+  setDraft(conver:Conversation,draft:string):ConversationInfo|undefined{
+    let normalizedDraft = draft
+    let converInfo = this.getConver(conver)
+    if(converInfo != undefined){
+      let sql = `UPDATE ${this.tableName} SET draft=? WHERE conver_id=? AND conver_type=?`
+      let args:Array<relationalStore.ValueType> = [normalizedDraft, conver.conversationId, conver.conversationType]
+      try{
+        JimDbManager.instance.getDb()?.executeSync(sql,args)
+        converInfo.draft = normalizedDraft
+        return converInfo
+      }catch (e) {
+        console.error(`jimsdk_db_fail. [${this.tableName}] err:${e.message}`)
+        return converInfo
+      }
+    }
+    if(normalizedDraft == ''){
+      return undefined
+    }
+    let newConverInfo = new ConversationInfo()
+    newConverInfo.conversation = conver
+    newConverInfo.draft = normalizedDraft
+    newConverInfo.converTime = new Date().getTime()
+    newConverInfo.lastMessage.conversation = conver
+    this.upsert(newConverInfo)
+    return this.getConver(conver)
   }
 
   existByConver(conver:Conversation):boolean{
