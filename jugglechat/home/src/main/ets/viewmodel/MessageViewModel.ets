@@ -26,6 +26,7 @@ class MessageViewItem{
   referenceText:string = ''
   previewText:string = ''
   msgType:string = JimMsgType.Unknown
+  isEdited:boolean = false
 
   isReceived:boolean = true
   msgTime:number = 0
@@ -42,6 +43,7 @@ class MessageViewItem{
     this.msgContent = message.msgContent
     this.msgTime = message.sentTime
     this.msgType = message.msgContent.getMsgType()
+    this.isEdited = message.isEdit
     this.previewText = buildMessagePreview(message.msgContent)
     if(message.referredMessage != null){
       this.referenceText = buildMessagePreview(message.referredMessage.msgContent)

@@ -26,6 +26,7 @@ export struct ConversationDetailItem {
   private referenceText?:string
   private previewText?:string
   private msgType?:string
+  private isEdited?:boolean
 
   private isReceived?: boolean = false;
   private msgTime:number=0
@@ -41,6 +42,7 @@ export struct ConversationDetailItem {
         referenceText:this.referenceText,
         previewText:this.previewText,
         msgType:this.msgType,
+        isEdited:this.isEdited,
         isReceived: this.isReceived,
         msgTime:this.msgTime
       })

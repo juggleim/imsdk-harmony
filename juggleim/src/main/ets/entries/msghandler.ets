@@ -9,6 +9,7 @@ import { JuggleIm } from "../../../../Index"
 import { GroupInfo } from "./group"
 import { JimMsgType } from "./msgtypes"
 import { MessageOptionUtil } from "../commons/messageoptionutil"
+import { MsgFlagTool } from "../improto/msgflag"
 
 export class MsgHandler{
   private static msgTypeMap:Map<string,Function> = new Map()
@@ -66,6 +67,7 @@ export class MsgHandler{
     message.memberCount = JimUtil.toNumber(downMsg.memberCount as number)
     message.searchContent = downMsg.SearchText as string
     message.flags = JimUtil.toNumber(downMsg.flags as number)
+    message.isEdit = MsgFlagTool.parseFlag(message.flags).isModified == true
     let referMessage:Message|undefined
     if(downMsg.referMsg != undefined && downMsg.referMsg != null){
       referMessage = MsgHandler.downMsg2ReferenceMessage(downMsg.referMsg)
@@ -110,6 +112,7 @@ export class MsgHandler{
     message.memberCount = JimUtil.toNumber(downMsg.memberCount as number)
     message.searchContent = downMsg.SearchText as string
     message.flags = JimUtil.toNumber(downMsg.flags as number)
+    message.isEdit = MsgFlagTool.parseFlag(message.flags).isModified == true
     MessageOptionUtil.applyProtoOptions(message, downMsg)
     return message
   }

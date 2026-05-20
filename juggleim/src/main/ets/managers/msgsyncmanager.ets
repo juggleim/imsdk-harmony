@@ -664,7 +664,23 @@ export class MsgSyncManager{
       }
       oldMsg.msgContent = MsgHandler.constructByMsgType(newMsgType,modifyMsg.newMsgContent)
       msgDao.updateMsgContent(oldMsg.messageId,oldMsg.msgContent)
-      this.triggerMsgModify(oldMsg)
+      oldMsg.flags = oldMsg.flags | 16
+      oldMsg.isEdit = true
+      msgDao.updateMsgFlags(oldMsg.messageId, oldMsg.flags)
+      this.notifyMessageModified(oldMsg)
     }
+  }
+
+  public notifyMessageModified(message:Message):void{
+    let converDao = JimDbManager.instance.getConversationDao()
+    let converInfo = converDao.getConver(message.conversation)
+    if(converInfo != undefined &&
+      (converInfo.lastMessage.messageId == message.messageId ||
+        (message.clientId != '' && converInfo.lastMessage.clientId == message.clientId))){
+      converInfo.lastMessage = message
+      converDao.upsert(converInfo)
+      this.triggerConversationUpdate([converInfo])
+    }
+    this.triggerMsgModify(message)
   }
 }

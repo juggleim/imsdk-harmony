@@ -1,4 +1,5 @@
-import { Message, MessageContent } from "../entries/message";
+import { FileMessage, MergeMessage, Message, MessageContent, TextMessage } from "../entries/message";
+import { JimMsgType } from "../entries/msgtypes";
 import { relationalStore } from "@kit.ArkData";
 import { JimUtil } from "../commons/jimutil";
 import { MsgFlagTool } from "../improto/msgflag";
@@ -242,10 +243,11 @@ export class MessageDao{
   }
 
   updateMsgContent(msgId:string,msgContent:MessageContent):number{
-    let sql = `UPDATE ${this.tableName} SET msg_type=?, msg_content=? WHERE msg_id=?`
+    let sql = `UPDATE ${this.tableName} SET msg_type=?, msg_content=?, search_content=? WHERE msg_id=?`
     let args:Array<relationalStore.ValueType> = []
     args.push(msgContent.getMsgType())
     args.push(JimUtil.uint8ArrayToString(msgContent.encode()))
+    args.push(this.buildSearchContent(msgContent))
     args.push(msgId)
     try{
       let vt = JimDbManager.instance.getDb()?.executeSync(sql,args)
@@ -254,6 +256,32 @@ export class MessageDao{
       console.error(`jimsdk_db_fail. [${this.tableName}] err:${e.message}`)
     }
     return 0
+  }
+
+  updateMsgFlags(msgId:string, flags:number):number{
+    let sql = `UPDATE ${this.tableName} SET flags=? WHERE msg_id=?`
+    let args:Array<relationalStore.ValueType> = [flags, msgId]
+    try{
+      let vt = JimDbManager.instance.getDb()?.executeSync(sql,args)
+      return vt as number
+    }catch (e) {
+      console.error(`jimsdk_db_fail. [${this.tableName}] err:${e.message}`)
+    }
+    return 0
+  }
+
+  private buildSearchContent(msg:MessageContent):string{
+    let msgType = msg.getMsgType()
+    if(msgType == JimMsgType.Text){
+      return (msg as TextMessage).content
+    }
+    if(msgType == JimMsgType.File){
+      return (msg as FileMessage).name
+    }
+    if(msgType == JimMsgType.Merge){
+      return (msg as MergeMessage).title
+    }
+    return ''
   }
 
   updateMsgState(dbId:number,state:number,msgId?:string,msgTime?:number,msgSeq?:number):number{
@@ -357,6 +385,7 @@ export class MessageDao{
     message.msgContent = MsgHandler.constructByMsgType(msgType, JimUtil.stringToUint8Array(content))
     message.state = JimDbUtil.toNumber(resultSet,'state')
     message.flags = JimDbUtil.toNumber(resultSet,'flags')
+    message.isEdit = MsgFlagTool.parseFlag(message.flags).isModified == true
     message.hasRead = JimDbUtil.toNumber(resultSet,"has_read")>0
     message.readCount = JimDbUtil.toNumber(resultSet,"read_count")
     message.memberCount = JimDbUtil.toNumber(resultSet, "member_count")

@@ -39,6 +39,7 @@ export struct MessageBubble {
   private referenceText?:string
   private previewText?:string
   private msgType?:string
+  private isEdited?:boolean
   private msgTime?:number
 
   private getMsgType():string{
@@ -192,6 +193,13 @@ export struct MessageBubble {
         .lineHeight($r('app.float.conversation_default_text_line'))
         .fontColor($r('app.color.conversation_default_text_color'))
         .copyOption(CopyOptions.LocalDevice)
+    }
+
+    if(this.isEdited == true){
+      Text('已编辑')
+        .fontSize(10)
+        .fontColor('#999999')
+        .margin({ top: 6 })
     }
   }
 }

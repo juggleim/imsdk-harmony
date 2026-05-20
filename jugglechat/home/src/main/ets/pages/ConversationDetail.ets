@@ -27,11 +27,13 @@ import {
   GetConversationOptions,
   GetMessageDirection,
   GetMessageOptions,
+  JimMsgType,
   JuggleIm,
   Message,
   MessageMentionInfo,
   MessageOptions,
   MentionType,
+  MsgModifiedListener,
   MsgReceivedListener,
   TextMessage,
   UserInfo
@@ -67,6 +69,7 @@ export struct ConversationDetail {
   @State refreshing:boolean = false
   private scroller:Scroller = new Scroller()
   private msgReceiveListener:MsgReceivedListener = async (message)=>{}
+  private msgModifiedListener:MsgModifiedListener = async (message)=>{}
   @State private text:string = ''
   @State private showMessageActionPanel:boolean = false
   @State private showForwardPanel:boolean = false
@@ -74,6 +77,8 @@ export struct ConversationDetail {
   @State private quotedMessageId:string = ''
   @State private quotedPreview:string = ''
   @State private quotedSender:string = ''
+  @State private editingMessageId:string = ''
+  @State private editingOriginalText:string = ''
   @State private forwardTargets:ObservedArray<ConversationViewItem> = new ObservedArray<ConversationViewItem>([])
   @State private mentionCandidates:ObservedArray<MentionCandidate> = new ObservedArray<MentionCandidate>([])
   @State private filteredMentionCandidates:ObservedArray<MentionCandidate> = new ObservedArray<MentionCandidate>([])
@@ -260,10 +265,46 @@ export struct ConversationDetail {
       this.showToast('消息仍在发送，暂时不能引用')
       return
     }
+    this.cancelEdit()
     this.quotedMessageId = item.messageId
     this.quotedPreview = item.previewText
     this.quotedSender = item.isReceived ? item.senderName : item.selfName
     this.closePanels()
+  }
+
+  private isEditingMessage():boolean{
+    return this.editingMessageId != ''
+  }
+
+  private canEditMessage(item?:MessageViewItem):boolean{
+    if(item == undefined){
+      return false
+    }
+    return !item.isReceived &&
+      item.messageId != '' &&
+      item.msgType == JimMsgType.Text
+  }
+
+  private startEditingSelectedMessage():void{
+    let item = this.getSelectedMessage()
+    if(!this.canEditMessage(item)){
+      this.showToast('当前消息暂不支持编辑')
+      return
+    }
+    let textMessage = item?.msgContent as TextMessage
+    this.editingMessageId = item?.messageId as string
+    this.editingOriginalText = textMessage.content
+    this.text = textMessage.content
+    this.cancelQuote()
+    this.clearMentionState()
+    this.closePanels()
+  }
+
+  private cancelEdit():void{
+    this.editingMessageId = ''
+    this.editingOriginalText = ''
+    this.text = ''
+    this.clearMentionState()
   }
 
   private cancelQuote():void{
@@ -276,6 +317,37 @@ export struct ConversationDetail {
     this.showMentionPanel = false
     this.filteredMentionCandidates = new ObservedArray<MentionCandidate>([])
     this.selectedMentionMap.clear()
+  }
+
+  private async saveEditedMessage():Promise<void>{
+    if(!this.isEditingMessage()){
+      return
+    }
+    let content = this.text.trim()
+    if(content == ''){
+      this.showToast('不能发送空消息')
+      return
+    }
+    if(content == this.editingOriginalText.trim()){
+      this.cancelEdit()
+      return
+    }
+    let message = new TextMessage()
+    message.content = content
+    let editingMessageId = this.editingMessageId
+    let originalText = this.editingOriginalText
+    this.text = ''
+    this.clearMentionState()
+    JuggleIm.instance.getMessageManager().updateMessage(editingMessageId, message, this.getConversation(), (code, msg)=>{
+      if(code == 0){
+        JuggleIm.instance.getConversationManager().clearDraft(this.getConversation())
+        this.editingMessageId = ''
+        this.editingOriginalText = ''
+      }else{
+        this.text = originalText
+        this.showToast(`编辑失败: ${code}`)
+      }
+    })
   }
 
   private async loadMentionCandidates():Promise<void>{
@@ -428,6 +500,10 @@ export struct ConversationDetail {
   }
 
   private async sendTextMessage():Promise<void>{
+    if(this.isEditingMessage()){
+      await this.saveEditedMessage()
+      return
+    }
     let content = this.text.trim()
     let draftText = this.text
     if(content == ''){
@@ -500,12 +576,19 @@ export struct ConversationDetail {
 
     this.msgReceiveListener = async (message)=>{
       let conver = message.conversation
-      if(conver?.conversationId===param.conversationId){
+      if(conver?.conversationId===param.conversationId && conver?.conversationType===param.converType){
         await this.appendMessage(message, true)
+      }
+    }
+    this.msgModifiedListener = async (message)=>{
+      let conver = message.conversation
+      if(conver?.conversationId===param.conversationId && conver?.conversationType===param.converType){
+        await this.appendMessage(message, false)
       }
     }
 
     JuggleIm.instance.getMessageManager().addMsgReceivedListener(this.msgReceiveListener)
+    JuggleIm.instance.getMessageManager().addMsgModifiedListener(this.msgModifiedListener)
     this.resolveConversationTitle()
     this.loadMentionCandidates()
     this.restoreDraft()
@@ -516,6 +599,7 @@ export struct ConversationDetail {
   aboutToDisappear(): void {
     this.persistDraft()
     JuggleIm.instance.getMessageManager().removeMsgReceivedListener(this.msgReceiveListener)
+    JuggleIm.instance.getMessageManager().removeMsgModifiedListener(this.msgModifiedListener)
   }
 
   build() {
@@ -632,6 +716,30 @@ export struct ConversationDetail {
               .backgroundColor('#F3F4F6')
             }
 
+            if(this.isEditingMessage()){
+              Row() {
+                Column() {
+                  Text('编辑消息')
+                    .fontSize(12)
+                    .fontColor('#666666')
+                  Text(this.editingOriginalText)
+                    .fontSize(13)
+                    .maxLines(1)
+                    .textOverflow({ overflow: TextOverflow.Ellipsis })
+                }
+                .alignItems(HorizontalAlign.Start)
+                .layoutWeight(1)
+                Button('取消')
+                  .type(ButtonType.Normal)
+                  .onClick(()=>{
+                    this.cancelEdit()
+                  })
+              }
+              .width('100%')
+              .padding({ left: 16, right: 16, top: 10, bottom: 10 })
+              .backgroundColor('#F3F4F6')
+            }
+
             Row(){
               Column(){
                 Column() {
@@ -656,7 +764,11 @@ export struct ConversationDetail {
                   .backgroundColor(Color.White)
                   .onChange((v)=>{
                     this.text = v
-                    this.updateMentionPanel()
+                    if(this.isEditingMessage()){
+                      this.showMentionPanel = false
+                    }else{
+                      this.updateMentionPanel()
+                    }
                   })
               }
               Column() {
@@ -692,6 +804,23 @@ export struct ConversationDetail {
 
             if(this.showMessageActionPanel){
               Column() {
+                if(this.canEditMessage(this.getSelectedMessage())){
+                  Row() {
+                    Text('编辑')
+                      .fontSize(16)
+                      .fontColor('#111111')
+                    Blank()
+                  }
+                  .width('100%')
+                  .padding({ left: 20, right: 20, top: 18, bottom: 18 })
+                  .onClick(()=>{
+                    this.startEditingSelectedMessage()
+                  })
+                  Divider()
+                    .strokeWidth(1)
+                    .color('#EAEAEA')
+                }
+
                 Row() {
                   Text('引用')
                     .fontSize(16)

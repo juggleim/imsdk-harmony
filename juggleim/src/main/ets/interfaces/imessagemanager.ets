@@ -40,6 +40,7 @@ export interface IMessageManager {
   delMessages(conver: Conversation, msgIds: string[], delScope: number, callback: CommonCallback): void
   getMessagesByMessageIds(conver: Conversation | null, msgIds: string[], callback: QryMessagesCallback): void
   getMessagesByIds(conver: Conversation | null, msgIds: string[], callback: QryMessagesCallback): void
+  updateMessage(msgId: string, msg: MessageContent, conver: Conversation, callback: MessageCallback): void
   modifyMessage(conver: Conversation, msgId: string, msg: MessageContent, callback: MessageCallback): void
   sendReadReceipt(conver: Conversation, msgIds: string[], callback: CommonCallback): void
   recallMessage(conver: Conversation, msgId: string, extras: HashMap<string, string>, callback: MessageCallback): void

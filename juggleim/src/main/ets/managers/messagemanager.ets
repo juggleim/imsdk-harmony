@@ -496,7 +496,51 @@ export class MessageManager implements IMessageManager{
     this.getMessagesByMessageIds(conver, msgIds, callback)
   }
 
-  modifyMessage(conver:Conversation,msgId:string,msg:MessageContent,callback:MessageCallback){}
+  updateMessage(msgId:string,msg:MessageContent,conver:Conversation,callback:MessageCallback){
+    if(msgId == '' || conver.conversationId == '' || msg == undefined){
+      callback(-1, null)
+      return
+    }
+    let localMessages = JimDbManager.instance.getMessageDao().getMessagesByMessageIds([msgId])
+    if(localMessages.length == 0){
+      callback(-2, null)
+      return
+    }
+    let localMessage = localMessages[0]
+    let req = immessage.ModifyMsgReq.create({
+      "targetId":conver.conversationId,
+      "channelType":conver.conversationType,
+      "msgId":msgId,
+      "msgTime":localMessage.sentTime,
+      "msgSeqNo":localMessage.msgSeqNo,
+      "msgContent":msg.encode(),
+      "msgType":msg.getMsgType()
+    })
+    let data = immessage.ModifyMsgReq.encode(req).finish()
+    this.imclient.query("modify_msg", conver.conversationId, data, (code, qryAck)=>{
+      if(code != 0){
+        callback(code, null)
+        return
+      }
+      if(qryAck.timestamp != undefined && qryAck.timestamp != null){
+        this.msgSyncMgr.recordLatestSendboxMsgTime(JimUtil.toNumber(qryAck.timestamp as number), localMessage.flags)
+      }
+      let flags = localMessage.flags | 16
+      localMessage.msgContent = msg
+      localMessage.flags = flags
+      localMessage.isEdit = true
+      localMessage.searchContent = this.buildSearchContent(msg)
+      let msgDao = JimDbManager.instance.getMessageDao()
+      msgDao.updateMsgContent(localMessage.messageId, localMessage.msgContent)
+      msgDao.updateMsgFlags(localMessage.messageId, flags)
+      this.msgSyncMgr.notifyMessageModified(localMessage)
+      callback(0, localMessage)
+    })
+  }
+
+  modifyMessage(conver:Conversation,msgId:string,msg:MessageContent,callback:MessageCallback){
+    this.updateMessage(msgId, msg, conver, callback)
+  }
 
   sendReadReceipt(conver:Conversation,msgIds:string[],callback:CommonCallback){}
 

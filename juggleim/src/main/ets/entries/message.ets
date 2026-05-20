@@ -64,6 +64,7 @@ export class Message{
   readCount:number = 0
   memberCount:number = 0
   isDeleted:boolean = false
+  isEdit:boolean = false
   searchContent:string = ''
   localAttribute:string = ''
   referMsgId:string = ''
