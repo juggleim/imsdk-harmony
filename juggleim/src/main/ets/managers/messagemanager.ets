@@ -248,6 +248,7 @@ export class MessageManager implements IMessageManager{
       if(isLack||msgs.length<normalizedOptions.count){
         //query from remote
         this.queryRemoteMessages(conver,normalizedOptions,(code,remoteMsgs,hasMore)=>{
+          this.mergeLocalMessageState(msgs, remoteMsgs)
           remoteMsgs.forEach((msg)=>{
             //check exist
             let msgDao = JimDbManager.instance.getMessageDao()
@@ -261,6 +262,24 @@ export class MessageManager implements IMessageManager{
       }else{
         callback(code,msgs,msgs.length>=normalizedOptions.count)
       }
+    })
+  }
+
+  private mergeLocalMessageState(localMsgs:Message[], remoteMsgs:Message[]):void{
+    localMsgs.forEach((localMsg)=>{
+      remoteMsgs.forEach((remoteMsg)=>{
+        let isSameMessage = false
+        if(localMsg.messageId != '' && remoteMsg.messageId != '' && localMsg.messageId == remoteMsg.messageId){
+          isSameMessage = true
+        } else if(localMsg.clientId != '' && remoteMsg.clientId != '' && localMsg.clientId == remoteMsg.clientId){
+          isSameMessage = true
+        }
+        if(!isSameMessage){
+          return
+        }
+        remoteMsg.localAttribute = localMsg.localAttribute
+        return
+      })
     })
   }
 
@@ -418,6 +437,16 @@ export class MessageManager implements IMessageManager{
     callback(0, msgs, false)
   }
 
-  setLocalAttribue(msgId:string,attribute:string){}
+  setLocalAttribute(msgId:string,attribute:string){
+    JimDbManager.instance.getMessageDao().updateLocalAttribute(msgId, attribute)
+  }
+
+  getLocalAttribute(msgId:string):string{
+    return JimDbManager.instance.getMessageDao().getLocalAttribute(msgId)
+  }
+
+  setLocalAttribue(msgId:string,attribute:string){
+    this.setLocalAttribute(msgId, attribute)
+  }
 
 }

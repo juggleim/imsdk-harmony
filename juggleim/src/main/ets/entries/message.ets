@@ -65,6 +65,7 @@ export class Message{
   memberCount:number = 0
   isDeleted:boolean = false
   searchContent:string = ''
+  localAttribute:string = ''
   referMsgId:string = ''
   referredMessage:Message | null = null
   mentionInfo?:MessageMentionInfo

@@ -43,5 +43,7 @@ export interface IMessageManager {
   sendReadReceipt(conver: Conversation, msgIds: string[], callback: CommonCallback): void
   recallMessage(conver: Conversation, msgId: string, extras: HashMap<string, string>, callback: MessageCallback): void
   searchMessages(params: SearchParams, callback: QryMessagesCallback): void
+  setLocalAttribute(msgId: string, attribute: string): void
+  getLocalAttribute(msgId: string): string
   setLocalAttribue(msgId: string, attribute: string): void
 }

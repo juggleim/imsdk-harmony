@@ -220,6 +220,35 @@ export class MessageDao{
     return 0
   }
 
+  updateLocalAttribute(msgId:string, attribute:string):number{
+    let sql = `UPDATE ${this.tableName} SET local_attribute=? WHERE msg_id=?`
+    let args:Array<relationalStore.ValueType> = [attribute, msgId]
+    try{
+      let vt = JimDbManager.instance.getDb()?.executeSync(sql,args)
+      return vt as number
+    }catch (e) {
+      console.error(`jimsdk_db_fail. [${this.tableName}] err:${e.message}`)
+    }
+    return 0
+  }
+
+  getLocalAttribute(msgId:string):string{
+    let sql = `SELECT local_attribute FROM ${this.tableName} WHERE msg_id=?`
+    let args:Array<relationalStore.ValueType> = [msgId]
+    let resultSet:relationalStore.ResultSet|undefined
+    try{
+      resultSet = JimDbManager.instance.getDb()?.querySqlSync(sql,args)
+      if(resultSet?.goToNextRow()){
+        return JimDbUtil.toString(resultSet,'local_attribute')
+      }
+    }catch (e) {
+      console.error(`jimsdk_db_fail. [${this.tableName}] err:${e.message}`)
+    }finally {
+      resultSet?.close()
+    }
+    return ''
+  }
+
   private getValuesBucket(msg:Message):relationalStore.ValuesBucket{
     let valuesBucket:relationalStore.ValuesBucket = {
       "conver_id":msg.conversation?.conversationId as string,
@@ -240,6 +269,7 @@ export class MessageDao{
       "read_count":msg.readCount,
       "member_count":msg.memberCount,
       "search_content":msg.searchContent,
+      "local_attribute":msg.localAttribute,
       "mention_info": MessageOptionUtil.encodeMentionInfo(msg.mentionInfo),
       "refer_msg_id":msg.referMsgId
     }
@@ -269,6 +299,7 @@ export class MessageDao{
     message.memberCount = JimDbUtil.toNumber(resultSet, "member_count")
     message.isDeleted = JimDbUtil.toNumber(resultSet,"is_deleted")>0
     message.searchContent = JimDbUtil.toString(resultSet,"search_content")
+    message.localAttribute = JimDbUtil.toString(resultSet,"local_attribute")
     message.mentionInfo = MessageOptionUtil.decodeMentionInfo(JimDbUtil.toString(resultSet,"mention_info"))
     message.referMsgId = JimDbUtil.toString(resultSet, "refer_msg_id")
     if(message.referMsgId != ''){
