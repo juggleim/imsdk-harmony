@@ -14,6 +14,7 @@ import {
   ConversationInsertCallback,
   ConversationsCallback,
   ConversationUpdateListener,
+  GetConversationOptions,
   TopConverSortType,
   TotalUnreadCountCallback,
   TotalUnreadCountUpdateListener
@@ -26,6 +27,7 @@ export {
   ConversationInsertCallback,
   ConversationsCallback,
   ConversationUpdateListener,
+  GetConversationOptions,
   TopConverSortType,
   TotalUnreadCountCallback,
   TotalUnreadCountUpdateListener
@@ -71,12 +73,44 @@ export class ConversationManager implements IConversationManager{
     this.msgSyncMgr.removeTotalUnreadCountUpdateListener(listener)
   }
 
-  queryConversations(count:number,startTime:number,isPositive:boolean,callback:ConversationsCallback){
-    if(!isPositive&&startTime<=0){
-      startTime = new Date().getTime()
+  queryConversations(options:GetConversationOptions,callback:ConversationsCallback): void
+  queryConversations(count:number,startTime:number,isPositive:boolean,callback:ConversationsCallback): void
+  queryConversations(
+    arg1:GetConversationOptions|number,
+    arg2:ConversationsCallback|number,
+    arg3?:boolean,
+    arg4?:ConversationsCallback
+  ): void {
+    if(typeof arg1 === 'number'){
+      if(typeof arg2 !== 'number' || arg3 == undefined || arg4 == undefined){
+        return
+      }
+      let startTime = arg2
+      if(!arg3 && startTime <= 0){
+        startTime = new Date().getTime()
+      }
+      let convers = JimDbManager.instance.getConversationDao().queryConversations(startTime,arg1,arg3)
+      arg4(0,convers)
+      return
     }
-    let convers = JimDbManager.instance.getConversationDao().queryConversations(startTime,count,isPositive)
-    callback(0,convers)
+    if(typeof arg2 !== 'function'){
+      return
+    }
+    let normalizedOptions = this.normalizeConversationOptions(arg1)
+    let convers = JimDbManager.instance.getConversationDao().queryConversationsWithOptions(normalizedOptions)
+    arg2(0,convers)
+  }
+
+  private normalizeConversationOptions(options:GetConversationOptions):GetConversationOptions{
+    let normalizedOptions = new GetConversationOptions()
+    normalizedOptions.count = options.count > 0 ? options.count : 20
+    normalizedOptions.direction = options.direction
+    normalizedOptions.time = options.time
+    normalizedOptions.conversationTypes = options.conversationTypes.slice()
+    if(normalizedOptions.time <= 0){
+      normalizedOptions.time = new Date().getTime()
+    }
+    return normalizedOptions
   }
 
   getConversation(conver:Conversation,callback:ConversationCallback){

@@ -4,9 +4,8 @@ import { JimUtil } from "../commons/jimutil"
 import { JimDbUtil } from "./dbutil"
 import { Message } from "../entries/message";
 import { JimDbManager } from "./dbmanager";
-import { MessageManager } from "../managers/messagemanager";
-import { JuggleIm } from "../juggleim";
 import { MsgHandler } from "../entries/msghandler";
+import { GetConversationDirection, GetConversationOptions } from "../interfaces/conversationtypes";
 
 export class ConversationDao{
   static instance:ConversationDao = new ConversationDao()
@@ -24,6 +23,44 @@ export class ConversationDao{
     sql = sql + ` LIMIT ${count}`
     let args:Array<relationalStore.ValueType> = []
     args.push(start)
+    let resultSet:relationalStore.ResultSet|undefined
+    let converList:ConversationInfo[] = []
+    try{
+      resultSet = JimDbManager.instance.getDb()?.querySqlSync(sql,args)
+      while (resultSet?.goToNextRow()){
+        let conver = this.toConver(resultSet)
+        converList.push(conver)
+      }
+    }catch (e) {
+      console.error("jimsdk_db_failed. ",this.tableName,`err:${e.message}`)
+    }finally {
+      resultSet?.close()
+    }
+    return converList
+  }
+
+  queryConversationsWithOptions(options:GetConversationOptions):ConversationInfo[]{
+    let sql = `SELECT * FROM ${this.tableName} WHERE `
+    let args:Array<relationalStore.ValueType> = []
+    let time = options.time
+    if(time <= 0){
+      time = new Date().getTime()
+    }
+    if(options.direction == GetConversationDirection.Forward){
+      sql = sql + ` conver_time > ?`
+    }else{
+      sql = sql + ` conver_time < ?`
+    }
+    args.push(time)
+    if(options.conversationTypes.length > 0){
+      let placeholders:string[] = []
+      options.conversationTypes.forEach((conversationType:number)=>{
+        placeholders.push('?')
+        args.push(conversationType)
+      })
+      sql = sql + ` AND conver_type IN (${placeholders.join(', ')})`
+    }
+    sql = sql + ` ORDER BY is_top DESC, top_time DESC, conver_time DESC LIMIT ${options.count}`
     let resultSet:relationalStore.ResultSet|undefined
     let converList:ConversationInfo[] = []
     try{

@@ -10,6 +10,21 @@ export enum TopConverSortType {
   BySortTime
 }
 
+export enum GetConversationDirection {
+  Backward = 0,
+  Forward = 1
+}
+
+export class GetConversationOptions {
+  count: number = 20
+  time: number = 0
+  direction: GetConversationDirection = GetConversationDirection.Backward
+  conversationTypes: number[] = []
+
+  constructor() {
+  }
+}
+
 export type ConversationAddListener = (convers: ConversationInfo[]) => void
 export type ConversationUpdateListener = (convers: ConversationInfo[]) => void
 export type ConversationDeleteListener = (convers: ConversationInfo[]) => void

@@ -25,6 +25,8 @@ import {
   ConversationAddListener,
   ConversationDeleteListener,
   ConversationUpdateListener,
+  GetConversationDirection,
+  GetConversationOptions,
   JuggleIm
 } from 'juggleim'
 import { toConverViewItem } from '../viewmodel/ConversationViewModel'
@@ -35,7 +37,7 @@ export struct ConversationList {
   @Link currentConversationUserName: ResourceStr;
   @Link currentContactUserName: string;
   @State private currentIndex: number = 0;
-  @State conversationList:ObservedArray<ConversationViewItem>=[]
+  @State conversationList:ObservedArray<ConversationViewItem>=new ObservedArray<ConversationViewItem>([])
   @Consume('pageInfo') pageInfo: NavPathStack;
   // private scroller: ListScroller = new ListScroller()
   private maxConverSortTime:number = 0
@@ -53,6 +55,37 @@ export struct ConversationList {
     }
   }
 
+  private resetConverTimes():void{
+    this.maxConverSortTime = 0
+    this.minConverSortTime = Number.MAX_SAFE_INTEGER
+  }
+
+  private rebuildConverTimes():void{
+    this.resetConverTimes()
+    this.conversationList.forEach((item)=>{
+      this.recordConverTime(item.converTime)
+    })
+  }
+
+  private buildConversationQueryOptions(direction:GetConversationDirection, time:number):GetConversationOptions{
+    let options = new GetConversationOptions()
+    options.count = 20
+    options.time = time
+    options.direction = direction
+    return options
+  }
+
+  private mergeConversationViewItem(converViewItem:ConversationViewItem):void{
+    let foundIndex = this.conversationList.findIndex((item)=>{
+      return item.converId == converViewItem.converId && item.converType == converViewItem.converType
+    })
+    if(foundIndex >= 0){
+      this.conversationList[foundIndex] = converViewItem
+    }else{
+      this.conversationList.push(converViewItem)
+    }
+  }
+
   aboutToDisappear(): void {
     JuggleIm.instance.getConversationManager().removeConversationAddListener(this.converAddListener)
     JuggleIm.instance.getConversationManager().removeConversationUpdateListener(this.converUpdListener)
@@ -60,24 +93,26 @@ export struct ConversationList {
   }
 
   aboutToAppear(): void {
-    this.maxConverSortTime = 0
-    this.minConverSortTime = new Date().getTime()
+    this.resetConverTimes()
+    this.conversationList = new ObservedArray<ConversationViewItem>([])
 
     if(JuggleIm.instance.getConnStatus() == ConnStatus.connecting){
       JuggleIm.instance.getConnectionManager().addConnectStatusListener((status,code)=>{
         if(status==ConnStatus.connected){
-          this.loadMoreConvers()
+          this.reloadConversations()
         }
       })
+    } else if (JuggleIm.instance.getConnStatus() == ConnStatus.connected) {
+      this.reloadConversations()
     }
 
     //conver add
     this.converAddListener = (convers)=>{
       convers.forEach((conver)=>{
-        this.conversationList.push(toConverViewItem(conver))
-        this.recordConverTime(conver.converTime)
+        this.mergeConversationViewItem(toConverViewItem(conver))
       })
-      this.conversationList = this.conversationList.slice().sort((a,b)=>b.converTime - a.converTime)
+      this.conversationList = new ObservedArray<ConversationViewItem>(this.conversationList.slice().sort((a,b)=>b.converTime - a.converTime))
+      this.rebuildConverTimes()
     }
     JuggleIm.instance.getConversationManager().addConversationAddListener(this.converAddListener)
 
@@ -92,7 +127,7 @@ export struct ConversationList {
         let key:string = conver.conversation.conversationId+"_"+conver.conversation.conversationType
         updatedConverKeys.set(key,true)
       })
-      let tmpConverList:ObservedArray<ConversationViewItem>=[]
+      let tmpConverList:ObservedArray<ConversationViewItem>=new ObservedArray<ConversationViewItem>([])
       this.conversationList.forEach((conver)=>{
         let key = conver.converId+"_"+conver.converType
         if(!updatedConverKeys.has(key)){
@@ -102,8 +137,9 @@ export struct ConversationList {
       updatedConverList.forEach((conver)=>{
         tmpConverList.push(conver)
       })
-      tmpConverList = tmpConverList.slice().sort((a,b)=>b.converTime-a.converTime)
+      tmpConverList = new ObservedArray<ConversationViewItem>(tmpConverList.slice().sort((a,b)=>b.converTime-a.converTime))
       this.conversationList = tmpConverList
+      this.rebuildConverTimes()
     }
     JuggleIm.instance.getConversationManager().addConversationUpdateListener(this.converUpdListener)
 
@@ -115,7 +151,7 @@ export struct ConversationList {
         let key:string = conver.conversation.conversationId+"_"+conver.conversation.conversationType
         delConverKeys.set(key,true)
       })
-      let tmpConverList:ObservedArray<ConversationViewItem>=[]
+      let tmpConverList:ObservedArray<ConversationViewItem>=new ObservedArray<ConversationViewItem>([])
       this.conversationList.forEach((conver)=>{
         let key = conver.converId+"_"+conver.converType
         if(!delConverKeys.has(key)){
@@ -123,21 +159,36 @@ export struct ConversationList {
         }
       })
       this.conversationList = tmpConverList
+      this.rebuildConverTimes()
     }
     JuggleIm.instance.getConversationManager().addConversationDeleteListener(this.converDelListener)
   }
 
-  loadMoreConvers(){
+  private queryConversations(direction:GetConversationDirection, time:number, reset:boolean):void{
     if(JuggleIm.instance.getConnStatus()==ConnStatus.connected) {
+      if(reset){
+        this.resetConverTimes()
+        this.conversationList = new ObservedArray<ConversationViewItem>([])
+      }
+      let options = this.buildConversationQueryOptions(direction, time)
       JuggleIm.instance.getConversationManager()
-        .queryConversations(20, this.minConverSortTime, false, (code, convers) => {
+        .queryConversations(options, (code, convers) => {
           convers.forEach((conver) => {
-            this.conversationList.push(toConverViewItem(conver))
-            this.recordConverTime(conver.converTime)
+            this.mergeConversationViewItem(toConverViewItem(conver))
           })
-          this.conversationList = this.conversationList.slice().sort((a,b)=>b.converTime - a.converTime)
+          this.conversationList = new ObservedArray<ConversationViewItem>(this.conversationList.slice().sort((a,b)=>b.converTime - a.converTime))
+          this.rebuildConverTimes()
         })
     }
+  }
+
+  loadMoreConvers(){
+    let anchorTime = this.minConverSortTime == Number.MAX_SAFE_INTEGER ? 0 : this.minConverSortTime
+    this.queryConversations(GetConversationDirection.Backward, anchorTime, false)
+  }
+
+  private reloadConversations():void{
+    this.queryConversations(GetConversationDirection.Backward, 0, true)
   }
 
   build() {

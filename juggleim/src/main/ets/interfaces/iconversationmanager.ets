@@ -7,6 +7,7 @@ import {
   ConversationInsertCallback,
   ConversationsCallback,
   ConversationUpdateListener,
+  GetConversationOptions,
   TopConverSortType,
   TotalUnreadCountCallback,
   TotalUnreadCountUpdateListener
@@ -21,6 +22,7 @@ export interface IConversationManager {
   removeConversationDeleteListener(listener: ConversationDeleteListener): void
   addTotalUnreadCountUpdateListener(listener: TotalUnreadCountUpdateListener): void
   removeTotalUnreadCountUpdateListener(listener: TotalUnreadCountUpdateListener): void
+  queryConversations(options: GetConversationOptions, callback: ConversationsCallback): void
   queryConversations(count: number, startTime: number, isPositive: boolean, callback: ConversationsCallback): void
   getConversation(conver: Conversation, callback: ConversationCallback): void
   setDraft(conver: Conversation, draft: string): void

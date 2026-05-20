@@ -13,6 +13,8 @@ export {
   ConversationInsertCallback,
   ConversationsCallback,
   ConversationUpdateListener,
+  GetConversationDirection,
+  GetConversationOptions,
   TopConverSortType,
   TotalUnreadCountCallback,
   TotalUnreadCountUpdateListener
