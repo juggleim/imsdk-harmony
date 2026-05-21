@@ -19,7 +19,7 @@ import { JimUtil } from '../commons/jimutil'
 import { JuggleIm } from '../juggleim'
 import { IMessageManager } from '../interfaces/imessagemanager'
 import { GroupMessageMemberReadDetail, GroupMessageReadInfoDetail } from '../entries/group'
-import { MessageOptions } from '../entries/messageoptions'
+import { MentionType, MessageOptions } from '../entries/messageoptions'
 import { MessageOptionUtil } from '../commons/messageoptionutil'
 import { UserInfo } from '../entries/user'
 import {
@@ -408,8 +408,127 @@ export class MessageManager implements IMessageManager{
     return normalized
   }
 
-  queryMentionMessages(conver:Conversation,count:number,startTime:number,isPositive:boolean,callback:QryMessagesCallback){
+  private isMentionForCurrentUser(message:Message):boolean{
+    if(message.senderId == JuggleIm.instance.userId){
+      return false
+    }
+    let mentionInfo = message.mentionInfo
+    if(mentionInfo == undefined){
+      return false
+    }
+    if(mentionInfo.mentionType == MentionType.All ||
+      mentionInfo.mentionType == MentionType.AllAndSomeone){
+      return true
+    }
+    if(mentionInfo.mentionType != MentionType.Someone){
+      return false
+    }
+    for(let i = 0; i < mentionInfo.targetUsers.length; i++){
+      if(mentionInfo.targetUsers[i].userId == JuggleIm.instance.userId){
+        return true
+      }
+    }
+    return false
+  }
 
+  private queryLocalMentionMessages(conver:Conversation,count:number,startTime:number,isPositive:boolean):Message[]{
+    let queryTime = startTime
+    if(queryTime <= 0 && !isPositive){
+      queryTime = new Date().getTime()
+    }
+    let candidates = JimDbManager.instance.getMessageDao().queryMentionMessages(conver, queryTime, count > 0 ? count * 5 : 100, isPositive)
+    let results:Message[] = []
+    for(let i = 0; i < candidates.length; i++){
+      if(this.isMentionForCurrentUser(candidates[i])){
+        results.push(candidates[i])
+      }
+      if(count > 0 && results.length >= count){
+        break
+      }
+    }
+    return results
+  }
+
+  private mergeMentionResults(localMsgs:Message[], remoteMsgs:Message[], count:number, isPositive:boolean):Message[]{
+    let results:Message[] = []
+    let keys:Map<string, boolean> = new Map()
+    let appendMessage = (message:Message):void => {
+      let key = message.messageId != '' ? message.messageId : message.clientId
+      if(key == '' || keys.has(key)){
+        return
+      }
+      keys.set(key, true)
+      results.push(message)
+    }
+    remoteMsgs.forEach((message)=>{
+      appendMessage(message)
+    })
+    localMsgs.forEach((message)=>{
+      appendMessage(message)
+    })
+    results = results.slice().sort((a,b)=>{
+      if(isPositive){
+        return a.sentTime - b.sentTime
+      }
+      return b.sentTime - a.sentTime
+    })
+    if(count > 0 && results.length > count){
+      results = results.slice(0, count)
+    }
+    return results
+  }
+
+  queryMentionMessages(conver:Conversation,count:number,startTime:number,isPositive:boolean,callback:QryMessagesCallback){
+    if(conver.conversationId == ''){
+      callback(-1, [], false)
+      return
+    }
+    let queryCount = count > 0 ? count : 20
+    let queryTime = startTime
+    if(queryTime <= 0 && !isPositive){
+      queryTime = new Date().getTime()
+    }
+    let order = isPositive ? 1 : 0
+    let latestReadIndex = 0
+    let localConver = JimDbManager.instance.getConversationDao().getConver(conver)
+    if(localConver != undefined){
+      latestReadIndex = localConver.lastReadMsgIndex
+    }
+    let req = immessage.QryMentionMsgsReq.create({
+      "targetId": conver.conversationId,
+      "channelType": conver.conversationType,
+      "startTime": queryTime,
+      "count": queryCount,
+      "order": order,
+      "latestReadIndex": latestReadIndex
+    })
+    let data = immessage.QryMentionMsgsReq.encode(req).finish()
+    this.imclient.query("qry_mention_msgs", conver.conversationId, data, (code, qryAck)=>{
+      let msgs:Message[] = []
+      let localMentionMsgs = this.queryLocalMentionMessages(conver, queryCount, queryTime, isPositive)
+      if(code != 0){
+        if(localMentionMsgs.length > 0){
+          callback(0, localMentionMsgs, false)
+          return
+        }
+        callback(code, msgs, false)
+        return
+      }
+      let ackData = qryAck.data as Uint8Array
+      let resp = immessage.QryMentionMsgsResp.decode(ackData)
+      resp.mentionMsgs.forEach((msg)=>{
+        msgs.push(MsgHandler.downMsg2Message(msg))
+      })
+      let localMsgs = JimDbManager.instance.getMessageDao().getMessagesByMessageIds(msgs.map((msg)=>msg.messageId))
+      this.mergeLocalMessageState(localMsgs, msgs)
+      msgs.forEach((msg)=>{
+        if(!JimDbManager.instance.getMessageDao().existByMsgId(msg.messageId, msg.clientId)){
+          JimDbManager.instance.getMessageDao().insert(msg)
+        }
+      })
+      let mergedMsgs = this.mergeMentionResults(localMentionMsgs, msgs, queryCount, isPositive)
+      callback(0, mergedMsgs, !resp.isFinished)
+    })
   }
 
   clearMessages(conver:Conversation,options:ClearMsgOptions,callback:CommonCallback){

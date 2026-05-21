@@ -122,6 +122,18 @@ class GlobalMessageSearchParams {
   }
 }
 
+class MentionMessagesParams {
+  conversationId:string
+  converType:number
+  title:string
+
+  constructor(conversationId:string, converType:number, title:string) {
+    this.conversationId = conversationId
+    this.converType = converType
+    this.title = title
+  }
+}
+
 class ConversationViewModel {
   public startAppletAbility(context: common.UIAbilityContext, index: number): void {
     const want: Want = {
@@ -167,5 +179,6 @@ export {
   ConversationViewModel,
   ConversationDetailParams,
   ConversationRouteParams,
-  GlobalMessageSearchParams
+  GlobalMessageSearchParams,
+  MentionMessagesParams
 };

@@ -1,6 +1,6 @@
 import { StandardIcon } from 'base'
 import { JuggleIm } from 'juggleim'
-import { ConversationRouteParams } from '../viewmodel/ConversationViewModel'
+import { ConversationRouteParams, MentionMessagesParams } from '../viewmodel/ConversationViewModel'
 
 @Component
 export struct ConversationProfile {
@@ -84,6 +84,29 @@ export struct ConversationProfile {
         .width('100%')
         .backgroundColor(Color.White)
         .margin({ top: 12 })
+
+        if(this.conversationType == 2){
+          Column() {
+            Row() {
+              Text('提及我的消息')
+                .fontSize(16)
+                .fontColor('#111111')
+              Blank()
+              StandardIcon({ icon: $r('app.media.ic_public_more') })
+            }
+            .width('100%')
+            .padding({ left: 16, right: 16, top: 16, bottom: 16 })
+            .onClick(()=>{
+              this.pageInfo.pushPath({
+                name: 'MentionMessages',
+                param: new MentionMessagesParams(this.conversationId, this.conversationType, this.title)
+              })
+            })
+          }
+          .width('100%')
+          .backgroundColor(Color.White)
+          .margin({ top: 12 })
+        }
 
         Blank()
       }

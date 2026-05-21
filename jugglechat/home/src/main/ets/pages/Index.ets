@@ -18,6 +18,7 @@ import ConversationDetailNone from '../views/Conversation/ConversationDetailNone
 import { ContactsDetail } from './ContactsDetail';
 import { ConversationHistory } from './ConversationHistory';
 import { GlobalMessageSearch } from './GlobalMessageSearch';
+import { MentionMessages } from './MentionMessages';
 import { ContactsList } from './ContactsList';
 import { ConversationDetail } from './ConversationDetail';
 import { ConversationList } from './ConversationList';
@@ -72,6 +73,8 @@ export struct Index {
       ConversationProfile();
     } else if (name === 'ConversationHistory') {
       ConversationHistory();
+    } else if (name === 'MentionMessages') {
+      MentionMessages();
     } else if (name === 'ConversationDetailNone') {
       ConversationDetailNone();
     } else if (name === 'ContactsDetail') {
