@@ -73,6 +73,9 @@ export function toConverViewItem(conver:ConversationInfo):ConversationViewItem{
       }
     }
   }
+  if(title == ''){
+    title = conver.conversation.conversationId
+  }
   //latest msg content
   let msgStr = ""
   let isDraft = conver.draft.trim() != ''

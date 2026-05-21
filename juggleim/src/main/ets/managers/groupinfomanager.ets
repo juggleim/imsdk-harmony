@@ -4,9 +4,11 @@ import { ImClient } from "../imclients/imclient";
 import { immessage } from "../improto/immessage";
 import { JimUtil } from "../commons/jimutil";
 import { IGroupInfoManager } from '../interfaces/igroupinfomanager'
+import { GroupInfoCallback } from '../interfaces/igroupinfomanager'
+import { GroupMemberCallback } from '../interfaces/igroupinfomanager'
 import { GroupMembersCallback } from '../interfaces/igroupinfomanager'
 
-export { GroupMembersCallback } from '../interfaces/igroupinfomanager'
+export { GroupInfoCallback, GroupMemberCallback, GroupMembersCallback } from '../interfaces/igroupinfomanager'
 
 export class GroupInfoManager implements IGroupInfoManager{
   private imclient:ImClient
@@ -36,7 +38,75 @@ export class GroupInfoManager implements IGroupInfoManager{
   }
 
   getGroupInfo(groupId:string):GroupInfo|null{
+    if(groupId == ''){
+      return null
+    }
+    let localGroup = this.getLocalGroupInfo(groupId)
+    if(localGroup != null){
+      return localGroup
+    }
+    this.qryGroupInfo(groupId).then((group)=>{
+      if(group != null){
+        this.saveGroupInfo(group)
+      }
+    })
     return null
+  }
+
+  queryGroupInfo(groupId:string, callback:GroupInfoCallback):void{
+    if(groupId == ''){
+      callback(-1, null)
+      return
+    }
+    this.qryGroupInfo(groupId).then((group)=>{
+      if(group == null){
+        callback(-1, null)
+        return
+      }
+      this.saveGroupInfo(group)
+      callback(0, group)
+    })
+  }
+
+  getLocalGroupMember(groupId:string, memberId:string):GroupMember|null{
+    if(groupId == '' || memberId == ''){
+      return null
+    }
+    return JimDbManager.instance.getGroupMemberDao().getGroupMember(groupId, memberId)
+  }
+
+  getGroupMember(groupId:string, memberId:string):GroupMember|null{
+    if(groupId == '' || memberId == ''){
+      return null
+    }
+    let localMember = this.getLocalGroupMember(groupId, memberId)
+    if(localMember != null){
+      return localMember
+    }
+    this.queryGroupMember(groupId, memberId, ()=>{})
+    return null
+  }
+
+  queryGroupMember(groupId:string, memberId:string, callback:GroupMemberCallback):void{
+    if(groupId == '' || memberId == ''){
+      callback(-1, null)
+      return
+    }
+    let localMember = this.getLocalGroupMember(groupId, memberId)
+    if(localMember != null){
+      callback(0, localMember)
+      return
+    }
+    this.queryAllGroupMembers(groupId, (code, members)=>{
+      if(code != 0){
+        callback(code, null)
+        return
+      }
+      let targetMember = members.find((member)=>{
+        return member.memberId == memberId
+      })
+      callback(targetMember == undefined ? -1 : 0, targetMember == undefined ? null : targetMember)
+    })
   }
 
   getLocalGroupMembers(groupId:string):GroupMember[]{
@@ -44,26 +114,45 @@ export class GroupInfoManager implements IGroupInfoManager{
   }
 
   queryGroupMembers(groupId:string,callback:GroupMembersCallback):void{
+    if(groupId == ''){
+      callback(-1, [])
+      return
+    }
+    this.queryAllGroupMembers(groupId, callback)
+  }
+
+  private queryAllGroupMembers(groupId:string, callback:GroupMembersCallback):void{
+    let members:GroupMember[] = []
+    this.queryGroupMembersPage(groupId, '', members, callback)
+  }
+
+  private queryGroupMembersPage(groupId:string, offset:string, members:GroupMember[], callback:GroupMembersCallback):void{
     let req = immessage.QryGroupMembersReq.create({
       groupId:groupId,
       limit:200,
-      offset:''
+      offset:offset
     })
     let data = immessage.QryGroupMembersReq.encode(req).finish()
     this.imclient.query("qry_group_members", groupId, data, (code, qryAck)=>{
-      let members:GroupMember[] = []
-      if(code == 0){
-        let result = immessage.GroupMembersResp.decode(qryAck.data as Uint8Array)
-        result.items.forEach((item)=>{
-          let member = new GroupMember()
-          member.groupId = groupId
-          member.memberId = item.memberId as string
-          member.displayName = item.memberId as string
-          members.push(member)
-          JimDbManager.instance.getGroupMemberDao().upsert(member)
-        })
+      if(code != 0){
+        callback(code, members)
+        return
       }
-      callback(code, members)
+      let result = immessage.GroupMembersResp.decode(qryAck.data as Uint8Array)
+      result.items.forEach((item)=>{
+        let member = new GroupMember()
+        member.groupId = groupId
+        member.memberId = item.memberId as string
+        member.displayName = item.memberId as string
+        members.push(member)
+        JimDbManager.instance.getGroupMemberDao().upsert(member)
+      })
+      let nextOffset = result.offset != undefined ? result.offset as string : ''
+      if(nextOffset != ''){
+        this.queryGroupMembersPage(groupId, nextOffset, members, callback)
+        return
+      }
+      callback(0, members)
     })
   }
 

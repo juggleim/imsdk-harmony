@@ -3,6 +3,7 @@ import { ObservedArray, CommonUtil } from '../jim/common'
 import {
   Conversation,
   GetMessageDirection,
+  GroupInfo,
   JimMsgType,
   JuggleIm,
   Message,
@@ -136,6 +137,15 @@ export struct GlobalMessageSearch {
     if(localGroup != null){
       let title = localGroup.groupName != '' ? localGroup.groupName : conversation.conversationId
       return new SearchConversationGroup(conversation.conversationId, conversation.conversationType, title, localGroup.groupPortrait)
+    }
+    let remoteGroup = await new Promise<GroupInfo | null>((resolve)=>{
+      JuggleIm.instance.getGroupInfoManager().queryGroupInfo(conversation.conversationId, (code, group)=>{
+        resolve(code == 0 ? group : null)
+      })
+    })
+    if(remoteGroup != null){
+      let title = remoteGroup.groupName != '' ? remoteGroup.groupName : conversation.conversationId
+      return new SearchConversationGroup(conversation.conversationId, conversation.conversationType, title, remoteGroup.groupPortrait)
     }
     return new SearchConversationGroup(conversation.conversationId, conversation.conversationType, conversation.conversationId, '')
   }

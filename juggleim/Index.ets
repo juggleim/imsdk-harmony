@@ -4,7 +4,7 @@ export { ConnectionStatusListener, IConnectionManager } from './src/main/ets/int
 export { IConversationManager } from './src/main/ets/interfaces/iconversationmanager'
 export { IMessageManager } from './src/main/ets/interfaces/imessagemanager'
 export { IUserInfoManager } from './src/main/ets/interfaces/iuserinfomanager'
-export { GroupMembersCallback, IGroupInfoManager } from './src/main/ets/interfaces/igroupinfomanager'
+export { GroupInfoCallback, GroupMemberCallback, GroupMembersCallback, IGroupInfoManager } from './src/main/ets/interfaces/igroupinfomanager'
 export { CommonCallback } from './src/main/ets/interfaces/commoncallback'
 export {
   ConversationAddListener,

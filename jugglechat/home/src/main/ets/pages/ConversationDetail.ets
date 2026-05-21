@@ -158,6 +158,11 @@ export struct ConversationDetail {
         this.conversationTitle = group.groupName
         return
       }
+      JuggleIm.instance.getGroupInfoManager().queryGroupInfo(this.conversationId, (code, remoteGroup)=>{
+        if(code == 0 && remoteGroup != null && remoteGroup.groupName != ''){
+          this.conversationTitle = remoteGroup.groupName
+        }
+      })
     }
     this.conversationTitle = this.currentConversationUserName
   }

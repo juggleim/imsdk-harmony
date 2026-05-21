@@ -59,4 +59,23 @@ export class GroupMemberDao{
     }
     return members
   }
+
+  getGroupMember(groupId:string, memberId:string):GroupMember|null{
+    let sql = `SELECT * FROM ${this.tableName} WHERE group_id=? AND member_id=? LIMIT 1`
+    let args:Array<relationalStore.ValueType> = []
+    args.push(groupId)
+    args.push(memberId)
+    let resultSet:relationalStore.ResultSet|undefined
+    try{
+      resultSet = JimDbManager.instance.getDb()?.querySqlSync(sql, args)
+      if(resultSet?.goToNextRow()){
+        return this.toGroupMember(resultSet)
+      }
+    }catch (e) {
+      console.error(`jimsdk_db_fail. [${this.tableName}] err:${e.message}`)
+    }finally {
+      resultSet?.close()
+    }
+    return null
+  }
 }
