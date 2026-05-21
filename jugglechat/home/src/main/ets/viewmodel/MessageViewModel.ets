@@ -7,6 +7,7 @@ import {
   MergeMessage,
   Message,
   MessageContent,
+  MessageSentState,
   TextMessage,
   VideoMessage,
   VoiceMessage
@@ -15,6 +16,7 @@ import {
 @Observed
 class MessageViewItem{
   conversation:Conversation
+  conversationType:number = 0
   messageId:string
   clientId:string
   senderId:string
@@ -27,12 +29,17 @@ class MessageViewItem{
   previewText:string = ''
   msgType:string = JimMsgType.Unknown
   isEdited:boolean = false
+  hasRead:boolean = false
+  readCount:number = 0
+  memberCount:number = 0
+  sentState:number = MessageSentState.none
 
   isReceived:boolean = true
   msgTime:number = 0
 
   constructor(message:Message,senderName:string,senderIcon:string,selfName:string,selfIcon:string) {
     this.conversation = message.conversation
+    this.conversationType = message.conversation.conversationType
     this.messageId = message.messageId
     this.clientId = message.clientId
     this.senderId = message.senderId
@@ -44,6 +51,10 @@ class MessageViewItem{
     this.msgTime = message.sentTime
     this.msgType = message.msgContent.getMsgType()
     this.isEdited = message.isEdit
+    this.hasRead = message.hasRead
+    this.readCount = message.readCount
+    this.memberCount = message.memberCount
+    this.sentState = message.state
     this.previewText = buildMessagePreview(message.msgContent)
     if(message.referredMessage != null){
       this.referenceText = buildMessagePreview(message.referredMessage.msgContent)
@@ -54,6 +65,7 @@ class MessageViewItem{
 export function isDisplayableMessage(message:Message):boolean{
   let msgType = message.msgContent.getMsgType()
   return msgType != JimMsgType.ReadNtf &&
+    msgType != JimMsgType.GroupReadNtf &&
     msgType != JimMsgType.ClearUnread &&
     msgType != JimMsgType.ModifyMsg &&
     msgType != JimMsgType.RecallCmd

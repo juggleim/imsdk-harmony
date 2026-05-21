@@ -27,13 +27,16 @@ import {
   GetConversationOptions,
   GetMessageDirection,
   GetMessageOptions,
+  GroupMessageReadInfoDetail,
   JimMsgType,
   JuggleIm,
   Message,
   MessageMentionInfo,
   MessageOptions,
   MentionType,
+  MsgGroupReadReceiptListener,
   MsgModifiedListener,
+  MsgReadReceiptListener,
   MsgReceivedListener,
   TextMessage,
   UserInfo
@@ -54,6 +57,21 @@ class MentionCandidate {
   }
 }
 
+@Observed
+class GroupReadMemberItem {
+  userId:string
+  name:string
+  readTime:number
+  isRead:boolean
+
+  constructor(userId:string, name:string, readTime:number, isRead:boolean) {
+    this.userId = userId
+    this.name = name
+    this.readTime = readTime
+    this.isRead = isRead
+  }
+}
+
 @Component
 export struct ConversationDetail {
   @StorageProp('currentBreakpoint') currentBreakpoint: string = BreakpointConstants.BREAKPOINT_SM;
@@ -66,13 +84,17 @@ export struct ConversationDetail {
   @State msgList:ObservedArray<MessageViewItem>=new ObservedArray<MessageViewItem>([])
   private maxMsgTime:number = 0
   private minMsgTime:number = Number.MAX_SAFE_INTEGER
+  private maxMsgIndex:number = 0
   @State refreshing:boolean = false
   private scroller:Scroller = new Scroller()
   private msgReceiveListener:MsgReceivedListener = async (message)=>{}
   private msgModifiedListener:MsgModifiedListener = async (message)=>{}
+  private readReceiptListener:MsgReadReceiptListener = async (conver, msgIds)=>{}
+  private groupReadReceiptListener:MsgGroupReadReceiptListener = async (conver, messages)=>{}
   @State private text:string = ''
   @State private showMessageActionPanel:boolean = false
   @State private showForwardPanel:boolean = false
+  @State private showGroupReadDetailPanel:boolean = false
   @State private selectedMessageIndex:number = -1
   @State private quotedMessageId:string = ''
   @State private quotedPreview:string = ''
@@ -82,6 +104,11 @@ export struct ConversationDetail {
   @State private forwardTargets:ObservedArray<ConversationViewItem> = new ObservedArray<ConversationViewItem>([])
   @State private mentionCandidates:ObservedArray<MentionCandidate> = new ObservedArray<MentionCandidate>([])
   @State private filteredMentionCandidates:ObservedArray<MentionCandidate> = new ObservedArray<MentionCandidate>([])
+  @State private groupReadMembers:ObservedArray<GroupReadMemberItem> = new ObservedArray<GroupReadMemberItem>([])
+  @State private groupUnreadMembers:ObservedArray<GroupReadMemberItem> = new ObservedArray<GroupReadMemberItem>([])
+  @State private groupReadCount:number = 0
+  @State private groupMemberCount:number = 0
+  @State private groupReadDetailMessageId:string = ''
   @State private showMentionPanel:boolean = false
   private selectedMentionMap:Map<string, MentionCandidate> = new Map()
   private touchStartTimeMap:Map<string,number> = new Map()
@@ -106,10 +133,13 @@ export struct ConversationDetail {
     this.msgList = new ObservedArray<MessageViewItem>([])
     this.maxMsgTime = 0
     this.minMsgTime = Number.MAX_SAFE_INTEGER
+    this.maxMsgIndex = 0
   }
 
   private getConversation():Conversation{
-    return new Conversation(this.conversationId,this.conversationType)
+    let conversation = new Conversation(this.conversationId,this.conversationType)
+    conversation.msgIndex = this.maxMsgIndex
+    return conversation
   }
 
   private async resolveConversationTitle():Promise<void>{
@@ -165,9 +195,26 @@ export struct ConversationDetail {
     let viewMsg = await toMessageViewItem(message)
     this.upsertViewItem(viewMsg)
     this.recordMsgTime(message.sentTime)
+    if(message.msgUnreadIndex > this.maxMsgIndex){
+      this.maxMsgIndex = message.msgUnreadIndex
+    }
     if(scrollToBottom){
       this.scroller.scrollEdge(Edge.Bottom)
     }
+  }
+
+  private async refreshMessagesByIds(msgIds:string[]):Promise<void>{
+    if(msgIds.length == 0){
+      return
+    }
+    JuggleIm.instance.getMessageManager().getMessagesByMessageIds(this.getConversation(), msgIds, async (code, msgs)=>{
+      if(code != 0){
+        return
+      }
+      for(let i = 0; i < msgs.length; i++){
+        await this.appendMessage(msgs[i], false)
+      }
+    })
   }
 
   private getSelectedMessage():MessageViewItem|undefined{
@@ -193,6 +240,49 @@ export struct ConversationDetail {
     return options
   }
 
+  private isPrivateConversation():boolean{
+    return this.conversationType == 1
+  }
+
+  private markConversationRead():void{
+    let conversation = this.getConversation()
+    if(conversation.conversationId == ''){
+      return
+    }
+    JuggleIm.instance.getConversationManager().clearUnreadCount(conversation, (code)=>{
+      if(code != 0){
+        console.error(`jimsdk_clear_unread_fail:${code}`)
+      }
+    })
+  }
+
+  private shouldSendReadReceipt(message:Message):boolean{
+    return this.isPrivateConversation() &&
+      message.direction == 1 &&
+      message.messageId != '' &&
+      !message.hasRead
+  }
+
+  private sendReadReceiptIfNeeded(messages:Message[]):void{
+    if(!this.isPrivateConversation() || messages.length == 0){
+      return
+    }
+    let messageIds:string[] = []
+    messages.forEach((message)=>{
+      if(this.shouldSendReadReceipt(message)){
+        messageIds.push(message.messageId)
+      }
+    })
+    if(messageIds.length == 0){
+      return
+    }
+    JuggleIm.instance.getMessageManager().sendReadReceipt(this.getConversation(), messageIds, (code)=>{
+      if(code != 0){
+        console.error(`jimsdk_send_read_receipt_fail:${code}`)
+      }
+    })
+  }
+
   private queryMessagesByOptions(options:GetMessageOptions):void{
     JuggleIm.instance.getMessageManager().queryMessages(this.getConversation(), options, async (code,msgs)=>{
       if(code != 0){
@@ -202,6 +292,8 @@ export struct ConversationDetail {
       for(let i = 0;i < msgs.length;i++){
         await this.appendMessage(msgs[i], false)
       }
+      this.markConversationRead()
+      this.sendReadReceiptIfNeeded(msgs)
     })
   }
 
@@ -248,6 +340,7 @@ export struct ConversationDetail {
   private closePanels():void{
     this.showMessageActionPanel = false
     this.showForwardPanel = false
+    this.showGroupReadDetailPanel = false
   }
 
   private openMessageActions(index:number):void{
@@ -283,6 +376,66 @@ export struct ConversationDetail {
     return !item.isReceived &&
       item.messageId != '' &&
       item.msgType == JimMsgType.Text
+  }
+
+  private canShowGroupReadDetail(item?:MessageViewItem):boolean{
+    if(item == undefined){
+      return false
+    }
+    return this.isGroupConversation() && !item.isReceived && item.messageId != ''
+  }
+
+  private applyGroupReadDetail(detail:GroupMessageReadInfoDetail):void{
+    let readMembers:GroupReadMemberItem[] = []
+    detail.readMembers.forEach((member)=>{
+      let name = member.nickname != '' ? member.nickname : member.userId
+      readMembers.push(new GroupReadMemberItem(member.userId, name, member.readTime, true))
+    })
+    let unreadMembers:GroupReadMemberItem[] = []
+    detail.unreadMembers.forEach((member)=>{
+      let name = member.nickname != '' ? member.nickname : member.userId
+      unreadMembers.push(new GroupReadMemberItem(member.userId, name, member.readTime, false))
+    })
+    this.groupReadCount = detail.readCount
+    this.groupMemberCount = detail.memberCount
+    this.groupReadMembers = new ObservedArray<GroupReadMemberItem>(readMembers)
+    this.groupUnreadMembers = new ObservedArray<GroupReadMemberItem>(unreadMembers)
+  }
+
+  private loadGroupReadDetail(messageId:string):void{
+    JuggleIm.instance.getMessageManager().getGroupMessageReadInfoDetail(this.getConversation(), messageId, (code, detail)=>{
+      if(code != 0 || detail == null){
+        this.showToast(`已读详情获取失败: ${code}`)
+        return
+      }
+      this.groupReadDetailMessageId = messageId
+      this.applyGroupReadDetail(detail)
+      this.showMessageActionPanel = false
+      this.showGroupReadDetailPanel = true
+    })
+  }
+
+  private refreshOpenedGroupReadDetail(messageIds:Map<string, boolean>):void{
+    if(!this.showGroupReadDetailPanel || this.groupReadDetailMessageId == ''){
+      return
+    }
+    if(!messageIds.has(this.groupReadDetailMessageId)){
+      return
+    }
+    JuggleIm.instance.getMessageManager().getGroupMessageReadInfoDetail(this.getConversation(), this.groupReadDetailMessageId, (code, detail)=>{
+      if(code == 0 && detail != null){
+        this.applyGroupReadDetail(detail)
+      }
+    })
+  }
+
+  private openSelectedGroupReadDetail():void{
+    let item = this.getSelectedMessage()
+    if(!this.canShowGroupReadDetail(item)){
+      this.showToast('当前消息暂无群已读详情')
+      return
+    }
+    this.loadGroupReadDetail(item?.messageId as string)
   }
 
   private startEditingSelectedMessage():void{
@@ -578,6 +731,8 @@ export struct ConversationDetail {
       let conver = message.conversation
       if(conver?.conversationId===param.conversationId && conver?.conversationType===param.converType){
         await this.appendMessage(message, true)
+        this.markConversationRead()
+        this.sendReadReceiptIfNeeded([message])
       }
     }
     this.msgModifiedListener = async (message)=>{
@@ -586,9 +741,29 @@ export struct ConversationDetail {
         await this.appendMessage(message, false)
       }
     }
+    this.readReceiptListener = async (conver, msgIds)=>{
+      if(conver.conversationId===param.conversationId && conver.conversationType===param.converType){
+        await this.refreshMessagesByIds(msgIds)
+      }
+    }
+    this.groupReadReceiptListener = async (conver, messages)=>{
+      if(conver.conversationId!==param.conversationId || conver.conversationType!==param.converType){
+        return
+      }
+      let changedMessageIds:string[] = []
+      let changedIds:Map<string, boolean> = new Map()
+      messages.forEach((info, msgId)=>{
+        changedIds.set(msgId, true)
+        changedMessageIds.push(msgId)
+      })
+      await this.refreshMessagesByIds(changedMessageIds)
+      this.refreshOpenedGroupReadDetail(changedIds)
+    }
 
     JuggleIm.instance.getMessageManager().addMsgReceivedListener(this.msgReceiveListener)
     JuggleIm.instance.getMessageManager().addMsgModifiedListener(this.msgModifiedListener)
+    JuggleIm.instance.getMessageManager().addReadReceiptListener(this.readReceiptListener)
+    JuggleIm.instance.getMessageManager().addGroupReadReceiptListener(this.groupReadReceiptListener)
     this.resolveConversationTitle()
     this.loadMentionCandidates()
     this.restoreDraft()
@@ -600,6 +775,8 @@ export struct ConversationDetail {
     this.persistDraft()
     JuggleIm.instance.getMessageManager().removeMsgReceivedListener(this.msgReceiveListener)
     JuggleIm.instance.getMessageManager().removeMsgModifiedListener(this.msgModifiedListener)
+    JuggleIm.instance.getMessageManager().removeReadReceiptListener(this.readReceiptListener)
+    JuggleIm.instance.getMessageManager().removeGroupReadReceiptListener(this.groupReadReceiptListener)
   }
 
   build() {
@@ -792,7 +969,7 @@ export struct ConversationDetail {
         })
         .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM])
 
-        if(this.showMessageActionPanel || this.showForwardPanel){
+        if(this.showMessageActionPanel || this.showForwardPanel || this.showGroupReadDetailPanel){
           Column() {
             Blank()
               .layoutWeight(1)
@@ -804,6 +981,23 @@ export struct ConversationDetail {
 
             if(this.showMessageActionPanel){
               Column() {
+                if(this.canShowGroupReadDetail(this.getSelectedMessage())){
+                  Row() {
+                    Text('已读详情')
+                      .fontSize(16)
+                      .fontColor('#111111')
+                    Blank()
+                  }
+                  .width('100%')
+                  .padding({ left: 20, right: 20, top: 18, bottom: 18 })
+                  .onClick(()=>{
+                    this.openSelectedGroupReadDetail()
+                  })
+                  Divider()
+                    .strokeWidth(1)
+                    .color('#EAEAEA')
+                }
+
                 if(this.canEditMessage(this.getSelectedMessage())){
                   Row() {
                     Text('编辑')
@@ -862,6 +1056,92 @@ export struct ConversationDetail {
                 .onClick(()=>{
                   this.closePanels()
                 })
+              }
+              .width('100%')
+              .backgroundColor(Color.White)
+              .borderRadius({
+                topLeft: 16,
+                topRight: 16
+              })
+              .padding({ bottom: 24 })
+            }
+
+            if(this.showGroupReadDetailPanel){
+              Column() {
+                Row() {
+                  Column() {
+                    Text('已读详情')
+                      .fontSize(16)
+                      .fontWeight(FontWeight.Medium)
+                      .fontColor('#111111')
+                    Text(`已读 ${this.groupReadCount}/${this.groupMemberCount}`)
+                      .fontSize(13)
+                      .fontColor('#666666')
+                      .margin({ top: 4 })
+                  }
+                  Blank()
+                  Button('关闭')
+                    .type(ButtonType.Normal)
+                    .onClick(()=>{
+                      this.showGroupReadDetailPanel = false
+                    })
+                }
+                .width('100%')
+                .padding({ left: 20, right: 20, top: 18, bottom: 14 })
+                Divider()
+                  .strokeWidth(1)
+                  .color('#EAEAEA')
+
+                List() {
+                  if(this.groupReadMembers.length > 0){
+                    ListItem() {
+                      Text('已读成员')
+                        .fontSize(13)
+                        .fontColor('#666666')
+                        .padding({ left: 20, right: 20, top: 16, bottom: 8 })
+                    }
+                    ForEach(this.groupReadMembers, (item:GroupReadMemberItem, index:number) => {
+                      ListItem() {
+                        Row() {
+                          Text(item.name)
+                            .fontSize(15)
+                            .fontColor('#111111')
+                          Blank()
+                          Text(item.userId)
+                            .fontSize(12)
+                            .fontColor('#999999')
+                        }
+                        .width('100%')
+                        .padding({ left: 20, right: 20, top: 14, bottom: 14 })
+                      }
+                    }, (item:GroupReadMemberItem, index:number)=>`${index}_${item.userId}`)
+                  }
+
+                  if(this.groupUnreadMembers.length > 0){
+                    ListItem() {
+                      Text('未读成员')
+                        .fontSize(13)
+                        .fontColor('#666666')
+                        .padding({ left: 20, right: 20, top: 16, bottom: 8 })
+                    }
+                    ForEach(this.groupUnreadMembers, (item:GroupReadMemberItem, index:number) => {
+                      ListItem() {
+                        Row() {
+                          Text(item.name)
+                            .fontSize(15)
+                            .fontColor('#111111')
+                          Blank()
+                          Text(item.userId)
+                            .fontSize(12)
+                            .fontColor('#999999')
+                        }
+                        .width('100%')
+                        .padding({ left: 20, right: 20, top: 14, bottom: 14 })
+                      }
+                    }, (item:GroupReadMemberItem, index:number)=>`${index}_${item.userId}`)
+                  }
+                }
+                .constraintSize({ maxHeight: 360 })
               }
               .width('100%')
               .backgroundColor(Color.White)

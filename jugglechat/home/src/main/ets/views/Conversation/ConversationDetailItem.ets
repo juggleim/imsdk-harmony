@@ -27,6 +27,11 @@ export struct ConversationDetailItem {
   private previewText?:string
   private msgType?:string
   private isEdited?:boolean
+  private hasRead?:boolean
+  private readCount?:number
+  private memberCount?:number
+  private sentState?:number
+  private conversationType?:number
 
   private isReceived?: boolean = false;
   private msgTime:number=0
@@ -43,6 +48,11 @@ export struct ConversationDetailItem {
         previewText:this.previewText,
         msgType:this.msgType,
         isEdited:this.isEdited,
+        hasRead:this.hasRead,
+        readCount:this.readCount,
+        memberCount:this.memberCount,
+        sentState:this.sentState,
+        conversationType:this.conversationType,
         isReceived: this.isReceived,
         msgTime:this.msgTime
       })

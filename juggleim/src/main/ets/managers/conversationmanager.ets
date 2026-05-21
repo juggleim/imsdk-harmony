@@ -305,15 +305,33 @@ export class ConversationManager implements IConversationManager{
   }
 
   clearUnreadCount(conver:Conversation,callback:CommonCallback){
+    let localConver = JimDbManager.instance.getConversationDao().getConver(conver)
+    let latestReadIndex = conver.msgIndex
+    let latestReadMsgId = ''
+    let latestReadMsgTime = 0
+    if(localConver != undefined){
+      if(latestReadIndex <= 0){
+        latestReadIndex = localConver.lastMessage.msgUnreadIndex
+      }
+      latestReadMsgId = localConver.lastMessage.messageId
+      latestReadMsgTime = localConver.lastMessage.sentTime
+    }
     let req = immessage.ClearUnreadReq.create({
       "conversations":[{
         "targetId":conver.conversationId,
         "channelType":conver.conversationType,
-        "latestReadIndex":conver.msgIndex
+        "latestReadIndex":latestReadIndex,
+        "latestReadMsgId":latestReadMsgId,
+        "latestReadMsgTime":latestReadMsgTime
       }]
     })
     let data = immessage.ClearUnreadReq.encode(req).finish()
     this.imclient.query("clear_unread",JuggleIm.instance.userId,data,(code)=>{
+      if(code == 0 && localConver != undefined){
+        localConver.lastReadMsgIndex = latestReadIndex
+        JimDbManager.instance.getConversationDao().upsert(localConver)
+        this.msgSyncMgr.notifyConversationUpdate([localConver])
+      }
       callback(code)
     })
   }

@@ -15,6 +15,7 @@
 
 import { BaseConstants, BreakpointConstants } from 'base'
 import { FileMessage, ImageMessage, JimMsgType, MergeMessage, MessageContent, RecallInfoMessage, TextMessage,
+  MessageSentState,
   VideoMessage,
   VoiceMessage} from 'juggleim';
 import { HomeConstants } from '../constants/HomeConstants';
@@ -40,6 +41,11 @@ export struct MessageBubble {
   private previewText?:string
   private msgType?:string
   private isEdited?:boolean
+  private hasRead?:boolean
+  private readCount?:number
+  private memberCount?:number
+  private sentState?:number
+  private conversationType?:number
   private msgTime?:number
 
   private getMsgType():string{
@@ -47,6 +53,39 @@ export struct MessageBubble {
       return this.msgContent.getMsgType()
     }
     return "unknown"
+  }
+
+  private getStatusText():string{
+    if(this.isReceived){
+      return ''
+    }
+    if(this.sentState == MessageSentState.failed){
+      return '发送失败'
+    }
+    if(this.sentState == MessageSentState.sending){
+      return '发送中'
+    }
+    if(this.sentState != MessageSentState.success){
+      return ''
+    }
+    if(this.conversationType == 1){
+      return this.hasRead == true ? '已读' : '已发送'
+    }
+    if(this.conversationType == 2){
+      let memberCount = this.memberCount ?? 0
+      let readCount = this.readCount ?? 0
+      if(readCount < 0){
+        readCount = 0
+      }
+      if(memberCount < 0){
+        memberCount = 0
+      }
+      if(readCount > memberCount){
+        readCount = memberCount
+      }
+      return `${readCount}/${memberCount}`
+    }
+    return '已发送'
   }
 
   build() {
@@ -195,11 +234,26 @@ export struct MessageBubble {
         .copyOption(CopyOptions.LocalDevice)
     }
 
-    if(this.isEdited == true){
-      Text('已编辑')
-        .fontSize(10)
-        .fontColor('#999999')
-        .margin({ top: 6 })
+    if(this.isEdited == true || this.getStatusText() != ''){
+      Row() {
+        if(this.isEdited == true){
+          Text('已编辑')
+            .fontSize(10)
+            .fontColor('#999999')
+        }
+        if(this.isEdited == true && this.getStatusText() != ''){
+          Text('·')
+            .fontSize(10)
+            .fontColor('#CCCCCC')
+            .margin({ left: 4, right: 4 })
+        }
+        if(this.getStatusText() != ''){
+          Text(this.getStatusText())
+            .fontSize(10)
+            .fontColor('#999999')
+        }
+      }
+      .margin({ top: 6 })
     }
   }
 }

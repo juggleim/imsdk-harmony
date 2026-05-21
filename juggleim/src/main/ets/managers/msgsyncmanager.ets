@@ -1,7 +1,7 @@
 import { JimUtil } from "../commons/jimutil";
 import { JimDbManager } from "../dbs/dbmanager";
 import { Conversation, ConversationInfo } from "../entries/conversation";
-import { GroupInfo } from "../entries/group";
+import { GroupInfo, GroupMessageReadInfo } from "../entries/group";
 import { Message, RecallInfoMessage } from "../entries/message";
 import { MsgHandler } from "../entries/msghandler";
 import { UserInfo } from "../entries/user";
@@ -13,9 +13,9 @@ import { ConversationAddListener,ConversationUpdateListener,ConversationDeleteLi
 import { JuggleIm } from "../juggleim";
 import {
   MsgCleanedListener,
-  MsgDeletedListener, MsgModifiedListener, MsgRecalledListener, MsgReceivedListener } from "./messagemanager";
+  MsgDeletedListener, MsgGroupReadReceiptListener, MsgModifiedListener, MsgReadReceiptListener, MsgRecalledListener, MsgReceivedListener } from "./messagemanager";
 import { JimMsgType } from "../entries/msgtypes";
-import { ModifyMessage, RecallCmdMessage } from "../entries/cmdmsg";
+import { GroupReadNtfMessage, ModifyMessage, ReadNtfMessage, RecallCmdMessage } from "../entries/cmdmsg";
 
 function promiseSyncConvers(mgr:MsgSyncManager):Promise<boolean>{
   return new Promise((resolve)=>{
@@ -73,6 +73,8 @@ export class MsgSyncManager{
   private msgReceivedListeners:MsgReceivedListener[] = new Array()
   private msgRecalledListeners:MsgRecalledListener[] = new Array()
   private msgModifiedListeners:MsgModifiedListener[] = new Array()
+  private readReceiptListeners:MsgReadReceiptListener[] = new Array()
+  private groupReadReceiptListeners:MsgGroupReadReceiptListener[] = new Array()
   private msgDeletedListeners:MsgDeletedListener[] = new Array()
   private msgCleanedListeners:MsgCleanedListener[] = new Array()
 
@@ -220,9 +222,47 @@ export class MsgSyncManager{
     }
   }
 
+  addReadReceiptListener(listener:MsgReadReceiptListener){
+    this.readReceiptListeners.push(listener)
+  }
+
+  removeReadReceiptListener(listener:MsgReadReceiptListener){
+    for(let i=0;i<this.readReceiptListeners.length;i++){
+      if(this.readReceiptListeners[i]===listener){
+        this.readReceiptListeners.splice(i,1)
+        break
+      }
+    }
+  }
+
+  addGroupReadReceiptListener(listener:MsgGroupReadReceiptListener){
+    this.groupReadReceiptListeners.push(listener)
+  }
+
+  removeGroupReadReceiptListener(listener:MsgGroupReadReceiptListener){
+    for(let i=0;i<this.groupReadReceiptListeners.length;i++){
+      if(this.groupReadReceiptListeners[i]===listener){
+        this.groupReadReceiptListeners.splice(i,1)
+        break
+      }
+    }
+  }
+
   private triggerMsgModify(msg:Message){
     this.msgModifiedListeners.forEach((listener)=>{
       listener(msg)
+    })
+  }
+
+  private triggerReadReceipt(conver:Conversation,msgIds:string[]){
+    this.readReceiptListeners.forEach((listener)=>{
+      listener(conver, msgIds)
+    })
+  }
+
+  private triggerGroupReadReceipt(conver:Conversation,messages:Map<string, GroupMessageReadInfo>){
+    this.groupReadReceiptListeners.forEach((listener)=>{
+      listener(conver, messages)
     })
   }
 
@@ -377,6 +417,10 @@ export class MsgSyncManager{
     if(msgFlag.isCmd){
       if(msg.msgContent.getMsgType() == JimMsgType.RecallCmd){
         this.handleRecallCmdMsg(msg)
+      }else if(msg.msgContent.getMsgType() == JimMsgType.ReadNtf){
+        this.handleReadNtfMsg(msg)
+      }else if(msg.msgContent.getMsgType() == JimMsgType.GroupReadNtf){
+        this.handleGroupReadNtfMsg(msg)
       }else if(msg.msgContent.getMsgType() == JimMsgType.ModifyMsg){
         this.handleModifyCmdMsg(msg)
       }
@@ -669,6 +713,42 @@ export class MsgSyncManager{
       msgDao.updateMsgFlags(oldMsg.messageId, oldMsg.flags)
       this.notifyMessageModified(oldMsg)
     }
+  }
+
+  private handleReadNtfMsg(msg:Message){
+    let readNtfMsg = msg.msgContent as ReadNtfMessage
+    let readMessageIds:string[] = []
+    readNtfMsg.msgs.forEach((item)=>{
+      if(item.msg_id != ''){
+        readMessageIds.push(item.msg_id)
+      }
+    })
+    if(readMessageIds.length == 0){
+      return
+    }
+    let msgDao = JimDbManager.instance.getMessageDao()
+    msgDao.updateMessagesRead(readMessageIds)
+    let readMessages = msgDao.getMessagesByMessageIds(readMessageIds)
+    readMessages.forEach((readMessage)=>{
+      readMessage.hasRead = true
+      this.notifyMessageModified(readMessage)
+    })
+    this.triggerReadReceipt(msg.conversation, readMessageIds)
+  }
+
+  private handleGroupReadNtfMsg(msg:Message){
+    let readNtfMsg = msg.msgContent as GroupReadNtfMessage
+    let msgDao = JimDbManager.instance.getMessageDao()
+    readNtfMsg.messages.forEach((info, msgId)=>{
+      msgDao.updateGroupReadInfo(msgId, info.readCount, info.memberCount)
+      let readMessage = msgDao.getMessage(msgId)
+      if(readMessage != null){
+        readMessage.readCount = info.readCount
+        readMessage.memberCount = info.memberCount
+        this.notifyMessageModified(readMessage)
+      }
+    })
+    this.triggerGroupReadReceipt(msg.conversation, readNtfMsg.messages)
   }
 
   public notifyMessageModified(message:Message):void{

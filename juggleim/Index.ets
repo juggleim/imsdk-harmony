@@ -23,10 +23,13 @@ export {
   ClearMsgOptions,
   GetMessageDirection,
   GetMessageOptions,
+  GroupMessageReadInfoDetailCallback,
   MessageCallback,
   MsgCleanedListener,
   MsgDeletedListener,
+  MsgGroupReadReceiptListener,
   MsgModifiedListener,
+  MsgReadReceiptListener,
   MsgReceivedListener,
   MsgRecalledListener,
   QryMessagesCallback,
@@ -53,4 +56,4 @@ export {
 export { MessageOptions, MessageMentionInfo, MentionType, PushData } from './src/main/ets/entries/messageoptions'
 export { JimMsgType } from './src/main/ets/entries/msgtypes'
 export { UserInfo } from './src/main/ets/entries/user'
-export { GroupInfo, GroupMember } from './src/main/ets/entries/group'
+export { GroupInfo, GroupMember, GroupMessageMemberReadDetail, GroupMessageReadInfo, GroupMessageReadInfoDetail } from './src/main/ets/entries/group'

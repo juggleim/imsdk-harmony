@@ -1,7 +1,7 @@
 import { immessage } from "../improto/immessage"
-import { RecallCmdMessage, ReadNtfMessage, ClearUnreadMessage, ModifyMessage } from "./cmdmsg"
+import { RecallCmdMessage, ReadNtfMessage, GroupReadNtfMessage, ClearUnreadMessage, ModifyMessage } from "./cmdmsg"
 import { MessageContent, TextMessage, MergeMessage, VoiceMessage, ImageMessage, FileMessage, VideoMessage, RecallInfoMessage,
-  Message } from "./message"
+  Message, MessageSentState } from "./message"
 import { Conversation } from "./conversation"
 import { JimUtil } from "../commons/jimutil"
 import { UserInfo } from "./user"
@@ -26,6 +26,7 @@ export class MsgHandler{
     //cmd msg
     MsgHandler.registerMessage(JimMsgType.RecallCmd,RecallCmdMessage)
     MsgHandler.registerMessage(JimMsgType.ReadNtf,ReadNtfMessage)
+    MsgHandler.registerMessage(JimMsgType.GroupReadNtf,GroupReadNtfMessage)
     MsgHandler.registerMessage(JimMsgType.ClearUnread,ClearUnreadMessage)
     MsgHandler.registerMessage(JimMsgType.ModifyMsg,ModifyMessage)
 
@@ -64,6 +65,10 @@ export class MsgHandler{
     message.msgSeqNo = JimUtil.toNumber(downMsg.msgSeqNo as number)
     message.msgUnreadIndex = JimUtil.toNumber(downMsg.unreadIndex as number)
     message.senderId = downMsg.senderId as string
+    message.direction = downMsg.senderId == JuggleIm.instance.userId ? 0 : 1
+    message.state = MessageSentState.success
+    message.hasRead = downMsg.isRead as boolean
+    message.readCount = JimUtil.toNumber(downMsg.readCount as number)
     message.memberCount = JimUtil.toNumber(downMsg.memberCount as number)
     message.searchContent = downMsg.SearchText as string
     message.flags = JimUtil.toNumber(downMsg.flags as number)
@@ -109,6 +114,10 @@ export class MsgHandler{
     message.sentTime = JimUtil.toNumber(downMsg.msgTime as number)
     message.msgSeqNo = JimUtil.toNumber(downMsg.msgSeqNo as number)
     message.msgUnreadIndex = JimUtil.toNumber(downMsg.unreadIndex as number)
+    message.direction = downMsg.senderId == JuggleIm.instance.userId ? 0 : 1
+    message.state = MessageSentState.success
+    message.hasRead = downMsg.isRead as boolean
+    message.readCount = JimUtil.toNumber(downMsg.readCount as number)
     message.memberCount = JimUtil.toNumber(downMsg.memberCount as number)
     message.searchContent = downMsg.SearchText as string
     message.flags = JimUtil.toNumber(downMsg.flags as number)

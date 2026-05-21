@@ -18,16 +18,21 @@ import { MsgSyncManager } from './msgsyncmanager'
 import { JimUtil } from '../commons/jimutil'
 import { JuggleIm } from '../juggleim'
 import { IMessageManager } from '../interfaces/imessagemanager'
+import { GroupMessageMemberReadDetail, GroupMessageReadInfoDetail } from '../entries/group'
 import { MessageOptions } from '../entries/messageoptions'
 import { MessageOptionUtil } from '../commons/messageoptionutil'
+import { UserInfo } from '../entries/user'
 import {
   ClearMsgOptions,
   GetMessageDirection,
   GetMessageOptions,
+  GroupMessageReadInfoDetailCallback,
   MessageCallback,
   MsgCleanedListener,
   MsgDeletedListener,
+  MsgGroupReadReceiptListener,
   MsgModifiedListener,
+  MsgReadReceiptListener,
   MsgReceivedListener,
   MsgRecalledListener,
   QryMessagesCallback,
@@ -39,10 +44,13 @@ export {
   ClearMsgOptions,
   GetMessageDirection,
   GetMessageOptions,
+  GroupMessageReadInfoDetailCallback,
   MessageCallback,
   MsgCleanedListener,
   MsgDeletedListener,
+  MsgGroupReadReceiptListener,
   MsgModifiedListener,
+  MsgReadReceiptListener,
   MsgReceivedListener,
   MsgRecalledListener,
   QryMessagesCallback,
@@ -81,6 +89,22 @@ export class MessageManager implements IMessageManager{
 
   removeMsgModifiedListener(listener:MsgModifiedListener){
     this.msgSyncMgr.removeMsgModifiedListener(listener)
+  }
+
+  addReadReceiptListener(listener:MsgReadReceiptListener){
+    this.msgSyncMgr.addReadReceiptListener(listener)
+  }
+
+  removeReadReceiptListener(listener:MsgReadReceiptListener){
+    this.msgSyncMgr.removeReadReceiptListener(listener)
+  }
+
+  addGroupReadReceiptListener(listener:MsgGroupReadReceiptListener){
+    this.msgSyncMgr.addGroupReadReceiptListener(listener)
+  }
+
+  removeGroupReadReceiptListener(listener:MsgGroupReadReceiptListener){
+    this.msgSyncMgr.removeGroupReadReceiptListener(listener)
   }
 
   addMsgDeletedListener(listener:MsgDeletedListener){
@@ -135,6 +159,12 @@ export class MessageManager implements IMessageManager{
     message.flags = msg.getFlagNumber()
     message.searchContent = this.buildSearchContent(msg)
     message.state = MessageSentState.sending
+    if(conver.conversationType == 2){
+      let localMembers = JuggleIm.instance.getGroupInfoManager().getLocalGroupMembers(conver.conversationId)
+      if(localMembers.length > 0){
+        message.memberCount = localMembers.length
+      }
+    }
 
     let referMsg = this.applyMessageOptions(message, options)
 
@@ -167,11 +197,22 @@ export class MessageManager implements IMessageManager{
         if(typeof pubAck.msgSeqNo == 'number'){
           message.msgSeqNo = pubAck.msgSeqNo
         }
+        if(conver.conversationType == 2 && typeof pubAck.memberCount == 'number' && pubAck.memberCount >= 0){
+          message.memberCount = pubAck.memberCount
+          message.readCount = 0
+        }
         if(message.lifeTime > 0){
           message.destroyTime = message.sentTime + message.lifeTime
         }
         message.state = MessageSentState.success
-        msgDao.updateMsgState(msgDbId,message.state,message.messageId,message.sentTime,message.msgSeqNo)
+        msgDao.updateMsgState(
+          msgDbId,
+          message.state,
+          message.messageId,
+          message.sentTime,
+          message.msgSeqNo,
+          conver.conversationType == 2 ? message.memberCount : undefined
+        )
         this.msgSyncMgr.updConver(message)
         callback(code,message)
       }else{
@@ -277,6 +318,15 @@ export class MessageManager implements IMessageManager{
         if(!isSameMessage){
           return
         }
+        remoteMsg.state = localMsg.state
+        remoteMsg.direction = localMsg.direction
+        remoteMsg.hasRead = localMsg.hasRead
+        remoteMsg.readCount = localMsg.readCount
+        remoteMsg.memberCount = localMsg.memberCount
+        remoteMsg.isEdit = localMsg.isEdit
+        remoteMsg.referMsgId = localMsg.referMsgId
+        remoteMsg.referredMessage = localMsg.referredMessage
+        remoteMsg.mentionInfo = localMsg.mentionInfo
         remoteMsg.localAttribute = localMsg.localAttribute
         return
       })
@@ -542,7 +592,129 @@ export class MessageManager implements IMessageManager{
     this.updateMessage(msgId, msg, conver, callback)
   }
 
-  sendReadReceipt(conver:Conversation,msgIds:string[],callback:CommonCallback){}
+  sendReadReceipt(conver:Conversation,msgIds:string[],callback:CommonCallback){
+    if(conver.conversationId == ''){
+      callback(-1)
+      return
+    }
+    let requestIds = this.normalizeMessageIds(msgIds)
+    if(requestIds.length == 0){
+      callback(0)
+      return
+    }
+    let localMessages = JimDbManager.instance.getMessageDao().getMessagesByMessageIds(requestIds)
+    let simpleMsgs:immessage.SimpleMsg[] = []
+    requestIds.forEach((requestId)=>{
+      let localMessage = this.findMessageByRequestId(localMessages, requestId)
+      let messageId = requestId
+      let msgTime = 0
+      let msgReadIndex = 0
+      if(localMessage != null){
+        if(localMessage.messageId != ''){
+          messageId = localMessage.messageId
+        }
+        msgTime = localMessage.sentTime
+        msgReadIndex = localMessage.msgUnreadIndex
+      }
+      if(messageId != ''){
+        simpleMsgs.push(immessage.SimpleMsg.create({
+          "msgId":messageId,
+          "msgTime":msgTime,
+          "msgReadIndex":msgReadIndex
+        }))
+      }
+    })
+    if(simpleMsgs.length == 0){
+      callback(0)
+      return
+    }
+    let req = immessage.MarkReadReq.create({
+      "targetId":conver.conversationId,
+      "channelType":conver.conversationType,
+      "msgs":simpleMsgs
+    })
+    let data = immessage.MarkReadReq.encode(req).finish()
+    this.imclient.query("mark_read", conver.conversationId, data, (code, qryAck)=>{
+      if(code != 0){
+        callback(code)
+        return
+      }
+      if(qryAck.timestamp != undefined && qryAck.timestamp != null){
+        this.msgSyncMgr.recordLatestSendboxMsgTime(JimUtil.toNumber(qryAck.timestamp as number), MsgFlagTool.toFlag({ isCmd:true }))
+      }
+      let msgDao = JimDbManager.instance.getMessageDao()
+      let actualMessageIds:string[] = []
+      simpleMsgs.forEach((simpleMsg)=>{
+        if(simpleMsg.msgId != undefined && simpleMsg.msgId != ''){
+          actualMessageIds.push(simpleMsg.msgId as string)
+        }
+      })
+      msgDao.updateMessagesRead(actualMessageIds)
+      let readMessages = msgDao.getMessagesByMessageIds(actualMessageIds)
+      readMessages.forEach((message)=>{
+        message.hasRead = true
+        this.msgSyncMgr.notifyMessageModified(message)
+      })
+      callback(0)
+    })
+  }
+
+  private toGroupMessageMemberReadDetail(item:immessage.IMemberReadDetailItem):GroupMessageMemberReadDetail{
+    let detail = new GroupMessageMemberReadDetail()
+    if(item.member != undefined && item.member != null){
+      let user = new UserInfo()
+      user.userId = item.member.userId as string
+      user.nickname = item.member.nickname as string
+      user.userPortrait = item.member.userPortrait as string
+      user.userType = JimUtil.toNumber(item.member.userType as number)
+      user.updTime = JimUtil.toNumber(item.member.updatedTime as number)
+      JuggleIm.instance.getUserInfoManager().saveUserInfo(user)
+      detail.userId = user.userId
+      detail.nickname = user.nickname
+      detail.portrait = user.userPortrait
+    }
+    detail.readTime = JimUtil.toNumber(item.time as number)
+    return detail
+  }
+
+  getGroupMessageReadInfoDetail(conver:Conversation,msgId:string,callback:GroupMessageReadInfoDetailCallback):void{
+    if(conver.conversationId == '' || msgId == '' || conver.conversationType != 2){
+      callback(-1, null)
+      return
+    }
+    let req = immessage.QryReadDetailReq.create({
+      "targetId":conver.conversationId,
+      "channelType":conver.conversationType,
+      "msgId":msgId
+    })
+    let data = immessage.QryReadDetailReq.encode(req).finish()
+    this.imclient.query("qry_read_detail", conver.conversationId, data, (code, qryAck)=>{
+      if(code != 0){
+        callback(code, null)
+        return
+      }
+      let ackData = qryAck.data as Uint8Array
+      let resp = immessage.QryReadDetailResp.decode(ackData)
+      let detail = new GroupMessageReadInfoDetail()
+      detail.readCount = resp.readCount as number
+      detail.memberCount = resp.memberCount as number
+      resp.readMembers.forEach((item)=>{
+        detail.readMembers.push(this.toGroupMessageMemberReadDetail(item))
+      })
+      resp.unreadMembers.forEach((item)=>{
+        detail.unreadMembers.push(this.toGroupMessageMemberReadDetail(item))
+      })
+      let msgDao = JimDbManager.instance.getMessageDao()
+      msgDao.updateGroupReadInfo(msgId, detail.readCount, detail.memberCount)
+      let localMessage = msgDao.getMessage(msgId)
+      if(localMessage != null){
+        localMessage.readCount = detail.readCount
+        localMessage.memberCount = detail.memberCount
+        this.msgSyncMgr.notifyMessageModified(localMessage)
+      }
+      callback(0, detail)
+    })
+  }
 
   recallMessage(conver:Conversation,msgId:string,extras:HashMap<string,string>,callback:MessageCallback){
     let exts:immessage.KvItem[] = []

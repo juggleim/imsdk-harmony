@@ -5,10 +5,13 @@ import { CommonCallback } from './commoncallback'
 import {
   ClearMsgOptions,
   GetMessageOptions,
+  GroupMessageReadInfoDetailCallback,
   MessageCallback,
   MsgCleanedListener,
   MsgDeletedListener,
+  MsgGroupReadReceiptListener,
   MsgModifiedListener,
+  MsgReadReceiptListener,
   MsgReceivedListener,
   MsgRecalledListener,
   QryMessagesCallback,
@@ -24,6 +27,10 @@ export interface IMessageManager {
   removeMsgRecalledListener(listener: MsgRecalledListener): void
   addMsgModifiedListener(listener: MsgModifiedListener): void
   removeMsgModifiedListener(listener: MsgModifiedListener): void
+  addReadReceiptListener(listener: MsgReadReceiptListener): void
+  removeReadReceiptListener(listener: MsgReadReceiptListener): void
+  addGroupReadReceiptListener(listener: MsgGroupReadReceiptListener): void
+  removeGroupReadReceiptListener(listener: MsgGroupReadReceiptListener): void
   addMsgDeletedListener(listener: MsgDeletedListener): void
   removeMsgDeletedListener(listener: MsgDeletedListener): void
   addMsgCleanedListener(listener: MsgCleanedListener): void
@@ -43,6 +50,7 @@ export interface IMessageManager {
   updateMessage(msgId: string, msg: MessageContent, conver: Conversation, callback: MessageCallback): void
   modifyMessage(conver: Conversation, msgId: string, msg: MessageContent, callback: MessageCallback): void
   sendReadReceipt(conver: Conversation, msgIds: string[], callback: CommonCallback): void
+  getGroupMessageReadInfoDetail(conver: Conversation, msgId: string, callback: GroupMessageReadInfoDetailCallback): void
   recallMessage(conver: Conversation, msgId: string, extras: HashMap<string, string>, callback: MessageCallback): void
   searchMessages(params: SearchParams, callback: QryMessagesCallback): void
   setLocalAttribute(msgId: string, attribute: string): void

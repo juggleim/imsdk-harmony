@@ -2,6 +2,7 @@ import {MessageContent} from './message'
 import { MsgFlag } from '../improto/msgflag'
 import { JimUtil } from '../commons/jimutil'
 import { JimMsgType } from './msgtypes'
+import { GroupMessageReadInfo } from './group'
 
 interface IRecallCmdMessage{
   msg_id:string
@@ -74,6 +75,56 @@ export class ReadNtfMessage extends MessageContent{
     let t = JSON.parse(str) as IReadNtfMessage
     this.msgs = t.msgs
     this.indexScopes = t.index_scopes
+  }
+}
+
+interface IGroupReadNtfMsg{
+  msg_id:string
+  read_count:number
+  member_count:number
+}
+
+interface IGroupReadNtfMessage{
+  msgs:IGroupReadNtfMsg[]
+}
+
+export class GroupReadNtfMessage extends MessageContent{
+  messages:Map<string, GroupMessageReadInfo> = new Map()
+  constructor() {
+    super()
+    this.setMsgType(JimMsgType.GroupReadNtf)
+    this.setMsgFlag({isCmd:true})
+  }
+
+  encode(): Uint8Array {
+    let msgs:IGroupReadNtfMsg[] = []
+    this.messages.forEach((info, msgId)=>{
+      msgs.push({
+        msg_id:msgId,
+        read_count:info.readCount,
+        member_count:info.memberCount
+      })
+    })
+    let str = JSON.stringify({
+      msgs:msgs
+    })
+    return JimUtil.stringToUint8Array(str)
+  }
+
+  decode(data: Uint8Array): void {
+    let str = JimUtil.uint8ArrayToString(data)
+    let t = JSON.parse(str) as IGroupReadNtfMessage
+    let messages:Map<string, GroupMessageReadInfo> = new Map()
+    t.msgs.forEach((item)=>{
+      if(item.msg_id == ''){
+        return
+      }
+      let info = new GroupMessageReadInfo()
+      info.readCount = item.read_count
+      info.memberCount = item.member_count
+      messages.set(item.msg_id, info)
+    })
+    this.messages = messages
   }
 }
 

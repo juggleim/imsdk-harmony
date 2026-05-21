@@ -270,6 +270,45 @@ export class MessageDao{
     return 0
   }
 
+  updateMessagesRead(msgIds:string[]):number{
+    let normalizedIds:string[] = []
+    msgIds.forEach((msgId)=>{
+      let normalizedId = msgId.trim()
+      if(normalizedId != ''){
+        normalizedIds.push(normalizedId)
+      }
+    })
+    if(normalizedIds.length == 0){
+      return 0
+    }
+    let placeholders:string[] = []
+    let args:Array<relationalStore.ValueType> = []
+    normalizedIds.forEach((msgId)=>{
+      placeholders.push('?')
+      args.push(msgId)
+    })
+    let sql = `UPDATE ${this.tableName} SET has_read=1 WHERE msg_id in (${placeholders.join(',')})`
+    try{
+      let vt = JimDbManager.instance.getDb()?.executeSync(sql,args)
+      return vt as number
+    }catch (e) {
+      console.error(`jimsdk_db_fail. [${this.tableName}] err:${e.message}`)
+    }
+    return 0
+  }
+
+  updateGroupReadInfo(msgId:string, readCount:number, memberCount:number):number{
+    let sql = `UPDATE ${this.tableName} SET read_count=?, member_count=? WHERE msg_id=?`
+    let args:Array<relationalStore.ValueType> = [readCount, memberCount, msgId]
+    try{
+      let vt = JimDbManager.instance.getDb()?.executeSync(sql,args)
+      return vt as number
+    }catch (e) {
+      console.error(`jimsdk_db_fail. [${this.tableName}] err:${e.message}`)
+    }
+    return 0
+  }
+
   private buildSearchContent(msg:MessageContent):string{
     let msgType = msg.getMsgType()
     if(msgType == JimMsgType.Text){
@@ -284,7 +323,7 @@ export class MessageDao{
     return ''
   }
 
-  updateMsgState(dbId:number,state:number,msgId?:string,msgTime?:number,msgSeq?:number):number{
+  updateMsgState(dbId:number,state:number,msgId?:string,msgTime?:number,msgSeq?:number,memberCount?:number):number{
     let sql = `UPDATE ${this.tableName} SET state=?`
     let args:Array<relationalStore.ValueType> = []
     args.push(state)
@@ -299,6 +338,10 @@ export class MessageDao{
     if(msgSeq!=undefined){
       sql = sql + ` ,msg_seq_no=?`
       args.push(msgSeq)
+    }
+    if(memberCount!=undefined){
+      sql = sql + ` ,member_count=?`
+      args.push(memberCount)
     }
     sql = sql + ` WHERE id=?`
     args.push(dbId)
@@ -341,6 +384,7 @@ export class MessageDao{
   }
 
   private getValuesBucket(msg:Message):relationalStore.ValuesBucket{
+    let flags = msg.flags > 0 ? msg.flags : MsgFlagTool.toFlag(msg.msgContent.getFlag())
     let valuesBucket:relationalStore.ValuesBucket = {
       "conver_id":msg.conversation?.conversationId as string,
       "conver_type":msg.conversation?.conversationType as number,
@@ -355,7 +399,7 @@ export class MessageDao{
       "msg_content": JimUtil.uint8ArrayToString(msg.msgContent.encode()),
       "ext": MessageOptionUtil.encodeMessageExt(msg),
       "state":msg.state,
-      "flags":MsgFlagTool.toFlag(msg.msgContent.getFlag()),
+      "flags":flags,
       "has_read":msg.hasRead?1:0,
       "read_count":msg.readCount,
       "member_count":msg.memberCount,
