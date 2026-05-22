@@ -2,7 +2,7 @@ import { JimUtil } from "../commons/jimutil";
 import { JimDbManager } from "../dbs/dbmanager";
 import { Conversation, ConversationInfo, ConversationTag } from "../entries/conversation";
 import { GroupInfo, GroupMessageReadInfo } from "../entries/group";
-import { Message, RecallInfoMessage } from "../entries/message";
+import { Message, MessageReaction, RecallInfoMessage } from "../entries/message";
 import { MsgHandler } from "../entries/msghandler";
 import { UserInfo } from "../entries/user";
 import { ConnStatus, ImClient } from "../imclients/imclient";
@@ -15,7 +15,7 @@ import {
   MsgCleanedListener,
   MsgDeletedListener, MsgGroupReadReceiptListener, MsgModifiedListener, MsgReadReceiptListener, MsgRecalledListener, MsgReceivedListener } from "./messagemanager";
 import { JimMsgType } from "../entries/msgtypes";
-import { GroupReadNtfMessage, ModifyMessage, ReadNtfMessage, RecallCmdMessage } from "../entries/cmdmsg";
+import { GroupReadNtfMessage, ModifyMessage, MsgExSetMessage, ReadNtfMessage, RecallCmdMessage } from "../entries/cmdmsg";
 
 function promiseSyncConvers(mgr:MsgSyncManager):Promise<boolean>{
   return new Promise((resolve)=>{
@@ -414,7 +414,9 @@ export class MsgSyncManager{
       }
     }
 
-    if(msgFlag.isCmd){
+    if(msg.msgContent.getMsgType() == JimMsgType.MsgExSet){
+      this.handleReactionStatusMsg(msg)
+    }else if(msgFlag.isCmd){
       if(msg.msgContent.getMsgType() == JimMsgType.RecallCmd){
         this.handleRecallCmdMsg(msg)
       }else if(msg.msgContent.getMsgType() == JimMsgType.ReadNtf){
@@ -735,6 +737,28 @@ export class MsgSyncManager{
     }
   }
 
+  private handleReactionStatusMsg(msg:Message){
+    let reactionMsg = msg.msgContent as MsgExSetMessage
+    if(reactionMsg.originalMessageId == ''){
+      return
+    }
+    let msgDao = JimDbManager.instance.getMessageDao()
+    let oldMsg = msgDao.getMessage(reactionMsg.originalMessageId)
+    if(oldMsg == null){
+      return
+    }
+    let nextReactions = this.cloneMessageReactions(oldMsg.reactions)
+    if(reactionMsg.addReactions.length > 0){
+      nextReactions = this.mergeReactionChanges(nextReactions, reactionMsg.addReactions, true)
+    }
+    if(reactionMsg.removeReactions.length > 0){
+      nextReactions = this.mergeReactionChanges(nextReactions, reactionMsg.removeReactions, false)
+    }
+    oldMsg.reactions = nextReactions
+    msgDao.updateMessageReactions(oldMsg.messageId, nextReactions)
+    this.notifyMessageModified(oldMsg)
+  }
+
   private handleReadNtfMsg(msg:Message){
     let readNtfMsg = msg.msgContent as ReadNtfMessage
     let readMessageIds:string[] = []
@@ -769,6 +793,84 @@ export class MsgSyncManager{
       }
     })
     this.triggerGroupReadReceipt(msg.conversation, readNtfMsg.messages)
+  }
+
+  private mergeReactionChanges(
+    reactions:MessageReaction[],
+    changes:MessageReaction[],
+    isAdd:boolean
+  ):MessageReaction[]{
+    let nextReactions = this.cloneMessageReactions(reactions)
+    let currentUserId = JuggleIm.instance.userId
+    changes.forEach((change)=>{
+      if(change.reactionId == ''){
+        return
+      }
+      let changeUserIds:string[] = []
+      change.userIds.forEach((userId)=>{
+        if(userId != '' && changeUserIds.indexOf(userId) < 0){
+          changeUserIds.push(userId)
+        }
+      })
+      if(changeUserIds.length == 0){
+        return
+      }
+      let targetIndex = nextReactions.findIndex((reaction)=>{
+        return reaction.reactionId == change.reactionId
+      })
+      if(targetIndex < 0){
+        if(!isAdd){
+          return
+        }
+        let nextReaction = new MessageReaction()
+        nextReaction.reactionId = change.reactionId
+        nextReaction.userIds = changeUserIds
+        nextReaction.count = nextReaction.userIds.length
+        nextReaction.isSelected = nextReaction.userIds.indexOf(currentUserId) >= 0
+        nextReactions.push(nextReaction)
+        return
+      }
+      let targetReaction = nextReactions[targetIndex]
+      let mergedUserIds:string[] = []
+      targetReaction.userIds.forEach((userId)=>{
+        if(userId != '' && mergedUserIds.indexOf(userId) < 0){
+          mergedUserIds.push(userId)
+        }
+      })
+      if(isAdd){
+        changeUserIds.forEach((userId)=>{
+          if(mergedUserIds.indexOf(userId) < 0){
+            mergedUserIds.push(userId)
+          }
+        })
+      }else{
+        mergedUserIds = mergedUserIds.filter((userId)=>{
+          return changeUserIds.indexOf(userId) < 0
+        })
+      }
+      if(mergedUserIds.length == 0){
+        nextReactions.splice(targetIndex, 1)
+        return
+      }
+      targetReaction.userIds = mergedUserIds
+      targetReaction.count = mergedUserIds.length
+      targetReaction.isSelected = mergedUserIds.indexOf(currentUserId) >= 0
+      nextReactions[targetIndex] = targetReaction
+    })
+    return nextReactions
+  }
+
+  private cloneMessageReactions(reactions:MessageReaction[]):MessageReaction[]{
+    let nextReactions:MessageReaction[] = []
+    reactions.forEach((reaction)=>{
+      let nextReaction = new MessageReaction()
+      nextReaction.reactionId = reaction.reactionId
+      nextReaction.userIds = reaction.userIds.slice()
+      nextReaction.count = reaction.count
+      nextReaction.isSelected = reaction.isSelected
+      nextReactions.push(nextReaction)
+    })
+    return nextReactions
   }
 
   public notifyMessageModified(message:Message):void{

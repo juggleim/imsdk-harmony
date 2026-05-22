@@ -10,6 +10,8 @@ import {
   MediaMessageUploadState,
   Message,
   MessageContent,
+  MessageReaction,
+  MessageReactionResult,
   MessageSentState,
   TextMessage,
   VideoMessage,
@@ -33,6 +35,7 @@ import { JimUtil } from '../commons/jimutil'
 import { JuggleIm } from '../juggleim'
 import { IMessageManager } from '../interfaces/imessagemanager'
 import { GroupMessageMemberReadDetail, GroupMessageReadInfoDetail } from '../entries/group'
+import { JimErrorCode } from '../entries/errcode'
 import { MentionType, MessageOptions } from '../entries/messageoptions'
 import { MessageOptionUtil } from '../commons/messageoptionutil'
 import { UserInfo } from '../entries/user'
@@ -46,6 +49,7 @@ import {
   GetMessageOptions,
   GroupMessageReadInfoDetailCallback,
   MessageCallback,
+  MessageReactionsCallback,
   MsgCleanedListener,
   MsgDeletedListener,
   MsgGroupReadReceiptListener,
@@ -68,6 +72,7 @@ export {
   GetMessageOptions,
   GroupMessageReadInfoDetailCallback,
   MessageCallback,
+  MessageReactionsCallback,
   MsgCleanedListener,
   MsgDeletedListener,
   MsgGroupReadReceiptListener,
@@ -166,6 +171,45 @@ export class MessageManager implements IMessageManager{
     return this.messageUploadProvider
   }
 
+  addMessageReaction(messageId:string, reactionId:string, callback:CommonCallback):void{
+    this.updateMessageReaction(messageId, reactionId, true, callback)
+  }
+
+  removeMessageReaction(messageId:string, reactionId:string, callback:CommonCallback):void{
+    this.updateMessageReaction(messageId, reactionId, false, callback)
+  }
+
+  getMessagesReaction(conver:Conversation | null, msgIds:string[], callback:MessageReactionsCallback):void{
+    let normalizedIds = this.normalizeReactionMessageIds(msgIds)
+    if(normalizedIds.length == 0){
+      callback(0, [])
+      return
+    }
+    let cachedResults = this.buildCachedReactionResults(normalizedIds)
+    let targetConversation = this.resolveReactionConversation(conver, normalizedIds)
+    if(targetConversation == null || targetConversation.conversationId == ''){
+      callback(0, cachedResults)
+      return
+    }
+    let req = immessage.QryMsgExtReq.create({
+      targetId: targetConversation.conversationId,
+      channelType: targetConversation.conversationType,
+      msgIds: normalizedIds
+    })
+    let data = immessage.QryMsgExtReq.encode(req).finish()
+    this.imclient.query('qry_msg_exset', targetConversation.conversationId, data, (code, qryAck)=>{
+      if(code != 0){
+        callback(code, cachedResults)
+        return
+      }
+      let ackData = qryAck.data as Uint8Array
+      let resp = immessage.MsgExtItemsList.decode(ackData)
+      let results = this.buildReactionResultsFromProto(normalizedIds, resp.items)
+      this.applyReactionResults(results)
+      callback(0, results)
+    })
+  }
+
   sendMessage(msg:MessageContent,conver:Conversation,callback:MessageCallback): void
   sendMessage(msg:MessageContent,conver:Conversation,options:MessageOptions,callback:MessageCallback): void
   sendMessage(msg:MessageContent,conver:Conversation,arg3:MessageCallback|MessageOptions,arg4?:MessageCallback): void{
@@ -193,6 +237,233 @@ export class MessageManager implements IMessageManager{
     }
     context.callback = arg4
     return context
+  }
+
+  private updateMessageReaction(messageId:string, reactionId:string, isAdd:boolean, callback:CommonCallback):void{
+    let normalizedMessageId = messageId.trim()
+    let normalizedReactionId = reactionId.trim()
+    if(normalizedMessageId == '' || normalizedReactionId == ''){
+      callback(new JimErrorCode().InvalidParam)
+      return
+    }
+    let msgDao = JimDbManager.instance.getMessageDao()
+    let message = msgDao.getMessage(normalizedMessageId)
+    if(message == null){
+      callback(new JimErrorCode().MessageNotExist)
+      return
+    }
+    let targetMessage:Message = message
+    let extItem = immessage.MsgExtItem.create({
+      key: normalizedReactionId,
+      value: JuggleIm.instance.userId
+    })
+    let req = immessage.MsgExt.create({
+      targetId: targetMessage.conversation.conversationId,
+      channelType: targetMessage.conversation.conversationType,
+      msgId: targetMessage.messageId,
+      ext: extItem
+    })
+    let data = immessage.MsgExt.encode(req).finish()
+    let topic = isAdd ? 'msg_exset' : 'del_msg_exset'
+    this.imclient.query(topic, normalizedMessageId, data, (code, _qryAck)=>{
+      if(code != 0){
+        callback(code)
+        return
+      }
+      let nextReactions = this.mergeMessageReactions(targetMessage.reactions, normalizedReactionId, isAdd)
+      targetMessage.reactions = nextReactions
+      msgDao.updateMessageReactions(normalizedMessageId, nextReactions)
+      this.msgSyncMgr.notifyMessageModified(targetMessage)
+      callback(0)
+    })
+  }
+
+  private normalizeReactionMessageIds(msgIds:string[]):string[]{
+    let normalizedIds:string[] = []
+    msgIds.forEach((msgId)=>{
+      let normalizedId = msgId.trim()
+      if(normalizedId != '' && normalizedIds.indexOf(normalizedId) < 0){
+        normalizedIds.push(normalizedId)
+      }
+    })
+    return normalizedIds
+  }
+
+  private resolveReactionConversation(conver:Conversation | null, msgIds:string[]):Conversation | null{
+    if(conver != null && conver.conversationId != ''){
+      return conver
+    }
+    let messages = JimDbManager.instance.getMessageDao().getMessagesByMessageIds(msgIds)
+    if(messages.length == 0){
+      return null
+    }
+    return messages[0].conversation
+  }
+
+  private buildCachedReactionResults(msgIds:string[]):MessageReactionResult[]{
+    let messages = JimDbManager.instance.getMessageDao().getMessagesByMessageIds(msgIds)
+    let results:MessageReactionResult[] = []
+    messages.forEach((message)=>{
+      let result = new MessageReactionResult()
+      result.messageId = message.messageId
+      result.clientId = message.clientId
+      result.reactions = this.cloneMessageReactions(message.reactions)
+      results.push(result)
+    })
+    return results
+  }
+
+  private buildReactionResultsFromProto(
+    requestedIds:string[],
+    items:immessage.IMsgExtItems[]
+  ):MessageReactionResult[]{
+    let resultMap:Map<string, MessageReactionResult> = new Map()
+    items.forEach((item)=>{
+      let messageId = item.msgId != undefined ? item.msgId : ''
+      if(messageId == ''){
+        return
+      }
+      let result = new MessageReactionResult()
+      result.messageId = messageId
+      result.clientId = this.resolveReactionClientId(messageId)
+      result.reactions = this.buildMessageReactionsFromProtoItems(item.exts)
+      resultMap.set(messageId, result)
+    })
+    let results:MessageReactionResult[] = []
+    requestedIds.forEach((messageId)=>{
+      if(resultMap.has(messageId)){
+        let cachedResult = resultMap.get(messageId)
+        if(cachedResult != undefined){
+          results.push(cachedResult)
+        }
+        return
+      }
+      let result = new MessageReactionResult()
+      result.messageId = messageId
+      result.clientId = this.resolveReactionClientId(messageId)
+      results.push(result)
+    })
+    return results
+  }
+
+  private resolveReactionClientId(messageId:string):string{
+    let localMessage = JimDbManager.instance.getMessageDao().getMessage(messageId)
+    if(localMessage == null){
+      return ''
+    }
+    return localMessage.clientId
+  }
+
+  private buildMessageReactionsFromProtoItems(items:immessage.IMsgExtItem[] | null | undefined):MessageReaction[]{
+    let reactions:MessageReaction[] = []
+    if(items == undefined || items == null){
+      return reactions
+    }
+    let currentUserId = JuggleIm.instance.userId
+    items.forEach((item)=>{
+      let reactionId = item.key != undefined ? item.key.trim() : ''
+      let userId = item.userInfo != undefined ? (item.userInfo.userId as string).trim() : ''
+      if(reactionId == '' || userId == ''){
+        return
+      }
+      let targetReaction:MessageReaction | undefined = undefined
+      for(let i = 0; i < reactions.length; i++){
+        if(reactions[i].reactionId == reactionId){
+          targetReaction = reactions[i]
+          break
+        }
+      }
+      if(targetReaction == undefined){
+        targetReaction = new MessageReaction()
+        targetReaction.reactionId = reactionId
+        reactions.push(targetReaction)
+      }
+      if(targetReaction.userIds.indexOf(userId) < 0){
+        targetReaction.userIds.push(userId)
+      }
+    })
+    reactions.forEach((reaction)=>{
+      reaction.count = reaction.userIds.length
+      reaction.isSelected = reaction.userIds.indexOf(currentUserId) >= 0
+    })
+    return reactions
+  }
+
+  private applyReactionResults(results:MessageReactionResult[]):void{
+    let msgDao = JimDbManager.instance.getMessageDao()
+    results.forEach((result)=>{
+      if(result.messageId == ''){
+        return
+      }
+      msgDao.updateMessageReactions(result.messageId, result.reactions)
+      let localMessage = msgDao.getMessage(result.messageId)
+      if(localMessage == null){
+        return
+      }
+      localMessage.reactions = this.cloneMessageReactions(result.reactions)
+      this.msgSyncMgr.notifyMessageModified(localMessage)
+    })
+  }
+
+  private mergeMessageReactions(
+    reactions:MessageReaction[],
+    reactionId:string,
+    isAdd:boolean
+  ):MessageReaction[]{
+    let currentUserId = JuggleIm.instance.userId
+    let nextReactions = this.cloneMessageReactions(reactions)
+    let foundIndex = nextReactions.findIndex((reaction)=>{
+      return reaction.reactionId == reactionId
+    })
+    if(foundIndex < 0){
+      if(!isAdd){
+        return nextReactions
+      }
+      let reaction = new MessageReaction()
+      reaction.reactionId = reactionId
+      reaction.userIds = [currentUserId]
+      reaction.count = 1
+      reaction.isSelected = true
+      nextReactions.push(reaction)
+      return nextReactions
+    }
+    let target = nextReactions[foundIndex]
+    let userIds:string[] = []
+    target.userIds.forEach((userId)=>{
+      if(userId != '' && userIds.indexOf(userId) < 0){
+        userIds.push(userId)
+      }
+    })
+    let selectedIndex = userIds.indexOf(currentUserId)
+    if(isAdd){
+      if(selectedIndex < 0){
+        userIds.push(currentUserId)
+      }
+    }else if(selectedIndex >= 0){
+      userIds.splice(selectedIndex, 1)
+    }
+    if(userIds.length == 0){
+      nextReactions.splice(foundIndex, 1)
+      return nextReactions
+    }
+    target.userIds = userIds
+    target.count = userIds.length
+    target.isSelected = userIds.indexOf(currentUserId) >= 0
+    nextReactions[foundIndex] = target
+    return nextReactions
+  }
+
+  private cloneMessageReactions(reactions:MessageReaction[]):MessageReaction[]{
+    let nextReactions:MessageReaction[] = []
+    reactions.forEach((reaction)=>{
+      let nextReaction = new MessageReaction()
+      nextReaction.reactionId = reaction.reactionId
+      nextReaction.userIds = reaction.userIds.slice()
+      nextReaction.count = reaction.count
+      nextReaction.isSelected = reaction.isSelected
+      nextReactions.push(nextReaction)
+    })
+    return nextReactions
   }
 
   private buildOutgoingMessage(msg:MessageContent, conver:Conversation):Message{
@@ -387,24 +658,25 @@ export class MessageManager implements IMessageManager{
       onError(-1)
       return
     }
-    if(!(message.msgContent instanceof MediaMessageContent)){
+    let targetMessage:Message = message
+    if(!(targetMessage.msgContent instanceof MediaMessageContent)){
       onError(-2)
       return
     }
-    let mediaContent = message.msgContent as MediaMessageContent
+    let mediaContent = targetMessage.msgContent as MediaMessageContent
     if(mediaContent.url == ''){
       onError(-3)
       return
     }
     if(this.isLocalMediaAvailable(mediaContent.localPath)){
-      onSuccess(message)
+      onSuccess(targetMessage)
       return
     }
     if(this.mediaDownloadTasks.get(messageId) != undefined){
       onError(-6)
       return
     }
-    let savePath = this.buildMediaDownloadPath(message, mediaContent)
+    let savePath = this.buildMediaDownloadPath(targetMessage, mediaContent)
     if(savePath == ''){
       onError(-4)
       return
@@ -422,7 +694,7 @@ export class MessageManager implements IMessageManager{
         onError(bizError.code)
         return
       }
-      this.bindMediaDownloadTask(messageId, message, mediaContent, savePath, task, onProgress, onSuccess, onError, onCancel)
+      this.bindMediaDownloadTask(messageId, targetMessage, mediaContent, savePath, task, onProgress, onSuccess, onError, onCancel)
     })
   }
 

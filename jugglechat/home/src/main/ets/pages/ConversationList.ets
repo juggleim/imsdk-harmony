@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 
-import { BaseConstants, BreakpointConstants } from 'base';
+import { Adaptive, BaseConstants, BreakpointConstants } from 'base';
 import { ConversationViewItem,ConversationDetailParams } from '../viewmodel/ConversationViewModel';
 import { ConversationItem } from '../views/Conversation/ConversationItem';
 import { HomeTopSearch } from '../views/common/HomeTopSearch';
@@ -21,7 +21,6 @@ import { HomeConstants } from '../constants/HomeConstants';
 import { deviceInfo } from '@kit.BasicServicesKit';
 import { ObservedArray} from '../jim/common'
 import {
-  Conversation,
   ConnStatus,
   ConversationAddListener,
   ConversationDeleteListener,
@@ -32,22 +31,6 @@ import {
 } from 'juggleim'
 import { toConverViewItem } from '../viewmodel/ConversationViewModel'
 
-class DemoConversationTagOption {
-  id:string
-  label:string
-
-  constructor(id:string, label:string) {
-    this.id = id
-    this.label = label
-  }
-}
-
-const DEMO_CONVERSATION_TAG_OPTIONS:DemoConversationTagOption[] = [
-  new DemoConversationTagOption('work', '项目'),
-  new DemoConversationTagOption('follow_up', '待跟进'),
-  new DemoConversationTagOption('important', '重要')
-]
-
 @Component
 export struct ConversationList {
   @StorageProp('currentBreakpoint') currentBreakpoint: string = BreakpointConstants.BREAKPOINT_SM;
@@ -55,8 +38,6 @@ export struct ConversationList {
   @Link currentContactUserName: string;
   @State private currentIndex: number = 0;
   @State conversationList:ObservedArray<ConversationViewItem>=new ObservedArray<ConversationViewItem>([])
-  @State private activeTagId:string = ''
-  @State private tagUnreadCounts:number[] = [0, 0, 0]
   @Consume('pageInfo') pageInfo: NavPathStack;
   // private scroller: ListScroller = new ListScroller()
   private maxConverSortTime:number = 0
@@ -91,51 +72,7 @@ export struct ConversationList {
     options.count = 20
     options.time = time
     options.direction = direction
-    options.tagId = this.activeTagId
     return options
-  }
-
-  private hasActiveTagFilter():boolean{
-    return this.activeTagId != ''
-  }
-
-  private conversationHasTag(item:ConversationViewItem, tagId:string):boolean{
-    return item.tags.indexOf(tagId) >= 0
-  }
-
-  private refreshTagUnreadCounts():void{
-    DEMO_CONVERSATION_TAG_OPTIONS.forEach((option, index)=>{
-      JuggleIm.instance.getConversationManager().getTotalUnreadCountByTag(option.id, (code, count)=>{
-        if(code != 0){
-          return
-        }
-        let nextCounts = this.tagUnreadCounts.slice()
-        nextCounts[index] = count
-        this.tagUnreadCounts = nextCounts
-      })
-    })
-  }
-
-  private applyTagFilter(tagId:string):void{
-    this.activeTagId = tagId
-    this.reloadConversations()
-  }
-
-  private toggleConversationTag(item:ConversationViewItem, tagId:string):void{
-    let conver = new Conversation(item.converId, item.converType)
-    let callback = (code:number)=>{
-      if(code == 0){
-        this.refreshTagUnreadCounts()
-        if(this.hasActiveTagFilter()){
-          this.reloadConversations()
-        }
-      }
-    }
-    if(this.conversationHasTag(item, tagId)){
-      JuggleIm.instance.getConversationManager().removeConversationTag(conver, tagId, callback)
-    }else{
-      JuggleIm.instance.getConversationManager().addConversationTag(conver, tagId, callback)
-    }
   }
 
   private mergeConversationViewItem(converViewItem:ConversationViewItem):void{
@@ -158,7 +95,6 @@ export struct ConversationList {
   aboutToAppear(): void {
     this.resetConverTimes()
     this.conversationList = new ObservedArray<ConversationViewItem>([])
-    this.refreshTagUnreadCounts()
 
     if(JuggleIm.instance.getConnStatus() == ConnStatus.connecting){
       JuggleIm.instance.getConnectionManager().addConnectStatusListener((status,code)=>{
@@ -172,11 +108,6 @@ export struct ConversationList {
 
     //conver add
     this.converAddListener = (convers)=>{
-      this.refreshTagUnreadCounts()
-      if(this.hasActiveTagFilter()){
-        this.reloadConversations()
-        return
-      }
       convers.forEach((conver)=>{
         this.mergeConversationViewItem(toConverViewItem(conver))
       })
@@ -188,11 +119,6 @@ export struct ConversationList {
     //conver update
     this.converUpdListener = (convers)=>{
       console.log("jimsdk_msgrece_converupd:",JSON.stringify(convers))
-      this.refreshTagUnreadCounts()
-      if(this.hasActiveTagFilter()){
-        this.reloadConversations()
-        return
-      }
       let updatedConverList:ConversationViewItem[] = new Array()
       let updatedConverKeys:Map<string,boolean> = new Map()
       convers.forEach((conver)=>{
@@ -220,11 +146,6 @@ export struct ConversationList {
     //conver del
     this.converDelListener = (convers)=>{
       console.log("jimsdk_msgrece_del",JSON.stringify(convers))
-      this.refreshTagUnreadCounts()
-      if(this.hasActiveTagFilter()){
-        this.reloadConversations()
-        return
-      }
       let delConverKeys:Map<string,boolean> = new Map()
       convers.forEach((conver)=>{
         let key:string = conver.conversation.conversationId+"_"+conver.conversation.conversationType
@@ -257,7 +178,6 @@ export struct ConversationList {
           })
           this.conversationList = new ObservedArray<ConversationViewItem>(this.conversationList.slice().sort((a,b)=>b.converTime - a.converTime))
           this.rebuildConverTimes()
-          this.refreshTagUnreadCounts()
         })
     }
   }
@@ -272,81 +192,25 @@ export struct ConversationList {
   }
 
   build() {
-    Column() {
+    Flex({ direction: FlexDirection.Column }) {
       HomeTopSearch({ title: HomeConstants.CONVERSATION_TITLE, enableGlobalMessageSearch: true })
-        .height(72)
-      Column() {
-        Scroll() {
-          Row({ space: 8 }) {
-            Text('全部')
-              .fontSize(BaseConstants.FONT_SIZE_TWELVE)
-              .fontColor(this.activeTagId == '' ? Color.White : '#55606D')
-              .backgroundColor(this.activeTagId == '' ? '#0A59F7' : '#EEF2F7')
-              .borderRadius(12)
-              .padding({ left: 12, right: 12, top: 6, bottom: 6 })
-              .onClick(()=>{
-                this.applyTagFilter('')
-              })
-            ForEach(DEMO_CONVERSATION_TAG_OPTIONS, (option:DemoConversationTagOption) => {
-              Text(option.label)
-                .fontSize(BaseConstants.FONT_SIZE_TWELVE)
-                .fontColor(this.activeTagId == option.id ? Color.White : '#55606D')
-                .backgroundColor(this.activeTagId == option.id ? '#0A59F7' : '#EEF2F7')
-                .borderRadius(12)
-                .padding({ left: 12, right: 12, top: 6, bottom: 6 })
-                .onClick(()=>{
-                  this.applyTagFilter(option.id)
-                })
-            }, (option:DemoConversationTagOption) => option.id)
-          }
-        }
-        .scrollable(ScrollDirection.Horizontal)
-        .scrollBar(BarState.Off)
-
-        Row({ space: 12 }) {
-          ForEach(DEMO_CONVERSATION_TAG_OPTIONS, (option:DemoConversationTagOption, index:number) => {
-            Text(`${option.label} ${this.tagUnreadCounts[index]}`)
-              .fontSize(BaseConstants.FONT_SIZE_ELEVEN)
-              .fontColor('#6B7280')
-          }, (option:DemoConversationTagOption) => `${option.id}_stat`)
-        }
-        .margin({ top: 10 })
-      }
-      .width(BaseConstants.FULL_WIDTH)
-      .padding({ left: 16, right: 16, bottom: 10 })
-      .backgroundColor(Color.White)
+        .height('13%')
       List() {
         ForEach(this.conversationList, (item: ConversationViewItem, index: number) => {
           ListItem() {
-            Column() {
-              ConversationItem(item)
-                .onClick(() => {
-                  if (this.pageInfo.size() > 1) {
-                    this.pageInfo.pop();
-                  }
-                  this.pageInfo.pushPath({ name: 'ConversationDetail',param:new ConversationDetailParams(item.userId,item.converId,item.converType, item.name as string)});
-                  this.currentConversationUserName = item.name;
-                  this.currentContactUserName = '';
-                  this.currentIndex = index;
-                })
-              Row({ space: 8 }) {
-                ForEach(DEMO_CONVERSATION_TAG_OPTIONS, (option:DemoConversationTagOption) => {
-                  Text(this.conversationHasTag(item, option.id) ? `${option.label} 已标记` : option.label)
-                    .fontSize(BaseConstants.FONT_SIZE_ELEVEN)
-                    .fontColor(this.conversationHasTag(item, option.id) ? '#0A59F7' : '#667085')
-                    .backgroundColor(this.conversationHasTag(item, option.id) ? '#E8F0FE' : '#F4F5F7')
-                    .borderRadius(12)
-                    .padding({ left: 10, right: 10, top: 5, bottom: 5 })
-                    .onClick(()=>{
-                      this.toggleConversationTag(item, option.id)
-                    })
-                }, (option:DemoConversationTagOption) => `${item.converId}_${option.id}`)
-              }
-              .margin({ left: 72, right: 16, bottom: 12 })
-            }
-            .backgroundColor(this.currentIndex === index ? $r('app.color.conversation_clicked_bg_color') : Color.White)
+            ConversationItem(item)
+              .onClick(() => {
+                if (this.pageInfo.size() > 1) {
+                  this.pageInfo.pop();
+                }
+                this.pageInfo.pushPath({ name: 'ConversationDetail',param:new ConversationDetailParams(item.userId,item.converId,item.converType, item.name as string)});
+                this.currentConversationUserName = item.name;
+                this.currentContactUserName = '';
+                this.currentIndex = index;
+              })
+              .backgroundColor(this.currentIndex === index ? $r('app.color.conversation_clicked_bg_color') : Color.White)
           }
-          .padding({ top: 4, bottom: 2 })
+          .height(Adaptive.ContactItemHeight(this.currentBreakpoint))
 
         }, (item: ConversationViewItem, index: number) => index + JSON.stringify(item))
       }
@@ -362,7 +226,7 @@ export struct ConversationList {
       })
       .backgroundColor(Color.White)
       .width(BaseConstants.FULL_WIDTH)
-      .layoutWeight(1)
+      .height(BaseConstants.FULL_HEIGHT)
     }
     .height(BaseConstants.FULL_HEIGHT)
     .width(BaseConstants.FULL_WIDTH)

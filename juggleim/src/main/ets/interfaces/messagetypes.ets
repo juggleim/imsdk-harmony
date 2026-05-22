@@ -1,10 +1,11 @@
 import { Conversation } from '../entries/conversation'
-import { Message, MessageContent } from '../entries/message'
+import { Message, MessageContent, MessageReactionResult } from '../entries/message'
 import { GroupMessageReadInfo, GroupMessageReadInfoDetail } from '../entries/group'
 
 export type MessageCallback = (code: number, msg: Message | null) => void
 export type QryMessagesCallback = (code: number, msgs: Message[], hasMore: boolean) => void
 export type GroupMessageReadInfoDetailCallback = (code: number, detail: GroupMessageReadInfoDetail | null) => void
+export type MessageReactionsCallback = (code: number, items: MessageReactionResult[]) => void
 export type DownloadMediaMessageProgressCallback = (progress: number, msg: Message) => void
 export type DownloadMediaMessageSuccessCallback = (msg: Message) => void
 export type DownloadMediaMessageErrorCallback = (code: number) => void

@@ -86,6 +86,8 @@ class GroupReadMemberItem {
   }
 }
 
+const DEMO_REACTION_OPTIONS:string[] = ['👍', '❤️', '😂', '👏']
+
 @Component
 export struct ConversationDetail {
   @StorageProp('currentBreakpoint') currentBreakpoint: string = BreakpointConstants.BREAKPOINT_SM;
@@ -318,6 +320,22 @@ export struct ConversationDetail {
     })
   }
 
+  private fetchMessageReactions(messages:Message[]):void{
+    let messageIds:string[] = []
+    messages.forEach((message)=>{
+      if(!isDisplayableMessage(message) || message.messageId == ''){
+        return
+      }
+      if(messageIds.indexOf(message.messageId) < 0){
+        messageIds.push(message.messageId)
+      }
+    })
+    if(messageIds.length == 0){
+      return
+    }
+    JuggleIm.instance.getMessageManager().getMessagesReaction(this.getConversation(), messageIds, (_code, _items)=>{})
+  }
+
   private queryMessagesByOptions(options:GetMessageOptions):void{
     JuggleIm.instance.getMessageManager().queryMessages(this.getConversation(), options, async (code,msgs)=>{
       if(code != 0){
@@ -327,6 +345,7 @@ export struct ConversationDetail {
       for(let i = 0;i < msgs.length;i++){
         await this.appendMessage(msgs[i], false)
       }
+      this.fetchMessageReactions(msgs)
       this.markConversationRead()
       this.sendReadReceiptIfNeeded(msgs)
     })
@@ -396,6 +415,40 @@ export struct ConversationDetail {
     this.selectedMessageIndex = index
     this.showForwardPanel = false
     this.showMessageActionPanel = true
+  }
+
+  private canReactMessage(item?:MessageViewItem):boolean{
+    if(item == undefined){
+      return false
+    }
+    return item.messageId != ''
+  }
+
+  private hasSelectedReaction(item:MessageViewItem | undefined, reactionId:string):boolean{
+    if(item == undefined){
+      return false
+    }
+    return item.selectedReactionIds.indexOf(reactionId) >= 0
+  }
+
+  private toggleSelectedReaction(reactionId:string):void{
+    let item = this.getSelectedMessage()
+    if(!this.canReactMessage(item)){
+      this.showToast('当前消息暂不支持 reaction')
+      return
+    }
+    let callback = (code:number)=>{
+      if(code != 0){
+        this.showToast(`reaction 失败: ${code}`)
+        return
+      }
+      this.closePanels()
+    }
+    if(this.hasSelectedReaction(item, reactionId)){
+      JuggleIm.instance.getMessageManager().removeMessageReaction(item?.messageId as string, reactionId, callback)
+    }else{
+      JuggleIm.instance.getMessageManager().addMessageReaction(item?.messageId as string, reactionId, callback)
+    }
   }
 
   private quoteSelectedMessage():void{
@@ -1354,6 +1407,7 @@ export struct ConversationDetail {
                     conversationType:item.conversationType,
                     downloadState:item.downloadState,
                     downloadProgress:item.downloadProgress,
+                    reactionSummaries:item.reactionSummaries,
                     showDownloadAction:this.shouldShowDownloadAction(item),
                     onDownloadTap:()=>{
                       this.startMediaDownload(item)
@@ -1697,6 +1751,30 @@ export struct ConversationDetail {
 
             if(this.showMessageActionPanel){
               Column() {
+                if(this.canReactMessage(this.getSelectedMessage())){
+                  Column() {
+                    Row({ space: 12 }) {
+                      ForEach(DEMO_REACTION_OPTIONS, (reactionId:string)=>{
+                        Text(reactionId)
+                          .fontSize(22)
+                          .width(44)
+                          .height(44)
+                          .textAlign(TextAlign.Center)
+                          .backgroundColor(this.hasSelectedReaction(this.getSelectedMessage(), reactionId) ? '#E8F0FE' : '#F5F6F8')
+                          .borderRadius(22)
+                          .onClick(()=>{
+                            this.toggleSelectedReaction(reactionId)
+                          })
+                      }, (reactionId:string)=>reactionId)
+                    }
+                    .width('100%')
+                    .padding({ left: 20, right: 20, top: 18, bottom: 18 })
+                  }
+                  Divider()
+                    .strokeWidth(1)
+                    .color('#EAEAEA')
+                }
+
                 if(this.canShowGroupReadDetail(this.getSelectedMessage())){
                   Row() {
                     Text('已读详情')

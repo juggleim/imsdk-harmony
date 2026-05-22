@@ -50,6 +50,7 @@ export struct MessageBubble {
   private conversationType?:number
   private downloadState?:number
   private downloadProgress?:number
+  private reactionSummaries?:string[]
   private showDownloadAction?:boolean
   private onDownloadTap?:()=>void
   private onCancelDownloadTap?:()=>void
@@ -141,6 +142,10 @@ export struct MessageBubble {
       return '已取消下载'
     }
     return ''
+  }
+
+  private getReactionSummaries():string[]{
+    return this.reactionSummaries != undefined ? this.reactionSummaries : []
   }
 
   build() {
@@ -309,6 +314,21 @@ export struct MessageBubble {
             .fontColor('#999999')
         }
       }
+      .margin({ top: 6 })
+    }
+
+    if(this.getReactionSummaries().length > 0){
+      Row({ space: 6 }) {
+        ForEach(this.getReactionSummaries(), (summary:string)=>{
+          Text(summary)
+            .fontSize(11)
+            .fontColor('#4B5563')
+            .backgroundColor('#F3F4F6')
+            .borderRadius(12)
+            .padding({ left: 8, right: 8, top: 4, bottom: 4 })
+        }, (summary:string)=>summary)
+      }
+      .width('100%')
       .margin({ top: 6 })
     }
 

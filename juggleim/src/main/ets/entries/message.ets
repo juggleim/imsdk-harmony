@@ -21,6 +21,25 @@ export class MediaMessageUploadState{
   static canceled:number = 5
 }
 
+export class MessageReaction{
+  reactionId:string = ''
+  userIds:string[] = []
+  count:number = 0
+  isSelected:boolean = false
+
+  constructor() {
+  }
+}
+
+export class MessageReactionResult{
+  messageId:string = ''
+  clientId:string = ''
+  reactions:MessageReaction[] = []
+
+  constructor() {
+  }
+}
+
 export class MessageContent{
   private msgType:string
   private msgFlag:MsgFlag
@@ -166,6 +185,7 @@ export class Message{
   referredMessage:Message | null = null
   mentionInfo?:MessageMentionInfo
   pushData?:PushData
+  reactions:MessageReaction[] = []
   lifeTime:number = 0
   lifeTimeAfterRead:number = 0
   destroyTime:number = 0

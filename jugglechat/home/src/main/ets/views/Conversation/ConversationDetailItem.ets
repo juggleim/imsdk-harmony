@@ -34,6 +34,7 @@ export struct ConversationDetailItem {
   private conversationType?:number
   private downloadState?:number
   private downloadProgress?:number
+  private reactionSummaries?:string[]
   private showDownloadAction?:boolean
   private onDownloadTap?:()=>void
   private onCancelDownloadTap?:()=>void
@@ -60,6 +61,7 @@ export struct ConversationDetailItem {
         conversationType:this.conversationType,
         downloadState:this.downloadState,
         downloadProgress:this.downloadProgress,
+        reactionSummaries:this.reactionSummaries,
         showDownloadAction:this.showDownloadAction,
         onDownloadTap:this.onDownloadTap,
         onCancelDownloadTap:this.onCancelDownloadTap,

@@ -4,15 +4,16 @@ import { MessageOptions } from '../entries/messageoptions'
 import { CommonCallback } from './commoncallback'
 import { IMessageUploadProvider, MediaUploadCredentialCallback } from './imessageuploadprovider'
 import {
-  ClearMsgOptions,
-  DownloadMediaMessageCancelCallback,
-  DownloadMediaMessageErrorCallback,
-  DownloadMediaMessageProgressCallback,
-  DownloadMediaMessageSuccessCallback,
+    ClearMsgOptions,
+    DownloadMediaMessageCancelCallback,
+    DownloadMediaMessageErrorCallback,
+    DownloadMediaMessageProgressCallback,
+    DownloadMediaMessageSuccessCallback,
   GetMessageOptions,
-  GroupMessageReadInfoDetailCallback,
-  MessageCallback,
-  MsgCleanedListener,
+    GroupMessageReadInfoDetailCallback,
+    MessageCallback,
+    MessageReactionsCallback,
+    MsgCleanedListener,
   MsgDeletedListener,
   MsgGroupReadReceiptListener,
   MsgModifiedListener,
@@ -43,6 +44,9 @@ export interface IMessageManager {
   registerMessage(msgType: string, constructor: Function): void
   setMessageUploadProvider(provider: IMessageUploadProvider | null): void
   getMessageUploadProvider(): IMessageUploadProvider | null
+  addMessageReaction(messageId: string, reactionId: string, callback: CommonCallback): void
+  removeMessageReaction(messageId: string, reactionId: string, callback: CommonCallback): void
+  getMessagesReaction(conver: Conversation | null, msgIds: string[], callback: MessageReactionsCallback): void
   sendMessage(msg: MessageContent, conver: Conversation, callback: MessageCallback): void
   sendMessage(msg: MessageContent, conver: Conversation, options: MessageOptions, callback: MessageCallback): void
   sendMediaMessage(msg: MessageContent, conver: Conversation): void

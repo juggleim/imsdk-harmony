@@ -1,4 +1,4 @@
-import {MessageContent} from './message'
+import {MessageContent, MessageReaction} from './message'
 import { MsgFlag } from '../improto/msgflag'
 import { JimUtil } from '../commons/jimutil'
 import { JimMsgType } from './msgtypes'
@@ -200,5 +200,73 @@ export class ModifyMessage extends MessageContent{
     this.msgTime = t.msg_time
     this.msgSeq = t.msg_seq
     this.newMsgContent = t.msg_content
+  }
+}
+
+interface IMsgExSetUser{
+  user_id:string
+}
+
+interface IMsgExSetItem{
+  is_del:number
+  key:string
+  user?:IMsgExSetUser
+}
+
+interface IMsgExSetPayload{
+  msg_id:string
+  exts:IMsgExSetItem[]
+}
+
+export class MsgExSetMessage extends MessageContent{
+  originalMessageId:string = ''
+  addReactions:MessageReaction[] = []
+  removeReactions:MessageReaction[] = []
+
+  constructor() {
+    super()
+    this.setMsgType(JimMsgType.MsgExSet)
+  }
+
+  encode(): Uint8Array {
+    return JimUtil.stringToUint8Array('')
+  }
+
+  decode(data: Uint8Array): void {
+    let str = JimUtil.uint8ArrayToString(data)
+    let payload = JSON.parse(str) as IMsgExSetPayload
+    this.originalMessageId = payload.msg_id
+    let addReactionMap:Map<string, string[]> = new Map()
+    let removeReactionMap:Map<string, string[]> = new Map()
+    payload.exts.forEach((item)=>{
+      let reactionId = item.key != undefined ? item.key.trim() : ''
+      let userId = item.user != undefined ? item.user.user_id.trim() : ''
+      if(reactionId == '' || userId == ''){
+        return
+      }
+      let targetMap = item.is_del != 0 ? removeReactionMap : addReactionMap
+      let userIds = targetMap.get(reactionId)
+      if(userIds == undefined){
+        userIds = []
+      }
+      if(userIds.indexOf(userId) < 0){
+        userIds.push(userId)
+      }
+      targetMap.set(reactionId, userIds)
+    })
+    this.addReactions = this.buildReactionList(addReactionMap)
+    this.removeReactions = this.buildReactionList(removeReactionMap)
+  }
+
+  private buildReactionList(reactionMap:Map<string, string[]>):MessageReaction[]{
+    let reactions:MessageReaction[] = []
+    reactionMap.forEach((userIds, reactionId)=>{
+      let reaction = new MessageReaction()
+      reaction.reactionId = reactionId
+      reaction.userIds = userIds.slice()
+      reaction.count = reaction.userIds.length
+      reactions.push(reaction)
+    })
+    return reactions
   }
 }

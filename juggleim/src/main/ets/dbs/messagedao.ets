@@ -1,4 +1,4 @@
-import { FileMessage, MergeMessage, Message, MessageContent, TextMessage } from "../entries/message";
+import { FileMessage, MergeMessage, Message, MessageContent, MessageReaction, TextMessage } from "../entries/message";
 import { JimMsgType } from "../entries/msgtypes";
 import { relationalStore } from "@kit.ArkData";
 import { JimUtil } from "../commons/jimutil";
@@ -415,6 +415,18 @@ export class MessageDao{
     return 0
   }
 
+  updateMessageReactions(msgId:string, reactions:MessageReaction[]):number{
+    let sql = `UPDATE ${this.tableName} SET reactions=? WHERE msg_id=?`
+    let args:Array<relationalStore.ValueType> = [this.encodeReactions(reactions), msgId]
+    try{
+      let vt = JimDbManager.instance.getDb()?.executeSync(sql,args)
+      return vt as number
+    }catch (e) {
+      console.error(`jimsdk_db_fail. [${this.tableName}] err:${e.message}`)
+    }
+    return 0
+  }
+
   getLocalAttribute(msgId:string):string{
     let sql = `SELECT local_attribute FROM ${this.tableName} WHERE msg_id=?`
     let args:Array<relationalStore.ValueType> = [msgId]
@@ -455,7 +467,8 @@ export class MessageDao{
       "search_content":msg.searchContent,
       "local_attribute":msg.localAttribute,
       "mention_info": MessageOptionUtil.encodeMentionInfo(msg.mentionInfo),
-      "refer_msg_id":msg.referMsgId
+      "refer_msg_id":msg.referMsgId,
+      "reactions":this.encodeReactions(msg.reactions)
     }
     return valuesBucket
   }
@@ -487,6 +500,7 @@ export class MessageDao{
     message.localAttribute = JimDbUtil.toString(resultSet,"local_attribute")
     message.mentionInfo = MessageOptionUtil.decodeMentionInfo(JimDbUtil.toString(resultSet,"mention_info"))
     message.referMsgId = JimDbUtil.toString(resultSet, "refer_msg_id")
+    message.reactions = this.decodeReactions(JimDbUtil.toString(resultSet, "reactions"))
     if(message.referMsgId != ''){
       let referMessage = this.getMessage(message.referMsgId)
       if(referMessage != null){
@@ -495,5 +509,47 @@ export class MessageDao{
     }
     MessageOptionUtil.decodeMessageExt(JimDbUtil.toString(resultSet, "ext"), message)
     return message
+  }
+
+  private encodeReactions(reactions:MessageReaction[]):string{
+    if(reactions.length == 0){
+      return ''
+    }
+    let encodedReactions:MessageReaction[] = []
+    reactions.forEach((reaction)=>{
+      let encodedReaction = new MessageReaction()
+      encodedReaction.reactionId = reaction.reactionId
+      encodedReaction.userIds = reaction.userIds
+      encodedReaction.count = reaction.count
+      encodedReaction.isSelected = reaction.isSelected
+      encodedReactions.push(encodedReaction)
+    })
+    return JSON.stringify(encodedReactions)
+  }
+
+  private decodeReactions(reactionsStr:string):MessageReaction[]{
+    if(reactionsStr == ''){
+      return []
+    }
+    try{
+      let rawReactions = JSON.parse(reactionsStr) as MessageReaction[]
+      let reactions:MessageReaction[] = []
+      rawReactions.forEach((reactionData)=>{
+        let reaction = new MessageReaction()
+        reaction.reactionId = reactionData.reactionId != undefined ? reactionData.reactionId : ''
+        reaction.userIds = reactionData.userIds != undefined ? reactionData.userIds.slice() : []
+        let count = reactionData.count
+        reaction.count = count != undefined && count > 0 ? count : reaction.userIds.length
+        let isSelected = reactionData.isSelected
+        reaction.isSelected = isSelected == true
+        if(reaction.reactionId != ''){
+          reactions.push(reaction)
+        }
+      })
+      return reactions
+    }catch (e) {
+      console.error(`jimsdk_reaction_decode_fail. [${this.tableName}] err:${e.message}`)
+    }
+    return []
   }
 }

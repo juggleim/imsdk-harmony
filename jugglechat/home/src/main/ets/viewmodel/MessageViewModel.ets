@@ -8,6 +8,7 @@ import {
   MergeMessage,
   Message,
   MessageContent,
+  MessageReaction,
   MessageSentState,
   TextMessage,
   VideoMessage,
@@ -43,6 +44,8 @@ class MessageViewItem{
   sentState:number = MessageSentState.none
   downloadState:number = MediaDownloadState.none
   downloadProgress:number = 0
+  reactionSummaries:string[] = []
+  selectedReactionIds:string[] = []
 
   isReceived:boolean = true
   msgTime:number = 0
@@ -65,6 +68,8 @@ class MessageViewItem{
     this.readCount = message.readCount
     this.memberCount = message.memberCount
     this.sentState = message.state
+    this.reactionSummaries = buildReactionSummaries(message.reactions)
+    this.selectedReactionIds = buildSelectedReactionIds(message.reactions)
     this.previewText = buildMessagePreview(message.msgContent)
     if(message.referredMessage != null){
       this.referenceText = buildMessagePreview(message.referredMessage.msgContent)
@@ -172,6 +177,28 @@ export function cloneMessageContent(msgContent?:MessageContent):MessageContent|n
     return target
   }
   return null
+}
+
+function buildReactionSummaries(reactions:MessageReaction[]):string[]{
+  let summaries:string[] = []
+  reactions.forEach((reaction)=>{
+    if(reaction.reactionId == ''){
+      return
+    }
+    let count = reaction.count > 0 ? reaction.count : reaction.userIds.length
+    summaries.push(`${reaction.reactionId} ${count}`)
+  })
+  return summaries
+}
+
+function buildSelectedReactionIds(reactions:MessageReaction[]):string[]{
+  let selectedIds:string[] = []
+  reactions.forEach((reaction)=>{
+    if(reaction.isSelected == true && reaction.reactionId != ''){
+      selectedIds.push(reaction.reactionId)
+    }
+  })
+  return selectedIds
 }
 
 function copyMediaMessageFields(target:MediaMessageContent, source:MediaMessageContent):void{

@@ -15,5 +15,6 @@ export class JimMsgType{
   static GroupReadNtf:string = 'jg:grpreadntf'
   static ClearUnread:string = 'jg:clearunread'
   static ModifyMsg:string = 'jg:modify'
+  static MsgExSet:string = 'jg:msgexset'
   static DelMsgs:string = `jg:delmsgs`
 }
