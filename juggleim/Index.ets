@@ -38,6 +38,8 @@ export {
   DownloadMediaMessageErrorCallback,
   DownloadMediaMessageProgressCallback,
   DownloadMediaMessageSuccessCallback,
+  FavoriteMessagesCallback,
+  GetFavoriteMessageOption,
   GetMessageDirection,
   GetMessageOptions,
   GroupMessageReadInfoDetailCallback,
@@ -50,9 +52,11 @@ export {
   MsgReadReceiptListener,
   MsgReceivedListener,
   MsgRecalledListener,
+  MsgTopChangedListener,
   QryMessagesCallback,
   QueryMsgOptions,
-  SearchParams
+  SearchParams,
+  TopMessageCallback
 } from './src/main/ets/interfaces/messagetypes'
 export { UserInfoCallback } from './src/main/ets/interfaces/userinfotypes'
 
@@ -64,6 +68,7 @@ export {
   MediaMessageContent,
   MediaMessageUploadState,
   MessageSentState,
+  FavoriteMessage,
   MessageReaction,
   MessageReactionResult,
   TextMessage,

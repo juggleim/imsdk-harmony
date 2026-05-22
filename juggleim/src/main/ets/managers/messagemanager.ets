@@ -5,6 +5,7 @@ import { BusinessError } from '@kit.BasicServicesKit'
 import {
   ImageMessage,
   FileMessage,
+  FavoriteMessage,
   MergeMessage,
   MediaMessageContent,
   MediaMessageUploadState,
@@ -45,6 +46,8 @@ import {
   DownloadMediaMessageErrorCallback,
   DownloadMediaMessageProgressCallback,
   DownloadMediaMessageSuccessCallback,
+  FavoriteMessagesCallback,
+  GetFavoriteMessageOption,
   GetMessageDirection,
   GetMessageOptions,
   GroupMessageReadInfoDetailCallback,
@@ -57,9 +60,11 @@ import {
   MsgReadReceiptListener,
   MsgReceivedListener,
   MsgRecalledListener,
+  MsgTopChangedListener,
   QryMessagesCallback,
   QueryMsgOptions,
-  SearchParams
+  SearchParams,
+  TopMessageCallback
 } from '../interfaces/messagetypes'
 
 export {
@@ -68,6 +73,8 @@ export {
   DownloadMediaMessageErrorCallback,
   DownloadMediaMessageProgressCallback,
   DownloadMediaMessageSuccessCallback,
+  FavoriteMessagesCallback,
+  GetFavoriteMessageOption,
   GetMessageDirection,
   GetMessageOptions,
   GroupMessageReadInfoDetailCallback,
@@ -80,9 +87,11 @@ export {
   MsgReadReceiptListener,
   MsgReceivedListener,
   MsgRecalledListener,
+  MsgTopChangedListener,
   QryMessagesCallback,
   QueryMsgOptions,
-  SearchParams
+  SearchParams,
+  TopMessageCallback
 } from '../interfaces/messagetypes'
 
 class MessageSendContext {
@@ -159,6 +168,14 @@ export class MessageManager implements IMessageManager{
     this.msgSyncMgr.removeMsgCleanedListener(listener)
   }
 
+  addMsgTopChangedListener(listener:MsgTopChangedListener){
+    this.msgSyncMgr.addMsgTopChangedListener(listener)
+  }
+
+  removeMsgTopChangedListener(listener:MsgTopChangedListener){
+    this.msgSyncMgr.removeMsgTopChangedListener(listener)
+  }
+
   public registerMessage(msgType:string, constructor:Function){
     MsgHandler.registerMessage(msgType, constructor)
   }
@@ -207,6 +224,117 @@ export class MessageManager implements IMessageManager{
       let results = this.buildReactionResultsFromProto(normalizedIds, resp.items)
       this.applyReactionResults(results)
       callback(0, results)
+    })
+  }
+
+  addFavorite(msgIds:string[], callback:CommonCallback):void{
+    this.updateFavorite(msgIds, true, callback)
+  }
+
+  removeFavorite(msgIds:string[], callback:CommonCallback):void{
+    this.updateFavorite(msgIds, false, callback)
+  }
+
+  getFavorite(option:GetFavoriteMessageOption, callback:FavoriteMessagesCallback):void{
+    let normalizedCount = option.count > 0 ? option.count : 0
+    if(normalizedCount <= 0){
+      callback(new JimErrorCode().InvalidParam, [], '')
+      return
+    }
+    let req = immessage.QryFavoriteMsgsReq.create({
+      limit: normalizedCount,
+      offset: option.offset != undefined ? option.offset : ''
+    })
+    let data = immessage.QryFavoriteMsgsReq.encode(req).finish()
+    this.imclient.query('qry_favorite_msgs', JuggleIm.instance.userId, data, (code, qryAck)=>{
+      if(code != 0){
+        callback(code, [], '')
+        return
+      }
+      let resp = immessage.FavoriteMsgs.decode(qryAck.data as Uint8Array)
+      let remoteMessages:Message[] = []
+      let favoriteMessages:FavoriteMessage[] = []
+      resp.items.forEach((item)=>{
+        if(item.msg == undefined || item.msg == null){
+          return
+        }
+        let remoteMessage = MsgHandler.downMsg2Message(item.msg)
+        remoteMessages.push(remoteMessage)
+        let favoriteMessage = new FavoriteMessage()
+        favoriteMessage.message = remoteMessage
+        favoriteMessage.createdTime = JimUtil.toNumber(item.createdTime as number)
+        favoriteMessages.push(favoriteMessage)
+      })
+      let persistedMessages = this.persistRemoteMessages(remoteMessages)
+      favoriteMessages.forEach((favoriteMessage)=>{
+        if(favoriteMessage.message == null){
+          return
+        }
+        let persistedMessage = this.findMessageByRequestId(
+          persistedMessages,
+          favoriteMessage.message.messageId != '' ? favoriteMessage.message.messageId : favoriteMessage.message.clientId
+        )
+        if(persistedMessage != null){
+          favoriteMessage.message = persistedMessage
+        }
+      })
+      callback(0, favoriteMessages, resp.offset != undefined ? resp.offset as string : '')
+    })
+  }
+
+  setTop(messageId:string, conver:Conversation, isTop:boolean, callback:CommonCallback):void{
+    let normalizedMessageId = messageId.trim()
+    if(normalizedMessageId == '' || conver.conversationId == ''){
+      callback(new JimErrorCode().InvalidParam)
+      return
+    }
+    let req = immessage.TopMsgReq.create({
+      targetId: conver.conversationId,
+      channelType: conver.conversationType,
+      msgId: normalizedMessageId
+    })
+    let data = immessage.TopMsgReq.encode(req).finish()
+    let topic = isTop ? 'set_top_msg' : 'del_top_msg'
+    this.imclient.query(topic, conver.conversationId, data, (code, qryAck)=>{
+      if(code != 0){
+        callback(code)
+        return
+      }
+      let createdTime = qryAck.timestamp != undefined && qryAck.timestamp != null ?
+        JimUtil.toNumber(qryAck.timestamp as number) : new Date().getTime()
+      this.msgSyncMgr.recordLatestSendboxMsgTime(createdTime, MsgFlagTool.toFlag({ isCmd:true }))
+      this.resolveTopMessageById(conver, normalizedMessageId, (message)=>{
+        this.msgSyncMgr.notifyTopMessageChanged(conver, message, this.getCurrentOperator(), isTop, createdTime)
+      })
+      callback(0)
+    })
+  }
+
+  getTopMessage(conver:Conversation, callback:TopMessageCallback):void{
+    if(conver.conversationId == ''){
+      callback(new JimErrorCode().InvalidParam, null, null, 0)
+      return
+    }
+    let req = immessage.GetTopMsgReq.create({
+      targetId: conver.conversationId,
+      channelType: conver.conversationType
+    })
+    let data = immessage.GetTopMsgReq.encode(req).finish()
+    this.imclient.query('get_top_msg', conver.conversationId, data, (code, qryAck)=>{
+      if(code != 0){
+        callback(code, null, null, 0)
+        return
+      }
+      let resp = immessage.TopMsg.decode(qryAck.data as Uint8Array)
+      if(resp.msg == undefined || resp.msg == null){
+        callback(new JimErrorCode().MessageNotExist, null, this.buildUserInfoFromProto(resp.operator), JimUtil.toNumber(resp.createdTime as number))
+        return
+      }
+      let message = MsgHandler.downMsg2Message(resp.msg)
+      let persistedMessages = this.persistRemoteMessages([message])
+      let persistedMessage = persistedMessages.length > 0 ? persistedMessages[0] : message
+      let operator = this.buildUserInfoFromProto(resp.operator)
+      callback(0, persistedMessage, operator, JimUtil.toNumber(resp.createdTime as number))
     })
   }
 
@@ -278,7 +406,105 @@ export class MessageManager implements IMessageManager{
     })
   }
 
+  private updateFavorite(msgIds:string[], isAdd:boolean, callback:CommonCallback):void{
+    let requestIds = this.normalizeDistinctMessageIds(msgIds)
+    if(requestIds.length == 0){
+      callback(new JimErrorCode().InvalidParam)
+      return
+    }
+    let messages = JimDbManager.instance.getMessageDao().getMessagesByMessageIds(requestIds)
+    if(messages.length == 0){
+      callback(new JimErrorCode().MessageNotExist)
+      return
+    }
+    let items = this.buildFavoriteMsgIdItems(messages)
+    if(items.length == 0){
+      callback(new JimErrorCode().MessageNotExist)
+      return
+    }
+    let req = immessage.FavoriteMsgIds.create({
+      items: items
+    })
+    let data = immessage.FavoriteMsgIds.encode(req).finish()
+    let topic = isAdd ? 'add_favorite_msgs' : 'del_favorite_msgs'
+    this.imclient.query(topic, JuggleIm.instance.userId, data, (code, _qryAck)=>{
+      callback(code)
+    })
+  }
+
+  private buildFavoriteMsgIdItems(messages:Message[]):immessage.IFavoriteMsgIdItem[]{
+    let currentUserId = JuggleIm.instance.userId
+    let items:immessage.IFavoriteMsgIdItem[] = []
+    messages.forEach((message)=>{
+      if(message.messageId == ''){
+        return
+      }
+      let receiverId = message.conversation.conversationId
+      if(message.conversation.conversationType == immessage.ChannelType.Private && message.direction == 1){
+        receiverId = currentUserId
+      }
+      items.push(immessage.FavoriteMsgIdItem.create({
+        senderId: message.senderId,
+        receiverId: receiverId,
+        channelType: message.conversation.conversationType,
+        msgId: message.messageId
+      }))
+    })
+    return items
+  }
+
+  private resolveTopMessageById(conver:Conversation, messageId:string, callback:(message:Message | null)=>void):void{
+    this.getMessagesByMessageIds(conver, [messageId], (code, messages)=>{
+      if(code != 0 || messages.length == 0){
+        callback(null)
+        return
+      }
+      callback(messages[0])
+    })
+  }
+
+  private getCurrentOperator():UserInfo | null{
+    let currentUserId = JuggleIm.instance.userId
+    if(currentUserId == ''){
+      return null
+    }
+    let user = JuggleIm.instance.getUserInfoManager().getLocalUserInfo(currentUserId)
+    if(user != null){
+      return user
+    }
+    let result = new UserInfo()
+    result.userId = currentUserId
+    return result
+  }
+
+  private buildUserInfoFromProto(proto:immessage.IUserInfo | null | undefined):UserInfo | null{
+    if(proto == undefined || proto == null){
+      return null
+    }
+    let user = new UserInfo()
+    user.userId = proto.userId != undefined ? proto.userId as string : ''
+    user.nickname = proto.nickname != undefined ? proto.nickname as string : ''
+    user.userPortrait = proto.userPortrait != undefined ? proto.userPortrait as string : ''
+    user.userType = proto.userType != undefined ? JimUtil.toNumber(proto.userType as number) : 0
+    user.updTime = proto.updatedTime != undefined ? JimUtil.toNumber(proto.updatedTime as number) : 0
+    if(user.userId != ''){
+      JuggleIm.instance.getUserInfoManager().saveUserInfo(user)
+    }
+    return user
+  }
+
   private normalizeReactionMessageIds(msgIds:string[]):string[]{
+    let normalizedIds:string[] = []
+    msgIds.forEach((msgId)=>{
+      let normalizedId = msgId.trim()
+      if(normalizedId != '' && normalizedIds.indexOf(normalizedId) < 0){
+        normalizedIds.push(normalizedId)
+      }
+    })
+    return normalizedIds
+  }
+
+  private normalizeDistinctMessageIds(msgIds:string[]):string[]{
     let normalizedIds:string[] = []
     msgIds.forEach((msgId)=>{
       let normalizedId = msgId.trim()
@@ -1322,6 +1548,25 @@ export class MessageManager implements IMessageManager{
       }
     })
     return result
+  }
+
+  private persistRemoteMessages(remoteMessages:Message[]):Message[]{
+    if(remoteMessages.length == 0){
+      return []
+    }
+    let msgDao = JimDbManager.instance.getMessageDao()
+    let localMessages = msgDao.getMessagesByMessageIds(remoteMessages.map((message)=>message.messageId))
+    this.mergeLocalMessageState(localMessages, remoteMessages)
+    remoteMessages.forEach((message)=>{
+      if(!msgDao.existByMsgId(message.messageId, message.clientId)){
+        msgDao.insert(message)
+      }
+    })
+    return this.combineMessagesByRequestIds(
+      remoteMessages.map((message)=>message.messageId != '' ? message.messageId : message.clientId),
+      localMessages,
+      remoteMessages
+    )
   }
 
   private queryRemoteMessagesByIds(conver:Conversation,msgIds:string[],callback:QryMessagesCallback):void{

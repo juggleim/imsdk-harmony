@@ -8,6 +8,8 @@ import { MsgHandler } from '../entries/msghandler'
 import { MsgSyncManager } from './msgsyncmanager'
 import { IConversationManager } from '../interfaces/iconversationmanager'
 import { JimErrorCode } from '../entries/errcode'
+import { MsgFlagTool } from '../improto/msgflag'
+import { JimUtil } from '../commons/jimutil'
 import {
   ConversationAddListener,
   ConversationCallback,
@@ -21,6 +23,8 @@ import {
   TotalUnreadCountCallback,
   TotalUnreadCountUpdateListener
 } from '../interfaces/conversationtypes'
+
+const TOP_TRACE_TAG:string = 'TOPTRACE'
 
 export {
   ConversationAddListener,
@@ -117,6 +121,27 @@ export class ConversationManager implements IConversationManager{
     return normalizedOptions
   }
 
+  private syncConversationStateFromRemote(remoteConver:ConversationInfo):void{
+    let localConver = JimDbManager.instance.getConversationDao().getConver(remoteConver.conversation)
+    if(localConver == undefined){
+      console.log(`${TOP_TRACE_TAG} conversation_get_local_missing: converId=${remoteConver.conversation.conversationId}, converType=${remoteConver.conversation.conversationType}, remoteIsTop=${remoteConver.isTop}, remoteTopTime=${remoteConver.topTime}, remoteIsMute=${remoteConver.isMute}`)
+      return
+    }
+    let changed = localConver.isTop != remoteConver.isTop ||
+      localConver.topTime != remoteConver.topTime ||
+      localConver.isMute != remoteConver.isMute
+    if(!changed){
+      console.log(`${TOP_TRACE_TAG} conversation_get_local_sync_skip: converId=${remoteConver.conversation.conversationId}, converType=${remoteConver.conversation.conversationType}, localIsTop=${localConver.isTop}, localTopTime=${localConver.topTime}, localIsMute=${localConver.isMute}`)
+      return
+    }
+    localConver.isTop = remoteConver.isTop
+    localConver.topTime = remoteConver.topTime
+    localConver.isMute = remoteConver.isMute
+    JimDbManager.instance.getConversationDao().upsert(localConver)
+    console.log(`${TOP_TRACE_TAG} conversation_get_local_sync_update: converId=${remoteConver.conversation.conversationId}, converType=${remoteConver.conversation.conversationType}, localIsTop=${localConver.isTop}, localTopTime=${localConver.topTime}, localIsMute=${localConver.isMute}`)
+    this.msgSyncMgr.notifyConversationUpdate([localConver])
+  }
+
   getConversation(conver:Conversation,callback:ConversationCallback){
     let req = immessage.QryConverReq.create({
       "targetId":conver.conversationId,
@@ -132,10 +157,11 @@ export class ConversationManager implements IConversationManager{
         converInfo.conversation = converInfo.lastMessage.conversation
         converInfo.converTime = resp.sortTime as number
         converInfo.isTop = (resp.isTop as number)>0
-        converInfo.topTime = resp.topUpdatedTime as number
+        converInfo.topTime = JimUtil.toNumber(resp.topUpdatedTime as number)
         converInfo.isMute = (resp.undisturbType as number)>0
         converInfo.tags = this.toConversationTags(resp.converTags, converInfo.conversation)
         JimDbManager.instance.getConverTagDao().replaceTags(converInfo.conversation, converInfo.tags)
+        this.syncConversationStateFromRemote(converInfo)
         callback(code,converInfo)
       }else{
         callback(code,null)
@@ -254,6 +280,7 @@ export class ConversationManager implements IConversationManager{
   }
 
   setTop(conver:Conversation,isTop:boolean,callback:CommonCallback){
+    console.log(`${TOP_TRACE_TAG} conversation_set_top_request: converId=${conver.conversationId}, converType=${conver.conversationType}, isTop=${isTop}, userId=${JuggleIm.instance.userInfo.userId}`)
     let req = immessage.ConversationsReq.create({
       "conversations":[{
         "targetId":conver.conversationId,
@@ -262,7 +289,24 @@ export class ConversationManager implements IConversationManager{
       }]
     })
     let data = immessage.ConversationsReq.encode(req).finish()
-    this.imclient.query("top_convers",JuggleIm.instance.userInfo.userId,data,(code)=>{
+    this.imclient.query("top_convers",JuggleIm.instance.userInfo.userId,data,(code, qryAck)=>{
+      let timestamp = qryAck.timestamp != undefined && qryAck.timestamp != null ?
+        JimUtil.toNumber(qryAck.timestamp as number) : 0
+      console.log(`${TOP_TRACE_TAG} conversation_set_top_ack: converId=${conver.conversationId}, converType=${conver.conversationType}, isTop=${isTop}, code=${code}, timestamp=${timestamp}`)
+      if(code == 0){
+        let localConver = JimDbManager.instance.getConversationDao().getConver(conver)
+        if(localConver != undefined){
+          localConver.isTop = isTop
+          let topTime = timestamp > 0 ? timestamp : new Date().getTime()
+          localConver.topTime = isTop ? topTime : 0
+          JimDbManager.instance.getConversationDao().upsert(localConver)
+          this.msgSyncMgr.recordLatestSendboxMsgTime(topTime, MsgFlagTool.toFlag({ isCmd:true }))
+          console.log(`${TOP_TRACE_TAG} conversation_set_top_local_update: converId=${conver.conversationId}, converType=${conver.conversationType}, localIsTop=${localConver.isTop}, localTopTime=${localConver.topTime}`)
+          this.msgSyncMgr.notifyConversationUpdate([localConver])
+        }else{
+          console.log(`${TOP_TRACE_TAG} conversation_set_top_local_missing: converId=${conver.conversationId}, converType=${conver.conversationType}`)
+        }
+      }
       callback(code)
     })
   }

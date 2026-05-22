@@ -13,9 +13,16 @@ import { ConversationAddListener,ConversationUpdateListener,ConversationDeleteLi
 import { JuggleIm } from "../juggleim";
 import {
   MsgCleanedListener,
-  MsgDeletedListener, MsgGroupReadReceiptListener, MsgModifiedListener, MsgReadReceiptListener, MsgRecalledListener, MsgReceivedListener } from "./messagemanager";
+  MsgDeletedListener,
+  MsgGroupReadReceiptListener,
+  MsgModifiedListener,
+  MsgReadReceiptListener,
+  MsgRecalledListener,
+  MsgReceivedListener,
+  MsgTopChangedListener
+} from "./messagemanager";
 import { JimMsgType } from "../entries/msgtypes";
-import { GroupReadNtfMessage, ModifyMessage, MsgExSetMessage, ReadNtfMessage, RecallCmdMessage } from "../entries/cmdmsg";
+import { GroupReadNtfMessage, ModifyMessage, MsgExSetMessage, ReadNtfMessage, RecallCmdMessage, TopMsgMessage } from "../entries/cmdmsg";
 
 function promiseSyncConvers(mgr:MsgSyncManager):Promise<boolean>{
   return new Promise((resolve)=>{
@@ -77,6 +84,7 @@ export class MsgSyncManager{
   private groupReadReceiptListeners:MsgGroupReadReceiptListener[] = new Array()
   private msgDeletedListeners:MsgDeletedListener[] = new Array()
   private msgCleanedListeners:MsgCleanedListener[] = new Array()
+  private msgTopChangedListeners:MsgTopChangedListener[] = new Array()
 
   constructor(imclient:ImClient) {
     this.imclient = imclient
@@ -292,6 +300,31 @@ export class MsgSyncManager{
     }
   }
 
+  addMsgTopChangedListener(listener:MsgTopChangedListener){
+    this.msgTopChangedListeners.push(listener)
+  }
+
+  removeMsgTopChangedListener(listener:MsgTopChangedListener){
+    for(let i=0;i<this.msgTopChangedListeners.length;i++){
+      if(this.msgTopChangedListeners[i]===listener){
+        this.msgTopChangedListeners.splice(i,1)
+        break
+      }
+    }
+  }
+
+  public notifyTopMessageChanged(
+    conver:Conversation,
+    message:Message | null,
+    operator:UserInfo | null,
+    isTop:boolean,
+    createdTime:number
+  ):void{
+    this.msgTopChangedListeners.forEach((listener)=>{
+      listener(conver, message, operator, isTop, createdTime)
+    })
+  }
+
   private onDirectMsgReceived(index:number,data:Uint8Array){
     if(data!=null&&data!=undefined){
       let downMsg = immessage.DownMsg.decode(data)
@@ -425,6 +458,8 @@ export class MsgSyncManager{
         this.handleGroupReadNtfMsg(msg)
       }else if(msg.msgContent.getMsgType() == JimMsgType.ModifyMsg){
         this.handleModifyCmdMsg(msg)
+      }else if(msg.msgContent.getMsgType() == JimMsgType.TopMsg){
+        this.handleTopMsgCmdMsg(msg)
       }
     }else{
       if(msgFlag.isStorage){
@@ -595,6 +630,35 @@ export class MsgSyncManager{
     }
     this.latestConverSyncTime = JimDbManager.instance.getConfDao().getConverSyncTime()
     return this.latestConverSyncTime
+  }
+
+  private handleTopMsgCmdMsg(message:Message):void{
+    let topMsg = message.msgContent as TopMsgMessage
+    let operator = this.resolveTopMsgOperator(message.senderId)
+    if(topMsg.msgId == ''){
+      this.notifyTopMessageChanged(message.conversation, null, operator, topMsg.isTop, message.sentTime)
+      return
+    }
+    JuggleIm.instance.getMessageManager().getMessagesByMessageIds(message.conversation, [topMsg.msgId], (code, messages)=>{
+      let topMessage:Message | null = null
+      if(code == 0 && messages.length > 0){
+        topMessage = messages[0]
+      }
+      this.notifyTopMessageChanged(message.conversation, topMessage, operator, topMsg.isTop, message.sentTime)
+    })
+  }
+
+  private resolveTopMsgOperator(userId:string):UserInfo | null{
+    if(userId == ''){
+      return null
+    }
+    let user = JuggleIm.instance.getUserInfoManager().getLocalUserInfo(userId)
+    if(user != null){
+      return user
+    }
+    let result = new UserInfo()
+    result.userId = userId
+    return result
   }
 
   public async syncAfterConnect(status:number,reasonCode:number,userId:string){

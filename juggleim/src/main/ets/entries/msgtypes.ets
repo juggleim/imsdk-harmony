@@ -16,5 +16,6 @@ export class JimMsgType{
   static ClearUnread:string = 'jg:clearunread'
   static ModifyMsg:string = 'jg:modify'
   static MsgExSet:string = 'jg:msgexset'
+  static TopMsg:string = 'jg:topmsg'
   static DelMsgs:string = `jg:delmsgs`
 }

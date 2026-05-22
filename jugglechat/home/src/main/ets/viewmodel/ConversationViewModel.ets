@@ -29,18 +29,36 @@ class ConversationViewItem {
   converType:number
   lastMsgTime:number
   converTime:number
+  isTop:boolean
+  topTime:number
   isDraft:boolean
   tags:string[]
   name: ResourceStr
   msg: ResourceStr
   time: ResourceStr
   icon: ResourceStr
-  constructor(userId:string,converId:string,converType:number,lastMsgTime:number,converTime:number,isDraft:boolean,tags:string[],name:ResourceStr,msg:ResourceStr,time:ResourceStr,icon:ResourceStr) {
+  constructor(
+    userId:string,
+    converId:string,
+    converType:number,
+    lastMsgTime:number,
+    converTime:number,
+    isTop:boolean,
+    topTime:number,
+    isDraft:boolean,
+    tags:string[],
+    name:ResourceStr,
+    msg:ResourceStr,
+    time:ResourceStr,
+    icon:ResourceStr
+  ) {
     this.userId = userId
     this.converId = converId
     this.converType = converType
     this.lastMsgTime = lastMsgTime
     this.converTime = converTime
+    this.isTop = isTop
+    this.topTime = topTime
     this.isDraft = isDraft
     this.tags = tags
     this.name = name
@@ -91,7 +109,8 @@ export function toConverViewItem(conver:ConversationInfo):ConversationViewItem{
   let timeStr = CommonUtil.getTimeToYYYYDDMMHHMMSS(conver.converTime)
 
   return new ConversationViewItem("", conver.conversation.conversationId,
-    conver.conversation.conversationType, conver.lastMessage.sentTime,conver.converTime, isDraft, tags, title,
+    conver.conversation.conversationType, conver.lastMessage.sentTime, conver.converTime,
+    conver.isTop, conver.topTime, isDraft, tags, title,
     msgStr, timeStr, iconUrl)
 }
 

@@ -1,11 +1,14 @@
 import { Conversation } from '../entries/conversation'
-import { Message, MessageContent, MessageReactionResult } from '../entries/message'
+import { FavoriteMessage, Message, MessageContent, MessageReactionResult } from '../entries/message'
 import { GroupMessageReadInfo, GroupMessageReadInfoDetail } from '../entries/group'
+import { UserInfo } from '../entries/user'
 
 export type MessageCallback = (code: number, msg: Message | null) => void
 export type QryMessagesCallback = (code: number, msgs: Message[], hasMore: boolean) => void
 export type GroupMessageReadInfoDetailCallback = (code: number, detail: GroupMessageReadInfoDetail | null) => void
 export type MessageReactionsCallback = (code: number, items: MessageReactionResult[]) => void
+export type FavoriteMessagesCallback = (code: number, items: FavoriteMessage[], offset: string) => void
+export type TopMessageCallback = (code: number, message: Message | null, operator: UserInfo | null, createdTime: number) => void
 export type DownloadMediaMessageProgressCallback = (progress: number, msg: Message) => void
 export type DownloadMediaMessageSuccessCallback = (msg: Message) => void
 export type DownloadMediaMessageErrorCallback = (code: number) => void
@@ -42,6 +45,11 @@ export class ClearMsgOptions {
   cleanTimeOffset: number = 0
 }
 
+export class GetFavoriteMessageOption {
+  offset: string = ''
+  count: number = 20
+}
+
 export class SearchParams {
   conver?: Conversation
   keywords: string = ''
@@ -59,3 +67,4 @@ export type MsgReadReceiptListener = (conver: Conversation, msgIds: string[]) =>
 export type MsgGroupReadReceiptListener = (conver: Conversation, messages: Map<string, GroupMessageReadInfo>) => void
 export type MsgDeletedListener = (conver: Conversation, msgIds: string[]) => void
 export type MsgCleanedListener = (conver: Conversation, cleanTime: number, senderId: string) => void
+export type MsgTopChangedListener = (conver: Conversation, message: Message | null, operator: UserInfo | null, isTop: boolean, createdTime: number) => void

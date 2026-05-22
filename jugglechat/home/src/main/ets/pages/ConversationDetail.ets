@@ -24,7 +24,7 @@ import { media } from '@kit.MediaKit';
 import { photoAccessHelper } from '@kit.MediaLibraryKit';
 import { ConversationDetailParams } from '../viewmodel/ConversationViewModel';
 import { ConversationViewItem, toConverViewItem } from '../viewmodel/ConversationViewModel';
-import { cloneMessageContent, isDisplayableMessage, MediaDownloadState, MessageViewItem, toMessageViewItem } from '../viewmodel/MessageViewModel'
+import { buildMessagePreview, cloneMessageContent, isDisplayableMessage, MediaDownloadState, MessageViewItem, toMessageViewItem } from '../viewmodel/MessageViewModel'
 import { ObservedArray } from '../jim/common';
 import {
   Conversation,
@@ -449,6 +449,22 @@ export struct ConversationDetail {
     }else{
       JuggleIm.instance.getMessageManager().addMessageReaction(item?.messageId as string, reactionId, callback)
     }
+  }
+
+  private addSelectedFavorite():void{
+    let item = this.getSelectedMessage()
+    if(item == undefined || item.messageId == ''){
+      this.showToast('当前消息暂不支持收藏')
+      return
+    }
+    JuggleIm.instance.getMessageManager().addFavorite([item.messageId], (code)=>{
+      if(code != 0){
+        this.showToast(`收藏失败: ${code}`)
+        return
+      }
+      this.closePanels()
+      this.showToast('已收藏')
+    })
   }
 
   private quoteSelectedMessage():void{
@@ -1350,7 +1366,6 @@ export struct ConversationDetail {
       await this.refreshMessagesByIds(changedMessageIds)
       this.refreshOpenedGroupReadDetail(changedIds)
     }
-
     JuggleIm.instance.getMessageManager().addMsgReceivedListener(this.msgReceiveListener)
     JuggleIm.instance.getMessageManager().addMsgModifiedListener(this.msgModifiedListener)
     JuggleIm.instance.getMessageManager().addReadReceiptListener(this.readReceiptListener)
@@ -1808,6 +1823,21 @@ export struct ConversationDetail {
                     .strokeWidth(1)
                     .color('#EAEAEA')
                 }
+
+                Row() {
+                  Text('收藏')
+                    .fontSize(16)
+                    .fontColor('#111111')
+                  Blank()
+                }
+                .width('100%')
+                .padding({ left: 20, right: 20, top: 18, bottom: 18 })
+                .onClick(()=>{
+                  this.addSelectedFavorite()
+                })
+                Divider()
+                  .strokeWidth(1)
+                  .color('#EAEAEA')
 
                 Row() {
                   Text('引用')

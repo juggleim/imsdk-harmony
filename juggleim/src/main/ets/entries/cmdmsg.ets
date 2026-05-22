@@ -218,6 +218,33 @@ interface IMsgExSetPayload{
   exts:IMsgExSetItem[]
 }
 
+interface ITopMsgPayload{
+  action:number
+  msg_id:string
+}
+
+export class TopMsgMessage extends MessageContent{
+  isTop:boolean = false
+  msgId:string = ''
+
+  constructor() {
+    super()
+    this.setMsgType(JimMsgType.TopMsg)
+    this.setMsgFlag({isCmd:true})
+  }
+
+  encode(): Uint8Array {
+    return JimUtil.stringToUint8Array('')
+  }
+
+  decode(data: Uint8Array): void {
+    let str = JimUtil.uint8ArrayToString(data)
+    let payload = JSON.parse(str) as ITopMsgPayload
+    this.isTop = payload.action == 0
+    this.msgId = payload.msg_id != undefined ? payload.msg_id : ''
+  }
+}
+
 export class MsgExSetMessage extends MessageContent{
   originalMessageId:string = ''
   addReactions:MessageReaction[] = []

@@ -14,7 +14,7 @@
  */
 
 import { Adaptive, BaseConstants, BreakpointConstants } from 'base';
-import { ConversationViewItem,ConversationDetailParams } from '../viewmodel/ConversationViewModel';
+import { ConversationDetailParams, ConversationRouteParams, ConversationViewItem } from '../viewmodel/ConversationViewModel';
 import { ConversationItem } from '../views/Conversation/ConversationItem';
 import { HomeTopSearch } from '../views/common/HomeTopSearch';
 import { HomeConstants } from '../constants/HomeConstants';
@@ -31,12 +31,13 @@ import {
 } from 'juggleim'
 import { toConverViewItem } from '../viewmodel/ConversationViewModel'
 
+const TOP_TRACE_TAG:string = 'TOPTRACE'
+
 @Component
 export struct ConversationList {
   @StorageProp('currentBreakpoint') currentBreakpoint: string = BreakpointConstants.BREAKPOINT_SM;
   @Link currentConversationUserName: ResourceStr;
   @Link currentContactUserName: string;
-  @State private currentIndex: number = 0;
   @State conversationList:ObservedArray<ConversationViewItem>=new ObservedArray<ConversationViewItem>([])
   @Consume('pageInfo') pageInfo: NavPathStack;
   // private scroller: ListScroller = new ListScroller()
@@ -86,6 +87,48 @@ export struct ConversationList {
     }
   }
 
+  private compareConversation(left:ConversationViewItem, right:ConversationViewItem):number{
+    if(left.isTop != right.isTop){
+      return left.isTop ? -1 : 1
+    }
+    if(left.isTop && right.isTop && left.topTime != right.topTime){
+      return right.topTime - left.topTime
+    }
+    return right.converTime - left.converTime
+  }
+
+  private sortConversationList():void{
+    this.conversationList = new ObservedArray<ConversationViewItem>(
+      this.conversationList.slice().sort((a,b)=>this.compareConversation(a, b))
+    )
+    let order = this.conversationList.map((item)=>{
+      return `${item.converType}_${item.converId}[top=${item.isTop},topTime=${item.topTime},converTime=${item.converTime}]`
+    })
+    console.log(`${TOP_TRACE_TAG} conversation_list_sorted: count=${order.length}, order=${JSON.stringify(order)}`)
+  }
+
+  private isConversationActive(item:ConversationViewItem):boolean{
+    for(let index = this.pageInfo.size() - 1; index >= 0; index--){
+      let route = this.pageInfo.getParamByIndex(index) as ConversationRouteParams | undefined
+      if(route != undefined &&
+        route.conversationId == item.converId &&
+        route.converType == item.converType){
+        return true
+      }
+    }
+    return false
+  }
+
+  private getConversationItemBackgroundColor(item:ConversationViewItem):ResourceColor{
+    if(this.isConversationActive(item)){
+      return $r('app.color.conversation_clicked_bg_color')
+    }
+    if(item.isTop){
+      return $r('app.color.conversation_top_bg_color')
+    }
+    return Color.White
+  }
+
   aboutToDisappear(): void {
     JuggleIm.instance.getConversationManager().removeConversationAddListener(this.converAddListener)
     JuggleIm.instance.getConversationManager().removeConversationUpdateListener(this.converUpdListener)
@@ -108,20 +151,23 @@ export struct ConversationList {
 
     //conver add
     this.converAddListener = (convers)=>{
+      console.log(`${TOP_TRACE_TAG} conversation_list_add_listener: count=${convers.length}`)
       convers.forEach((conver)=>{
+        console.log(`${TOP_TRACE_TAG} conversation_list_add_item: converId=${conver.conversation.conversationId}, converType=${conver.conversation.conversationType}, isTop=${conver.isTop}, topTime=${conver.topTime}, converTime=${conver.converTime}`)
         this.mergeConversationViewItem(toConverViewItem(conver))
       })
-      this.conversationList = new ObservedArray<ConversationViewItem>(this.conversationList.slice().sort((a,b)=>b.converTime - a.converTime))
+      this.sortConversationList()
       this.rebuildConverTimes()
     }
     JuggleIm.instance.getConversationManager().addConversationAddListener(this.converAddListener)
 
     //conver update
     this.converUpdListener = (convers)=>{
-      console.log("jimsdk_msgrece_converupd:",JSON.stringify(convers))
+      console.log(`${TOP_TRACE_TAG} conversation_list_update_listener: count=${convers.length}`)
       let updatedConverList:ConversationViewItem[] = new Array()
       let updatedConverKeys:Map<string,boolean> = new Map()
       convers.forEach((conver)=>{
+        console.log(`${TOP_TRACE_TAG} conversation_list_update_item: converId=${conver.conversation.conversationId}, converType=${conver.conversation.conversationType}, isTop=${conver.isTop}, topTime=${conver.topTime}, converTime=${conver.converTime}`)
         let converViewItem = toConverViewItem(conver)
         updatedConverList.push(converViewItem)
         let key:string = conver.conversation.conversationId+"_"+conver.conversation.conversationType
@@ -137,17 +183,18 @@ export struct ConversationList {
       updatedConverList.forEach((conver)=>{
         tmpConverList.push(conver)
       })
-      tmpConverList = new ObservedArray<ConversationViewItem>(tmpConverList.slice().sort((a,b)=>b.converTime-a.converTime))
       this.conversationList = tmpConverList
+      this.sortConversationList()
       this.rebuildConverTimes()
     }
     JuggleIm.instance.getConversationManager().addConversationUpdateListener(this.converUpdListener)
 
     //conver del
     this.converDelListener = (convers)=>{
-      console.log("jimsdk_msgrece_del",JSON.stringify(convers))
+      console.log(`${TOP_TRACE_TAG} conversation_list_delete_listener: count=${convers.length}`)
       let delConverKeys:Map<string,boolean> = new Map()
       convers.forEach((conver)=>{
+        console.log(`${TOP_TRACE_TAG} conversation_list_delete_item: converId=${conver.conversation.conversationId}, converType=${conver.conversation.conversationType}`)
         let key:string = conver.conversation.conversationId+"_"+conver.conversation.conversationType
         delConverKeys.set(key,true)
       })
@@ -171,12 +218,15 @@ export struct ConversationList {
         this.conversationList = new ObservedArray<ConversationViewItem>([])
       }
       let options = this.buildConversationQueryOptions(direction, time)
+      console.log(`${TOP_TRACE_TAG} conversation_list_query_request: direction=${options.direction}, time=${options.time}, count=${options.count}, types=${JSON.stringify(options.conversationTypes)}, tagId=${options.tagId}, reset=${reset}`)
       JuggleIm.instance.getConversationManager()
         .queryConversations(options, (code, convers) => {
+          console.log(`${TOP_TRACE_TAG} conversation_list_query_response: code=${code}, count=${convers.length}`)
           convers.forEach((conver) => {
+            console.log(`${TOP_TRACE_TAG} conversation_list_query_item: converId=${conver.conversation.conversationId}, converType=${conver.conversation.conversationType}, isTop=${conver.isTop}, topTime=${conver.topTime}, converTime=${conver.converTime}, tags=${JSON.stringify(conver.tags.map((tag)=>tag.tagId))}`)
             this.mergeConversationViewItem(toConverViewItem(conver))
           })
-          this.conversationList = new ObservedArray<ConversationViewItem>(this.conversationList.slice().sort((a,b)=>b.converTime - a.converTime))
+          this.sortConversationList()
           this.rebuildConverTimes()
         })
     }
@@ -206,13 +256,12 @@ export struct ConversationList {
                 this.pageInfo.pushPath({ name: 'ConversationDetail',param:new ConversationDetailParams(item.userId,item.converId,item.converType, item.name as string)});
                 this.currentConversationUserName = item.name;
                 this.currentContactUserName = '';
-                this.currentIndex = index;
               })
-              .backgroundColor(this.currentIndex === index ? $r('app.color.conversation_clicked_bg_color') : Color.White)
+              .backgroundColor(this.getConversationItemBackgroundColor(item))
           }
           .height(Adaptive.ContactItemHeight(this.currentBreakpoint))
 
-        }, (item: ConversationViewItem, index: number) => index + JSON.stringify(item))
+        }, (item: ConversationViewItem) => `${item.converType}_${item.converId}`)
       }
       .onReachEnd(()=>{
         console.log("jimsdk_end, load more")

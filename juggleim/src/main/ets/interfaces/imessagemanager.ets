@@ -9,6 +9,8 @@ import {
     DownloadMediaMessageErrorCallback,
     DownloadMediaMessageProgressCallback,
     DownloadMediaMessageSuccessCallback,
+    FavoriteMessagesCallback,
+    GetFavoriteMessageOption,
   GetMessageOptions,
     GroupMessageReadInfoDetailCallback,
     MessageCallback,
@@ -20,9 +22,11 @@ import {
   MsgReadReceiptListener,
   MsgReceivedListener,
   MsgRecalledListener,
+  MsgTopChangedListener,
   QryMessagesCallback,
   QueryMsgOptions,
-  SearchParams
+  SearchParams,
+  TopMessageCallback
 } from './messagetypes'
 import { HashMap } from '@kit.ArkTS'
 
@@ -41,12 +45,19 @@ export interface IMessageManager {
   removeMsgDeletedListener(listener: MsgDeletedListener): void
   addMsgCleanedListener(listener: MsgCleanedListener): void
   removeMsgCleanedListener(listener: MsgCleanedListener): void
+  addMsgTopChangedListener(listener: MsgTopChangedListener): void
+  removeMsgTopChangedListener(listener: MsgTopChangedListener): void
   registerMessage(msgType: string, constructor: Function): void
   setMessageUploadProvider(provider: IMessageUploadProvider | null): void
   getMessageUploadProvider(): IMessageUploadProvider | null
   addMessageReaction(messageId: string, reactionId: string, callback: CommonCallback): void
   removeMessageReaction(messageId: string, reactionId: string, callback: CommonCallback): void
   getMessagesReaction(conver: Conversation | null, msgIds: string[], callback: MessageReactionsCallback): void
+  addFavorite(msgIds: string[], callback: CommonCallback): void
+  removeFavorite(msgIds: string[], callback: CommonCallback): void
+  getFavorite(option: GetFavoriteMessageOption, callback: FavoriteMessagesCallback): void
+  setTop(messageId: string, conver: Conversation, isTop: boolean, callback: CommonCallback): void
+  getTopMessage(conver: Conversation, callback: TopMessageCallback): void
   sendMessage(msg: MessageContent, conver: Conversation, callback: MessageCallback): void
   sendMessage(msg: MessageContent, conver: Conversation, options: MessageOptions, callback: MessageCallback): void
   sendMediaMessage(msg: MessageContent, conver: Conversation): void

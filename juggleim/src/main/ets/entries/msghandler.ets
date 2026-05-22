@@ -1,5 +1,5 @@
 import { immessage } from "../improto/immessage"
-import { RecallCmdMessage, ReadNtfMessage, GroupReadNtfMessage, ClearUnreadMessage, ModifyMessage, MsgExSetMessage } from "./cmdmsg"
+import { RecallCmdMessage, ReadNtfMessage, GroupReadNtfMessage, ClearUnreadMessage, ModifyMessage, MsgExSetMessage, TopMsgMessage } from "./cmdmsg"
 import { MessageContent, TextMessage, MergeMessage, VoiceMessage, ImageMessage, FileMessage, VideoMessage, RecallInfoMessage,
   Message, MessageSentState } from "./message"
 import { Conversation } from "./conversation"
@@ -30,6 +30,7 @@ export class MsgHandler{
     MsgHandler.registerMessage(JimMsgType.ClearUnread,ClearUnreadMessage)
     MsgHandler.registerMessage(JimMsgType.ModifyMsg,ModifyMessage)
     MsgHandler.registerMessage(JimMsgType.MsgExSet,MsgExSetMessage)
+    MsgHandler.registerMessage(JimMsgType.TopMsg,TopMsgMessage)
 
   }
 

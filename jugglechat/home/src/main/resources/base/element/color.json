@@ -75,6 +75,10 @@
     {
       "name": "conversation_clicked_bg_color",
       "value": "#33D8D8D8"
+    },
+    {
+      "name": "conversation_top_bg_color",
+      "value": "#F0F2F5"
     }
   ]
 }

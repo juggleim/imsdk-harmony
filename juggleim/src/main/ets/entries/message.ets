@@ -40,6 +40,14 @@ export class MessageReactionResult{
   }
 }
 
+export class FavoriteMessage{
+  message:Message | null = null
+  createdTime:number = 0
+
+  constructor() {
+  }
+}
+
 export class MessageContent{
   private msgType:string
   private msgFlag:MsgFlag
