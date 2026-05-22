@@ -16,20 +16,32 @@
 import { Adaptive, BaseConstants, BreakpointConstants, StandardIcon } from 'base';
 import {ConversationDetailItem} from '../views/Conversation/ConversationDetailItem';
 import { ConversationDetailTopSearch } from '../views/Conversation/ConversationDetailTopSearch';
-import { deviceInfo } from '@kit.BasicServicesKit';
+import { common } from '@kit.AbilityKit';
+import { BusinessError, deviceInfo } from '@kit.BasicServicesKit';
+import abilityAccessCtrl, { Permissions } from '@ohos.abilityAccessCtrl';
+import { fileIo, fileUri, picker } from '@kit.CoreFileKit';
+import { media } from '@kit.MediaKit';
+import { photoAccessHelper } from '@kit.MediaLibraryKit';
 import { ConversationDetailParams } from '../viewmodel/ConversationViewModel';
 import { ConversationViewItem, toConverViewItem } from '../viewmodel/ConversationViewModel';
-import { cloneMessageContent, isDisplayableMessage, MessageViewItem, toMessageViewItem } from '../viewmodel/MessageViewModel'
+import { cloneMessageContent, isDisplayableMessage, MediaDownloadState, MessageViewItem, toMessageViewItem } from '../viewmodel/MessageViewModel'
 import { ObservedArray } from '../jim/common';
 import {
   Conversation,
+  DownloadMediaMessageCancelCallback,
+  DownloadMediaMessageErrorCallback,
+  DownloadMediaMessageProgressCallback,
+  DownloadMediaMessageSuccessCallback,
+  FileMessage,
   GetConversationDirection,
   GetConversationOptions,
   GetMessageDirection,
   GetMessageOptions,
   GroupMessageReadInfoDetail,
+  ImageMessage,
   JimMsgType,
   JuggleIm,
+  MediaMessageContent,
   Message,
   MessageMentionInfo,
   MessageOptions,
@@ -39,7 +51,9 @@ import {
   MsgReadReceiptListener,
   MsgReceivedListener,
   TextMessage,
-  UserInfo
+  UserInfo,
+  VideoMessage,
+  VoiceMessage
 } from 'juggleim';
 import { HomeConstants } from '../constants/HomeConstants';
 import { promptAction } from '@kit.ArkUI'
@@ -95,6 +109,10 @@ export struct ConversationDetail {
   @State private showMessageActionPanel:boolean = false
   @State private showForwardPanel:boolean = false
   @State private showGroupReadDetailPanel:boolean = false
+  @State private showMediaPanel:boolean = false
+  @State private useVoiceInput:boolean = false
+  @State private isRecordingVoice:boolean = false
+  @State private recordingDurationMs:number = 0
   @State private selectedMessageIndex:number = -1
   @State private quotedMessageId:string = ''
   @State private quotedPreview:string = ''
@@ -112,6 +130,13 @@ export struct ConversationDetail {
   @State private showMentionPanel:boolean = false
   private selectedMentionMap:Map<string, MentionCandidate> = new Map()
   private touchStartTimeMap:Map<string,number> = new Map()
+  private recorder:media.AVRecorder | null = null
+  private recorderFile:fileIo.File | null = null
+  private recorderFilePath:string = ''
+  private recordingStartTime:number = 0
+  private recordingTimer:number = -1
+  private isPreparingRecording:boolean = false
+  private isVoicePressing:boolean = false
 
   @Builder
   refreshContent() {
@@ -186,6 +211,11 @@ export struct ConversationDetail {
         (viewItem.clientId != '' && item.clientId == viewItem.clientId)
     })
     if(foundIndex >= 0){
+      let currentItem = this.msgList[foundIndex]
+      if(this.shouldKeepDownloadState(viewItem, currentItem)){
+        viewItem.downloadState = currentItem.downloadState
+        viewItem.downloadProgress = currentItem.downloadProgress
+      }
       this.msgList[foundIndex] = viewItem
     }else{
       this.msgList.push(viewItem)
@@ -346,6 +376,20 @@ export struct ConversationDetail {
     this.showMessageActionPanel = false
     this.showForwardPanel = false
     this.showGroupReadDetailPanel = false
+    this.showMediaPanel = false
+    this.showMentionPanel = false
+  }
+
+  private toggleMediaPanel():void{
+    if(this.isRecordingVoice || this.isPreparingRecording){
+      return
+    }
+    this.showMessageActionPanel = false
+    this.showForwardPanel = false
+    this.showGroupReadDetailPanel = false
+    this.showMentionPanel = false
+    this.useVoiceInput = false
+    this.showMediaPanel = !this.showMediaPanel
   }
 
   private openMessageActions(index:number):void{
@@ -388,6 +432,71 @@ export struct ConversationDetail {
       return false
     }
     return this.isGroupConversation() && !item.isReceived && item.messageId != ''
+  }
+
+  private shouldKeepDownloadState(nextItem:MessageViewItem, currentItem:MessageViewItem):boolean{
+    if(!(nextItem.msgContent instanceof MediaMessageContent)){
+      return false
+    }
+    let mediaMsg = nextItem.msgContent as MediaMessageContent
+    return mediaMsg.localPath == '' && currentItem.downloadState != MediaDownloadState.none
+  }
+
+  private canDownloadMedia(item?:MessageViewItem):boolean{
+    if(item == undefined || !(item.msgContent instanceof MediaMessageContent)){
+      return false
+    }
+    let mediaMsg = item.msgContent as MediaMessageContent
+    return item.messageId != '' && mediaMsg.url != '' && mediaMsg.localPath == ''
+  }
+
+  private shouldShowDownloadAction(item?:MessageViewItem):boolean{
+    if(item == undefined){
+      return false
+    }
+    return this.canDownloadMedia(item) || item.downloadState == MediaDownloadState.downloading
+  }
+
+  private updateDownloadState(messageId:string, state:number, progress:number):void{
+    let foundIndex = this.msgList.findIndex((item)=>{
+      return item.messageId == messageId
+    })
+    if(foundIndex < 0){
+      return
+    }
+    this.msgList[foundIndex].downloadState = state
+    this.msgList[foundIndex].downloadProgress = progress
+  }
+
+  private startMediaDownload(item:MessageViewItem):void{
+    if(!this.canDownloadMedia(item)){
+      return
+    }
+    let onProgress:DownloadMediaMessageProgressCallback = (progress:number, _msg:Message)=>{
+      this.updateDownloadState(item.messageId, MediaDownloadState.downloading, progress)
+    }
+    let onSuccess:DownloadMediaMessageSuccessCallback = async (msg:Message)=>{
+      this.updateDownloadState(item.messageId, MediaDownloadState.none, 0)
+      await this.refreshMessagesByIds([msg.messageId])
+      this.showToast('下载完成')
+    }
+    let onError:DownloadMediaMessageErrorCallback = (code:number)=>{
+      this.updateDownloadState(item.messageId, MediaDownloadState.failed, 0)
+      this.showToast(`下载失败: ${code}`)
+    }
+    let onCancel:DownloadMediaMessageCancelCallback = (_msg:Message)=>{
+      this.updateDownloadState(item.messageId, MediaDownloadState.canceled, 0)
+      this.showToast('已取消下载')
+    }
+    this.updateDownloadState(item.messageId, MediaDownloadState.downloading, 0)
+    JuggleIm.instance.getMessageManager().downloadMediaMessage(item.messageId, onProgress, onSuccess, onError, onCancel)
+  }
+
+  private cancelMediaDownload(item:MessageViewItem):void{
+    if(item.messageId == ''){
+      return
+    }
+    JuggleIm.instance.getMessageManager().cancelDownloadMediaMessage(item.messageId)
   }
 
   private applyGroupReadDetail(detail:GroupMessageReadInfoDetail):void{
@@ -725,6 +834,430 @@ export struct ConversationDetail {
     this.selectedMentionMap.clear()
   }
 
+  private getAbilityContext():common.UIAbilityContext | null{
+    let hostContext = getContext(this) as common.UIAbilityContext
+    if(hostContext == undefined){
+      return null
+    }
+    return hostContext
+  }
+
+  private async requestMicrophonePermission():Promise<boolean>{
+    let context = this.getAbilityContext()
+    if(context == null){
+      this.showToast('当前页面上下文不可用')
+      return false
+    }
+    try{
+      let atManager = abilityAccessCtrl.createAtManager()
+      let permissions:Array<Permissions> = ['ohos.permission.MICROPHONE']
+      let result = await atManager.requestPermissionsFromUser(context, permissions)
+      if(result.authResults.length > 0 && result.authResults[0] == 0){
+        return true
+      }
+    }catch(error){
+      let err = error as BusinessError
+      console.error(`jimsdk_request_microphone_fail:${err.code}:${err.message}`)
+    }
+    this.showToast('未获得麦克风权限')
+    return false
+  }
+
+  private stopRecordingTimer():void{
+    if(this.recordingTimer >= 0){
+      clearInterval(this.recordingTimer)
+      this.recordingTimer = -1
+    }
+  }
+
+  private startRecordingTimer():void{
+    this.stopRecordingTimer()
+    this.recordingTimer = setInterval(()=>{
+      if(this.recordingStartTime <= 0){
+        this.recordingDurationMs = 0
+        return
+      }
+      this.recordingDurationMs = new Date().getTime() - this.recordingStartTime
+    }, 200)
+  }
+
+  private buildVoiceRecordPath(context:common.UIAbilityContext):string{
+    let dir = `${context.cacheDir}/voice`
+    try{
+      fileIo.mkdirSync(dir, true)
+    }catch(error){
+    }
+    return `${dir}/voice_${new Date().getTime()}.m4a`
+  }
+
+  private resetRecordingState():void{
+    this.isRecordingVoice = false
+    this.isPreparingRecording = false
+    this.recordingDurationMs = 0
+    this.recordingStartTime = 0
+    this.stopRecordingTimer()
+  }
+
+  private closeRecorderFile():void{
+    if(this.recorderFile == null){
+      return
+    }
+    try{
+      fileIo.closeSync(this.recorderFile)
+    }catch(error){
+    }
+    this.recorderFile = null
+  }
+
+  private async releaseRecorder():Promise<void>{
+    if(this.recorder == null){
+      return
+    }
+    try{
+      await this.recorder.release()
+    }catch(error){
+    }
+    this.recorder = null
+  }
+
+  private disposeRecordingResources(removeFile:boolean):void{
+    let activeRecorder:media.AVRecorder | null = this.recorder
+    let recordPath = this.recorderFilePath
+    this.recorder = null
+    this.recorderFilePath = ''
+    this.closeRecorderFile()
+    if(activeRecorder != null){
+      let recorder:media.AVRecorder = activeRecorder
+      recorder.stop()
+        .catch(()=>{
+        })
+        .then(()=>{
+          recorder.release().catch(()=>{
+          })
+        })
+    }
+    if(removeFile){
+      this.removeRecordingFile(recordPath)
+    }
+    this.resetRecordingState()
+  }
+
+  private removeRecordingFile(path:string):void{
+    if(path == ''){
+      return
+    }
+    try{
+      fileIo.unlinkSync(path)
+    }catch(error){
+    }
+  }
+
+  private getRecordingSeconds():number{
+    let duration = this.recordingDurationMs
+    if(duration <= 0 && this.recordingStartTime > 0){
+      duration = new Date().getTime() - this.recordingStartTime
+    }
+    if(duration <= 0){
+      return 0
+    }
+    return Math.floor((duration + 999) / 1000)
+  }
+
+  private getRecordingTimeText():string{
+    let totalSeconds = this.getRecordingSeconds()
+    let minute = Math.floor(totalSeconds / 60)
+    let second = totalSeconds % 60
+    let minuteText = minute < 10 ? `0${minute}` : `${minute}`
+    let secondText = second < 10 ? `0${second}` : `${second}`
+    return `${minuteText}:${secondText}`
+  }
+
+  private getRecordButtonText():string{
+    if(this.isPreparingRecording){
+      return '准备录音中...'
+    }
+    if(this.isRecordingVoice){
+      return `松开发送 ${this.getRecordingTimeText()}`
+    }
+    return '按住说话'
+  }
+
+  private getRecordStatusText():string{
+    if(this.isPreparingRecording){
+      return '正在申请录音权限并准备录音'
+    }
+    if(this.isRecordingVoice){
+      return `录音中 ${this.getRecordingTimeText()}`
+    }
+    return '轻触切换输入方式，按住录音，松开发送'
+  }
+
+  private hasInputText():boolean{
+    return this.text.trim() != ''
+  }
+
+  private async beginVoiceRecording():Promise<void>{
+    if(this.isRecordingVoice || this.isPreparingRecording){
+      return
+    }
+    if(!this.useVoiceInput){
+      return
+    }
+    let granted = await this.requestMicrophonePermission()
+    if(!granted || !this.isVoicePressing){
+      return
+    }
+
+    let context = this.getAbilityContext()
+    if(context == null){
+      this.showToast('当前页面上下文不可用')
+      return
+    }
+
+    this.closePanels()
+    this.showMentionPanel = false
+    this.isPreparingRecording = true
+    let recordPath = ''
+
+    try{
+      recordPath = this.buildVoiceRecordPath(context)
+      let recordFile = fileIo.openSync(
+        recordPath,
+        fileIo.OpenMode.READ_WRITE | fileIo.OpenMode.CREATE | fileIo.OpenMode.TRUNC
+      )
+      let recorder = await media.createAVRecorder()
+      let profile:media.AVRecorderProfile = {
+        audioBitrate: 64000,
+        audioChannels: 1,
+        audioCodec: media.CodecMimeType.AUDIO_AAC,
+        audioSampleRate: 44100,
+        fileFormat: media.ContainerFormatType.CFT_MPEG_4A
+      }
+      let config:media.AVRecorderConfig = {
+        audioSourceType: media.AudioSourceType.AUDIO_SOURCE_TYPE_MIC,
+        profile: profile,
+        url: `fd://${recordFile.fd}`
+      }
+      await recorder.prepare(config)
+      if(!this.isVoicePressing){
+        await recorder.release()
+        fileIo.closeSync(recordFile)
+        this.removeRecordingFile(recordPath)
+        this.resetRecordingState()
+        return
+      }
+      await recorder.start()
+      this.recorder = recorder
+      this.recorderFile = recordFile
+      this.recorderFilePath = recordPath
+      this.recordingStartTime = new Date().getTime()
+      this.recordingDurationMs = 0
+      this.isPreparingRecording = false
+      this.isRecordingVoice = true
+      this.startRecordingTimer()
+    }catch(error){
+      let err = error as BusinessError
+      console.error(`jimsdk_voice_record_start_fail:${err.code}:${err.message}`)
+      this.closeRecorderFile()
+      await this.releaseRecorder()
+      this.removeRecordingFile(recordPath)
+      this.recorderFilePath = ''
+      this.resetRecordingState()
+      this.showToast('录音启动失败')
+    }
+  }
+
+  private async completeVoiceRecording(shouldSend:boolean):Promise<void>{
+    if(this.isPreparingRecording){
+      this.isVoicePressing = false
+      return
+    }
+    if(!this.isRecordingVoice || this.recorder == null){
+      return
+    }
+    let recorder = this.recorder
+    let recordPath = this.recorderFilePath
+    let durationSeconds = this.getRecordingSeconds()
+    this.resetRecordingState()
+
+    try{
+      await recorder.stop()
+    }catch(error){
+      let err = error as BusinessError
+      console.error(`jimsdk_voice_record_stop_fail:${err.code}:${err.message}`)
+    }
+    this.recorder = null
+    this.closeRecorderFile()
+    await this.releaseRecorder()
+    this.recorderFilePath = ''
+
+    if(!shouldSend){
+      this.removeRecordingFile(recordPath)
+      this.showToast('已取消录音')
+      return
+    }
+    if(durationSeconds <= 0){
+      this.removeRecordingFile(recordPath)
+      this.showToast('录音时间太短')
+      return
+    }
+
+    let msg = new VoiceMessage()
+    msg.localPath = recordPath
+    msg.type = 'audio/m4a'
+    msg.duration = durationSeconds * 1000
+    await this.sendSelectedMediaMessage(msg, '语音')
+  }
+
+  private toggleVoiceInputMode():void{
+    if(this.isEditingMessage()){
+      this.showToast('编辑消息时不能切换语音输入')
+      return
+    }
+    if(this.isRecordingVoice || this.isPreparingRecording){
+      return
+    }
+    this.useVoiceInput = !this.useVoiceInput
+    this.showMediaPanel = false
+    this.showMentionPanel = false
+  }
+
+  private getFileNameFromUri(uri:string):string{
+    try{
+      return new fileUri.FileUri(uri).name
+    }catch(error){
+      let uriWithoutQuery = uri.split('?')[0]
+      let index = uriWithoutQuery.lastIndexOf('/')
+      if(index >= 0 && index < uriWithoutQuery.length - 1){
+        return uriWithoutQuery.substring(index + 1)
+      }
+      return 'unknown'
+    }
+  }
+
+  private getFileSizeFromUri(uri:string):number{
+    try{
+      let stat = fileIo.statSync(uri)
+      return stat.size
+    }catch(error){
+      return 0
+    }
+  }
+
+  private inferFileMimeType(fileName:string):string{
+    let lowerName = fileName.toLowerCase()
+    if(lowerName.endsWith('.pdf')){
+      return 'application/pdf'
+    }
+    if(lowerName.endsWith('.doc')){
+      return 'application/msword'
+    }
+    if(lowerName.endsWith('.docx')){
+      return 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+    }
+    if(lowerName.endsWith('.xls')){
+      return 'application/vnd.ms-excel'
+    }
+    if(lowerName.endsWith('.xlsx')){
+      return 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    }
+    if(lowerName.endsWith('.ppt')){
+      return 'application/vnd.ms-powerpoint'
+    }
+    if(lowerName.endsWith('.pptx')){
+      return 'application/vnd.openxmlformats-officedocument.presentationml.presentation'
+    }
+    if(lowerName.endsWith('.zip')){
+      return 'application/zip'
+    }
+    if(lowerName.endsWith('.txt')){
+      return 'text/plain'
+    }
+    return 'application/octet-stream'
+  }
+
+  private async sendSelectedMediaMessage(msg:ImageMessage|FileMessage|VideoMessage|VoiceMessage, fallbackName:string):Promise<void>{
+    this.showMediaPanel = false
+    JuggleIm.instance.getMessageManager().sendMediaMessage(msg, this.getConversation(), async (code, message)=>{
+      if(code == 0 && message != null){
+        JuggleIm.instance.getConversationManager().clearDraft(this.getConversation())
+        await this.appendMessage(message, false)
+        return
+      }
+      this.showToast(`${fallbackName}发送失败: ${code}`)
+    })
+  }
+
+  private async pickImageMessage():Promise<void>{
+    this.showMediaPanel = false
+    try{
+      let options = new photoAccessHelper.PhotoSelectOptions()
+      options.MIMEType = photoAccessHelper.PhotoViewMIMETypes.IMAGE_TYPE
+      options.maxSelectNumber = 1
+      options.isPhotoTakingSupported = true
+      let result = await new photoAccessHelper.PhotoViewPicker().select(options)
+      if(result.photoUris.length == 0){
+        return
+      }
+      let msg = new ImageMessage()
+      msg.localPath = result.photoUris[0]
+      msg.size = this.getFileSizeFromUri(msg.localPath)
+      await this.sendSelectedMediaMessage(msg, '图片')
+    }catch(error){
+      let err = error as BusinessError
+      console.error(`jimsdk_pick_image_fail:${err.code}:${err.message}`)
+      this.showToast('选择图片失败')
+    }
+  }
+
+  private async pickFileMessage():Promise<void>{
+    this.showMediaPanel = false
+    let context = this.getAbilityContext()
+    if(context == null){
+      this.showToast('当前页面上下文不可用')
+      return
+    }
+    try{
+      let options = new picker.DocumentSelectOptions()
+      options.maxSelectNumber = 1
+      let uris = await new picker.DocumentViewPicker(context).select(options)
+      if(uris.length == 0){
+        return
+      }
+      let msg = new FileMessage()
+      msg.localPath = uris[0]
+      msg.name = this.getFileNameFromUri(msg.localPath)
+      msg.type = this.inferFileMimeType(msg.name)
+      msg.size = this.getFileSizeFromUri(msg.localPath)
+      await this.sendSelectedMediaMessage(msg, '文件')
+    }catch(error){
+      let err = error as BusinessError
+      console.error(`jimsdk_pick_file_fail:${err.code}:${err.message}`)
+      this.showToast('选择文件失败')
+    }
+  }
+
+  private async pickVideoMessage():Promise<void>{
+    this.showMediaPanel = false
+    try{
+      let options = new photoAccessHelper.PhotoSelectOptions()
+      options.MIMEType = photoAccessHelper.PhotoViewMIMETypes.VIDEO_TYPE
+      options.maxSelectNumber = 1
+      let result = await new photoAccessHelper.PhotoViewPicker().select(options)
+      if(result.photoUris.length == 0){
+        return
+      }
+      let msg = new VideoMessage()
+      msg.localPath = result.photoUris[0]
+      msg.size = this.getFileSizeFromUri(msg.localPath)
+      await this.sendSelectedMediaMessage(msg, '视频')
+    }catch(error){
+      let err = error as BusinessError
+      console.error(`jimsdk_pick_video_fail:${err.code}:${err.message}`)
+      this.showToast('选择视频失败')
+    }
+  }
+
   aboutToAppear(): void {
     let param = this.pageInfo.getParamByIndex(this.pageInfo.size() - 1) as ConversationDetailParams
     this.conversationId = param.conversationId
@@ -778,6 +1311,8 @@ export struct ConversationDetail {
 
   aboutToDisappear(): void {
     this.persistDraft()
+    this.isVoicePressing = false
+    this.disposeRecordingResources(true)
     JuggleIm.instance.getMessageManager().removeMsgReceivedListener(this.msgReceiveListener)
     JuggleIm.instance.getMessageManager().removeMsgModifiedListener(this.msgModifiedListener)
     JuggleIm.instance.getMessageManager().removeReadReceiptListener(this.readReceiptListener)
@@ -802,7 +1337,33 @@ export struct ConversationDetail {
             List({ scroller: this.scroller }) {
               ForEach(this.msgList, (item: MessageViewItem, index: number) => {
                 ListItem() {
-                  ConversationDetailItem(item)
+                  ConversationDetailItem({
+                    senderName:item.senderName,
+                    senderIcon:item.senderIcon,
+                    selfName:item.selfName,
+                    selfIcon:item.selfIcon,
+                    msgContent:item.msgContent,
+                    referenceText:item.referenceText,
+                    previewText:item.previewText,
+                    msgType:item.msgType,
+                    isEdited:item.isEdited,
+                    hasRead:item.hasRead,
+                    readCount:item.readCount,
+                    memberCount:item.memberCount,
+                    sentState:item.sentState,
+                    conversationType:item.conversationType,
+                    downloadState:item.downloadState,
+                    downloadProgress:item.downloadProgress,
+                    showDownloadAction:this.shouldShowDownloadAction(item),
+                    onDownloadTap:()=>{
+                      this.startMediaDownload(item)
+                    },
+                    onCancelDownloadTap:()=>{
+                      this.cancelMediaDownload(item)
+                    },
+                    isReceived:item.isReceived,
+                    msgTime:item.msgTime
+                  })
                 }
                 .onTouch((event: TouchEvent)=>{
                   let itemKey = this.getItemKey(item)
@@ -922,47 +1483,197 @@ export struct ConversationDetail {
               .backgroundColor('#F3F4F6')
             }
 
-            Row(){
-              Column(){
-                Column() {
-                  StandardIcon({ icon: $r('app.media.ic_public_add_norm') })
-                }
-                .flexBasis(HomeConstants.FLEX_BASIS_AUTO)
-                .padding({
-                  left:10,
-                  right:10
-                })
+            if(this.useVoiceInput){
+              Row() {
+                Text(this.getRecordStatusText())
+                  .fontSize(12)
+                  .fontColor(this.isRecordingVoice ? '#D9485C' : '#666666')
+                  .maxLines(1)
+                  .textOverflow({ overflow: TextOverflow.Ellipsis })
               }
-              Blank()
-              Column(){
-                TextInput({text:this.text})
-                  .width('78%')
+              .width('100%')
+              .padding({ left: 18, right: 18, top: 6, bottom: 6 })
+              .backgroundColor(Color.White)
+            }
+
+            Row(){
+              Stack() {
+                if(this.useVoiceInput){
+                  Image($r('app.media.ic_public_keyboard'))
+                    .width(22)
+                    .height(22)
+                }else{
+                  StandardIcon({ icon: $r('app.media.ic_public_voice_filled') })
+                }
+              }
+              .width(40)
+              .height(40)
+              .borderRadius(20)
+              .backgroundColor('#F3F4F6')
+              .onClick(()=>{
+                this.toggleVoiceInputMode()
+              })
+
+              if(this.useVoiceInput){
+                Row() {
+                  Text(this.getRecordButtonText())
+                    .fontSize(15)
+                    .fontWeight(this.isRecordingVoice ? FontWeight.Medium : FontWeight.Normal)
+                    .fontColor(this.isRecordingVoice ? '#D9485C' : '#222222')
+                }
+                .layoutWeight(1)
+                .height(44)
+                .justifyContent(FlexAlign.Center)
+                .borderRadius(22)
+                .backgroundColor(this.isRecordingVoice ? '#FFF1F3' : '#F7F8FA')
+                .border({
+                  width: 1,
+                  color: this.isRecordingVoice ? '#F3A1AF' : '#E5E7EB'
+                })
+                .onTouch(async (event:TouchEvent)=>{
+                  if(event.type == TouchType.Down){
+                    this.isVoicePressing = true
+                    await this.beginVoiceRecording()
+                  }else if(event.type == TouchType.Up){
+                    this.isVoicePressing = false
+                    await this.completeVoiceRecording(true)
+                  }else if(event.type == TouchType.Cancel){
+                    this.isVoicePressing = false
+                    await this.completeVoiceRecording(false)
+                  }
+                })
+              }else{
+                TextInput({text:this.text, placeholder:'输入消息'})
+                  .layoutWeight(1)
                   .placeholderColor($r('app.color.text_input_default_color'))
                   .caretColor($r('app.color.text_input_default_care_color'))
-                  .backgroundColor($r('app.color.text_input_default_background_color'))
+                  .backgroundColor('#F7F8FA')
                   .borderRadius(HomeConstants.CONVERSATION_DETAIL_BOTTOM_TEXT_RADIUS)
-                  .flexGrow(BaseConstants.FLEX_GROW_ONE)
-                  .padding({ right: $r('app.float.conversation_detail_bottom_text_padding') })
-                  .backgroundColor(Color.White)
+                  .padding({ left: 16, right: 16 })
+                  .height(44)
+                  .margin({ left: 10 })
                   .onChange((v)=>{
                     this.text = v
+                    this.showMediaPanel = false
                     if(this.isEditingMessage()){
                       this.showMentionPanel = false
                     }else{
                       this.updateMentionPanel()
                     }
                   })
+                  .onClick(()=>{
+                    this.showMediaPanel = false
+                  })
+
+                if(this.hasInputText()){
+                  Stack() {
+                    StandardIcon({ icon: $r('app.media.ic_public_email_send') })
+                  }
+                  .width(40)
+                  .height(40)
+                  .borderRadius(20)
+                  .backgroundColor('#F3F4F6')
+                  .margin({ left: 10 })
+                  .onClick(async ()=>{
+                    await this.sendTextMessage()
+                  })
+                }else{
+                  Stack() {
+                    StandardIcon({ icon: $r('app.media.ic_public_add_norm') })
+                  }
+                  .width(40)
+                  .height(40)
+                  .borderRadius(20)
+                  .backgroundColor('#F3F4F6')
+                  .margin({ left: 10 })
+                  .onClick(()=>{
+                    this.toggleMediaPanel()
+                  })
+                }
               }
+            }
+            .width(BaseConstants.FULL_WIDTH)
+            .padding({ left: 12, right: 12, top: 10, bottom: 10 })
+            .backgroundColor(Color.White)
+
+            if(this.showMediaPanel && !this.useVoiceInput){
               Column() {
-                StandardIcon({ icon: $r('app.media.ic_public_email_send') }).onClick(async ()=>{
-                  await this.sendTextMessage()
-                })
+                Divider()
+                  .strokeWidth(1)
+                  .color('#EAECEF')
+                Row() {
+                  Column() {
+                    Stack() {
+                      Image($r('app.media.img'))
+                        .width(28)
+                        .height(28)
+                    }
+                    .width(56)
+                    .height(56)
+                    .borderRadius(16)
+                    .backgroundColor('#FFFFFF')
+                    .shadow({ radius: 8, color: '#12000000', offsetX: 0, offsetY: 2 })
+                    Text('图片')
+                      .fontSize(12)
+                      .fontColor('#333333')
+                      .margin({ top: 8 })
+                  }
+                  .width(84)
+                  .onClick(async ()=>{
+                    await this.pickImageMessage()
+                  })
+
+                  Column() {
+                    Stack() {
+                      StandardIcon({ icon: $r('app.media.ic_public_video_filled') })
+                    }
+                    .width(56)
+                    .height(56)
+                    .borderRadius(16)
+                    .backgroundColor('#FFFFFF')
+                    .shadow({ radius: 8, color: '#12000000', offsetX: 0, offsetY: 2 })
+                    Text('视频')
+                      .fontSize(12)
+                      .fontColor('#333333')
+                      .margin({ top: 8 })
+                  }
+                  .width(84)
+                  .margin({ left: 20 })
+                  .onClick(async ()=>{
+                    await this.pickVideoMessage()
+                  })
+
+                  Column() {
+                    Stack() {
+                      Image($r('app.media.ic_file'))
+                        .width(28)
+                        .height(28)
+                    }
+                    .width(56)
+                    .height(56)
+                    .borderRadius(16)
+                    .backgroundColor('#FFFFFF')
+                    .shadow({ radius: 8, color: '#12000000', offsetX: 0, offsetY: 2 })
+                    Text('文件')
+                      .fontSize(12)
+                      .fontColor('#333333')
+                      .margin({ top: 8 })
+                  }
+                  .width(84)
+                  .margin({ left: 20 })
+                  .onClick(async ()=>{
+                    await this.pickFileMessage()
+                  })
+                  Blank()
+                }
+                .width('100%')
+                .alignItems(VerticalAlign.Top)
               }
-              .padding({
-                left:10,
-                right:10
-              })
-            }.width(BaseConstants.FULL_WIDTH)
+              .width('100%')
+              .height(188)
+              .padding({ left: 20, right: 20, top: 18, bottom: 18 })
+              .backgroundColor('#F7F8FA')
+            }
           }
         }
         .height(BaseConstants.FULL_HEIGHT)

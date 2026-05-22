@@ -15748,6 +15748,9 @@ export namespace immessage {
 
         /** PreSignResp signature */
         signature?: (string|null);
+
+        /** PreSignResp downloadUrl */
+        downloadUrl?: (string|null);
     }
 
     /** Represents a PreSignResp. */
@@ -15779,6 +15782,9 @@ export namespace immessage {
 
         /** PreSignResp signature. */
         public signature: string;
+
+        /** PreSignResp downloadUrl. */
+        public downloadUrl: string;
 
         /**
          * Creates a new PreSignResp instance using the specified properties.

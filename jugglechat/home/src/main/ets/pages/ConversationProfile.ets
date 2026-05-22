@@ -117,6 +117,7 @@ export struct ConversationProfile {
         .width(64)
         .height(64)
         .borderRadius(32)
+        .margin({ top: 20 })
     }else{
       Stack() {
         Text(this.getGroupInitial())
@@ -127,6 +128,7 @@ export struct ConversationProfile {
       .height(64)
       .borderRadius(32)
       .backgroundColor(CommonUtil.getBackgroundColor(this.getGroupInitial()))
+      .margin({ top: 20 })
     }
   }
 
@@ -171,7 +173,6 @@ export struct ConversationProfile {
         if(this.conversationType == 2){
           Column() {
             this.groupAvatar()
-              .margin({ top: 20 })
             Text(this.title != '' ? this.title : this.conversationId)
               .fontSize(20)
               .fontColor('#111111')

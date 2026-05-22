@@ -2,8 +2,13 @@ import { Conversation } from '../entries/conversation'
 import { MessageContent } from '../entries/message'
 import { MessageOptions } from '../entries/messageoptions'
 import { CommonCallback } from './commoncallback'
+import { IMessageUploadProvider, MediaUploadCredentialCallback } from './imessageuploadprovider'
 import {
   ClearMsgOptions,
+  DownloadMediaMessageCancelCallback,
+  DownloadMediaMessageErrorCallback,
+  DownloadMediaMessageProgressCallback,
+  DownloadMediaMessageSuccessCallback,
   GetMessageOptions,
   GroupMessageReadInfoDetailCallback,
   MessageCallback,
@@ -36,9 +41,21 @@ export interface IMessageManager {
   addMsgCleanedListener(listener: MsgCleanedListener): void
   removeMsgCleanedListener(listener: MsgCleanedListener): void
   registerMessage(msgType: string, constructor: Function): void
+  setMessageUploadProvider(provider: IMessageUploadProvider | null): void
+  getMessageUploadProvider(): IMessageUploadProvider | null
   sendMessage(msg: MessageContent, conver: Conversation, callback: MessageCallback): void
   sendMessage(msg: MessageContent, conver: Conversation, options: MessageOptions, callback: MessageCallback): void
   sendMediaMessage(msg: MessageContent, conver: Conversation): void
+  sendMediaMessage(msg: MessageContent, conver: Conversation, callback: MessageCallback): void
+  downloadMediaMessage(
+    messageId: string,
+    onProgress: DownloadMediaMessageProgressCallback,
+    onSuccess: DownloadMediaMessageSuccessCallback,
+    onError: DownloadMediaMessageErrorCallback,
+    onCancel: DownloadMediaMessageCancelCallback
+  ): void
+  cancelDownloadMediaMessage(messageId: string): void
+  queryUploadFileCredential(fileType: number, ext: string, callback: MediaUploadCredentialCallback): void
   queryMessages(conver: Conversation, options: GetMessageOptions, callback: QryMessagesCallback): void
   queryLocalMessages(conver: Conversation, options: GetMessageOptions, callback: QryMessagesCallback): void
   queryRemoteMessages(conver: Conversation, options: GetMessageOptions, callback: QryMessagesCallback): void

@@ -7,6 +7,18 @@ export { IUserInfoManager } from './src/main/ets/interfaces/iuserinfomanager'
 export { GroupInfoCallback, GroupMemberCallback, GroupMembersCallback, IGroupInfoManager } from './src/main/ets/interfaces/igroupinfomanager'
 export { CommonCallback } from './src/main/ets/interfaces/commoncallback'
 export {
+  IMessageUploadProvider,
+  MediaUploadCredential,
+  MediaUploadCredentialCallback,
+  MediaUploadCancelCallback,
+  MediaUploadFileType,
+  MediaUploadErrorCallback,
+  MediaUploadOssType,
+  MediaUploadProgressCallback,
+  MediaUploadResult,
+  MediaUploadSuccessCallback
+} from './src/main/ets/interfaces/imessageuploadprovider'
+export {
   ConversationAddListener,
   ConversationCallback,
   ConversationDeleteListener,
@@ -21,6 +33,10 @@ export {
 } from './src/main/ets/interfaces/conversationtypes'
 export {
   ClearMsgOptions,
+  DownloadMediaMessageCancelCallback,
+  DownloadMediaMessageErrorCallback,
+  DownloadMediaMessageProgressCallback,
+  DownloadMediaMessageSuccessCallback,
   GetMessageDirection,
   GetMessageOptions,
   GroupMessageReadInfoDetailCallback,
@@ -43,6 +59,8 @@ export { Conversation, ConversationInfo, ConversationTag } from './src/main/ets/
 export {
   Message,
   MessageContent,
+  MediaMessageContent,
+  MediaMessageUploadState,
   MessageSentState,
   TextMessage,
   MergeMessage,

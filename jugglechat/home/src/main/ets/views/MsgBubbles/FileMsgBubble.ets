@@ -1,6 +1,4 @@
-import { IntroduceText, NormalText } from "base"
 import { FileMessage } from 'juggleim'
-import { HomeConstants } from "../../constants/HomeConstants"
 
 @Component
 export struct FileMsgBubble{
@@ -14,38 +12,64 @@ export struct FileMsgBubble{
     }
   }
 
+  getFileSize():string{
+    if(this.fileMsg == undefined || this.fileMsg.size <= 0){
+      return '未知大小'
+    }
+    let size = this.fileMsg.size
+    if(size < 1024){
+      return `${size} B`
+    }
+    if(size < 1024 * 1024){
+      return `${(size / 1024).toFixed(1)} KB`
+    }
+    return `${(size / 1024 / 1024).toFixed(1)} MB`
+  }
+
+  getFileTypeText():string{
+    if(this.fileMsg == undefined || this.fileMsg.type == ''){
+      return '文件'
+    }
+    return this.fileMsg.type
+  }
+
   build(){
     Column() {
       Row() {
-        NormalText({ data: this.getFileName() })
-          .margin({ right: $r('app.float.applet_icon_right') })
-          .width($r('app.float.document_text_width'))
+        Column() {
+          Text(this.getFileName())
+            .fontSize(14)
+            .fontColor('#111111')
+            .maxLines(2)
+            .margin({ right: 12 })
+          Text(this.getFileSize())
+            .fontSize(12)
+            .fontColor('#999999')
+            .margin({ top: 6 })
+        }
+        .layoutWeight(1)
         Image($r('app.media.ic_PDF'))
-          .height($r('app.float.document_icon_size'))
-          .width($r('app.float.document_icon_size'))
-          .margin({ right: $r('app.float.document_icon_right') })
+          .height(44)
+          .width(44)
       }
-      .margin({ bottom: $r('app.float.document_icon_bottom') })
-
-      IntroduceText({ data: HomeConstants.DOCUMENT_SIZE, fontColor: $r('app.color.background_color_grey_three') })
-        .margin({ bottom: $r('app.float.document_text_bottom') })
+      .width('100%')
+      .alignItems(VerticalAlign.Center)
       Divider()
         .color($r('app.color.divider_background_color'))
-        .strokeWidth(HomeConstants.DOCUMENT_DIVIDER_WIDTH).margin({ bottom: $r('app.float.divider_bottom') })
+        .strokeWidth(1)
+        .margin({ top: 14, bottom: 12 })
       Row() {
         Image($r('app.media.ic_file'))
-          .width($r('app.float.document_small_icon_size'))
-          .height($r('app.float.document_small_icon_size'))
-          .margin({ right: $r('app.float.document_small_icon_right') })
-        IntroduceText({
-          data: HomeConstants.DOCUMENT_INTRODUCE,
-          fontColor: $r('app.color.background_color_grey_three')
-        })
-          .margin({ top: $r('app.float.document_introduce_top') })
+          .width(18)
+          .height(18)
+          .margin({ right: 8 })
+        Text(this.getFileTypeText())
+          .fontSize(12)
+          .fontColor('#999999')
       }
     }
     .alignItems(HorizontalAlign.Start)
-    .width($r('app.float.document_width'))
-    .margin({ bottom: $r('app.float.document_bottom') })
+    .width(228)
+    .padding({ left: 14, right: 14, top: 14, bottom: 12 })
   }
 }

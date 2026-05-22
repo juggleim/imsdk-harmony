@@ -4,6 +4,7 @@ import {
   ImageMessage,
   JuggleIm,
   JimMsgType,
+  MediaMessageContent,
   MergeMessage,
   Message,
   MessageContent,
@@ -12,6 +13,13 @@ import {
   VideoMessage,
   VoiceMessage
 } from 'juggleim'
+
+export class MediaDownloadState {
+  static readonly none:number = 0
+  static readonly downloading:number = 1
+  static readonly failed:number = 2
+  static readonly canceled:number = 3
+}
 
 @Observed
 class MessageViewItem{
@@ -33,6 +41,8 @@ class MessageViewItem{
   readCount:number = 0
   memberCount:number = 0
   sentState:number = MessageSentState.none
+  downloadState:number = MediaDownloadState.none
+  downloadProgress:number = 0
 
   isReceived:boolean = true
   msgTime:number = 0
@@ -126,46 +136,50 @@ export function cloneMessageContent(msgContent?:MessageContent):MessageContent|n
   if(msgType == JimMsgType.Image){
     let source = msgContent as ImageMessage
     let target = new ImageMessage()
-    target.url = source.url
+    copyMediaMessageFields(target, source)
     target.thumbnail = source.thumbnail
     target.height = source.height
     target.width = source.width
     target.size = source.size
-    target.extra = source.extra
     return target
   }
   if(msgType == JimMsgType.File){
     let source = msgContent as FileMessage
     let target = new FileMessage()
+    copyMediaMessageFields(target, source)
     target.name = source.name
-    target.url = source.url
     target.size = source.size
     target.type = source.type
-    target.extra = source.extra
     return target
   }
   if(msgType == JimMsgType.Video){
     let source = msgContent as VideoMessage
     let target = new VideoMessage()
-    target.url = source.url
+    copyMediaMessageFields(target, source)
     target.poster = source.poster
     target.height = source.height
     target.width = source.width
     target.size = source.size
     target.duration = source.duration
-    target.extra = source.extra
     return target
   }
   if(msgType == JimMsgType.Voice){
     let source = msgContent as VoiceMessage
     let target = new VoiceMessage()
-    target.url = source.url
+    copyMediaMessageFields(target, source)
     target.type = source.type
     target.duration = source.duration
-    target.extra = source.extra
     return target
   }
   return null
+}
+
+function copyMediaMessageFields(target:MediaMessageContent, source:MediaMessageContent):void{
+  target.localPath = source.localPath
+  target.url = source.url
+  target.extra = source.extra
+  target.uploadState = source.uploadState
+  target.uploadProgress = source.uploadProgress
 }
 
 export async function toMessageViewItem(message:Message):Promise<MessageViewItem>{

@@ -5,6 +5,10 @@ import { GroupMessageReadInfo, GroupMessageReadInfoDetail } from '../entries/gro
 export type MessageCallback = (code: number, msg: Message | null) => void
 export type QryMessagesCallback = (code: number, msgs: Message[], hasMore: boolean) => void
 export type GroupMessageReadInfoDetailCallback = (code: number, detail: GroupMessageReadInfoDetail | null) => void
+export type DownloadMediaMessageProgressCallback = (progress: number, msg: Message) => void
+export type DownloadMediaMessageSuccessCallback = (msg: Message) => void
+export type DownloadMediaMessageErrorCallback = (code: number) => void
+export type DownloadMediaMessageCancelCallback = (msg: Message) => void
 
 export enum GetMessageDirection {
   Backward = 0,

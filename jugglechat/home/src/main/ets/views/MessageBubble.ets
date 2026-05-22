@@ -15,6 +15,8 @@
 
 import { BaseConstants, BreakpointConstants } from 'base'
 import { FileMessage, ImageMessage, JimMsgType, MergeMessage, MessageContent, RecallInfoMessage, TextMessage,
+  MediaMessageContent,
+  MediaMessageUploadState,
   MessageSentState,
   VideoMessage,
   VoiceMessage} from 'juggleim';
@@ -25,7 +27,7 @@ import { FileMsgBubble } from './MsgBubbles/FileMsgBubble';
 import { VideoMsgBubble } from './MsgBubbles/VideoMsgBubble';
 import { VoiceMsgBubble } from './MsgBubbles/VoiceMsgBubble';
 import { CommonUtil } from '../jim/common';
-import { buildMessagePreview } from '../viewmodel/MessageViewModel';
+import { buildMessagePreview, MediaDownloadState } from '../viewmodel/MessageViewModel';
 
 @Component
 export struct MessageBubble {
@@ -46,6 +48,11 @@ export struct MessageBubble {
   private memberCount?:number
   private sentState?:number
   private conversationType?:number
+  private downloadState?:number
+  private downloadProgress?:number
+  private showDownloadAction?:boolean
+  private onDownloadTap?:()=>void
+  private onCancelDownloadTap?:()=>void
   private msgTime?:number
 
   private getMsgType():string{
@@ -59,8 +66,15 @@ export struct MessageBubble {
     if(this.isReceived){
       return ''
     }
+    let mediaStatus = this.getMediaStatusText()
+    if(mediaStatus != ''){
+      return mediaStatus
+    }
     if(this.sentState == MessageSentState.failed){
       return '发送失败'
+    }
+    if(this.sentState == MessageSentState.uploading){
+      return '上传中'
     }
     if(this.sentState == MessageSentState.sending){
       return '发送中'
@@ -86,6 +100,47 @@ export struct MessageBubble {
       return `${readCount}/${memberCount}`
     }
     return '已发送'
+  }
+
+  private getMediaStatusText():string{
+    if(this.msgContent == undefined || !(this.msgContent instanceof MediaMessageContent)){
+      return ''
+    }
+    let mediaMsg = this.msgContent as MediaMessageContent
+    if(mediaMsg.uploadState == MediaMessageUploadState.uploading){
+      if(mediaMsg.uploadProgress > 0 && mediaMsg.uploadProgress < 100){
+        return `上传中 ${mediaMsg.uploadProgress}%`
+      }
+      return '上传中'
+    }
+    if(mediaMsg.uploadState == MediaMessageUploadState.failed){
+      return '上传失败'
+    }
+    if(mediaMsg.uploadState == MediaMessageUploadState.canceled){
+      return '已取消'
+    }
+    return ''
+  }
+
+  private isDownloadingMedia():boolean{
+    return this.downloadState == MediaDownloadState.downloading
+  }
+
+  private getDownloadStatusText():string{
+    if(this.downloadState == MediaDownloadState.downloading){
+      let progress = this.downloadProgress ?? 0
+      if(progress > 0 && progress < 100){
+        return `下载中 ${progress}%`
+      }
+      return '下载中'
+    }
+    if(this.downloadState == MediaDownloadState.failed){
+      return '下载失败'
+    }
+    if(this.downloadState == MediaDownloadState.canceled){
+      return '已取消下载'
+    }
+    return ''
   }
 
   build() {
@@ -208,7 +263,8 @@ export struct MessageBubble {
       })
     } else if(this.getMsgType() == JimMsgType.Voice){
       VoiceMsgBubble({
-        voiceMsg:this.msgContent as VoiceMessage
+        voiceMsg:this.msgContent as VoiceMessage,
+        isReceived:this.isReceived
       })
     } else if(this.getMsgType() == JimMsgType.Merge){
       Text(buildMessagePreview(this.msgContent as MergeMessage))
@@ -253,6 +309,34 @@ export struct MessageBubble {
             .fontColor('#999999')
         }
       }
+      .margin({ top: 6 })
+    }
+
+    if(this.showDownloadAction == true){
+      Row() {
+        if(this.getDownloadStatusText() != ''){
+          Text(this.getDownloadStatusText())
+            .fontSize(10)
+            .fontColor('#999999')
+        }
+        Blank()
+        Button(this.isDownloadingMedia() ? '取消' : '下载')
+          .type(ButtonType.Capsule)
+          .height(26)
+          .fontSize(12)
+          .backgroundColor('#F3F4F6')
+          .fontColor('#333333')
+          .onClick(()=>{
+            if(this.isDownloadingMedia()){
+              if(this.onCancelDownloadTap != undefined){
+                this.onCancelDownloadTap()
+              }
+            }else if(this.onDownloadTap != undefined){
+              this.onDownloadTap()
+            }
+          })
+      }
+      .width('100%')
       .margin({ top: 6 })
     }
   }

@@ -59,6 +59,16 @@
           ],
           "when": "always"
         }
+      },
+      {
+        "name": "ohos.permission.MICROPHONE",
+        "reason": "$string:reason",
+        "usedScene": {
+          "abilities": [
+            "DemoAbility"
+          ],
+          "when": "inuse"
+        }
       }
     ]
   }

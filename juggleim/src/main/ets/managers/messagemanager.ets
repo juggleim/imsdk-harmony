@@ -1,16 +1,30 @@
 import {immessage} from  '../improto/immessage'
+import request from '@ohos.request'
+import { fileIo } from '@kit.CoreFileKit'
+import { BusinessError } from '@kit.BasicServicesKit'
 import {
+  ImageMessage,
   FileMessage,
   MergeMessage,
+  MediaMessageContent,
+  MediaMessageUploadState,
   Message,
   MessageContent,
   MessageSentState,
-  TextMessage
+  TextMessage,
+  VideoMessage,
+  VoiceMessage
 } from '../entries/message'
 import { Conversation, ConversationInfo } from '../entries/conversation'
 import { MsgFlagTool } from '../improto/msgflag'
 import { ImClient } from '../imclients/imclient'
 import { CommonCallback } from '../interfaces/commoncallback'
+import {
+  IMessageUploadProvider,
+  MediaUploadCredential,
+  MediaUploadCredentialCallback,
+  MediaUploadResult
+} from '../interfaces/imessageuploadprovider'
 import { HashMap } from '@kit.ArkTS'
 import { JimDbManager } from '../dbs/dbmanager'
 import { MsgHandler } from '../entries/msghandler'
@@ -24,6 +38,10 @@ import { MessageOptionUtil } from '../commons/messageoptionutil'
 import { UserInfo } from '../entries/user'
 import {
   ClearMsgOptions,
+  DownloadMediaMessageCancelCallback,
+  DownloadMediaMessageErrorCallback,
+  DownloadMediaMessageProgressCallback,
+  DownloadMediaMessageSuccessCallback,
   GetMessageDirection,
   GetMessageOptions,
   GroupMessageReadInfoDetailCallback,
@@ -42,6 +60,10 @@ import {
 
 export {
   ClearMsgOptions,
+  DownloadMediaMessageCancelCallback,
+  DownloadMediaMessageErrorCallback,
+  DownloadMediaMessageProgressCallback,
+  DownloadMediaMessageSuccessCallback,
   GetMessageDirection,
   GetMessageOptions,
   GroupMessageReadInfoDetailCallback,
@@ -58,9 +80,18 @@ export {
   SearchParams
 } from '../interfaces/messagetypes'
 
+class MessageSendContext {
+  callback:MessageCallback = (_code:number, _message:Message|null)=>{}
+  options?:MessageOptions
+  constructor() {
+  }
+}
+
 export class MessageManager implements IMessageManager{
   private imclient:ImClient
   private msgSyncMgr:MsgSyncManager
+  private messageUploadProvider:IMessageUploadProvider | null = null
+  private mediaDownloadTasks:Map<string, request.DownloadTask> = new Map()
 
   constructor(imclient:ImClient,mgr:MsgSyncManager) {
     this.imclient = imclient
@@ -127,33 +158,48 @@ export class MessageManager implements IMessageManager{
     MsgHandler.registerMessage(msgType, constructor)
   }
 
+  setMessageUploadProvider(provider:IMessageUploadProvider | null):void{
+    this.messageUploadProvider = provider
+  }
+
+  getMessageUploadProvider():IMessageUploadProvider | null{
+    return this.messageUploadProvider
+  }
+
   sendMessage(msg:MessageContent,conver:Conversation,callback:MessageCallback): void
   sendMessage(msg:MessageContent,conver:Conversation,options:MessageOptions,callback:MessageCallback): void
   sendMessage(msg:MessageContent,conver:Conversation,arg3:MessageCallback|MessageOptions,arg4?:MessageCallback): void{
-    let callback:MessageCallback
-    let options:MessageOptions|undefined
+    let context = this.resolveSendContext(arg3, arg4)
+    if(context == null){
+      return
+    }
+    let message = this.buildOutgoingMessage(msg, conver)
+    let referMsg = this.applyMessageOptions(message, context.options)
+    let msgDao = JimDbManager.instance.getMessageDao()
+    let msgDbId = msgDao.insert(message)
+    this.msgSyncMgr.updConver(message)
+    this.publishOutgoingMessage(message, msgDbId, referMsg, context.callback)
+  }
+
+  private resolveSendContext(arg3:MessageCallback|MessageOptions,arg4?:MessageCallback):MessageSendContext|null{
+    let context = new MessageSendContext()
     if(typeof arg3 === 'function'){
-      callback = arg3
-    }else{
-      options = arg3
-      if(arg4 == undefined){
-        return
-      }
-      callback = arg4
+      context.callback = arg3
+      return context
     }
-    let targetId = conver.conversationId
-    let method:string = ""
-    if(conver.conversationType == 1){
-      method = 'p_msg'
-    }else if (conver.conversationType==2){
-      method = 'g_msg'
+    context.options = arg3
+    if(arg4 == undefined){
+      return null
     }
-    let clientUid:string = JimUtil.getUuid()
-    let flags = MsgFlagTool.toFlag(msg.getFlag())
+    context.callback = arg4
+    return context
+  }
+
+  private buildOutgoingMessage(msg:MessageContent, conver:Conversation):Message{
     let message = new Message()
     message.conversation = conver
     message.msgContent = msg
-    message.clientId = clientUid
+    message.clientId = JimUtil.getUuid()
     message.senderId = JuggleIm.instance.userId
     message.sentTime = new Date().getTime()
     message.flags = msg.getFlagNumber()
@@ -165,27 +211,45 @@ export class MessageManager implements IMessageManager{
         message.memberCount = localMembers.length
       }
     }
+    return message
+  }
 
-    let referMsg = this.applyMessageOptions(message, options)
-
-    let upMsg = immessage.UpMsg.create({
-      msgType:msg.getMsgType(),
-      msgContent:msg.encode(),
-      flags: flags,
-      clientUid:clientUid,
+  private buildUpMsg(message:Message, referMsg?:Message):immessage.UpMsg{
+    return immessage.UpMsg.create({
+      msgType:message.msgContent.getMsgType(),
+      msgContent:message.msgContent.encode(),
+      flags: MsgFlagTool.toFlag(message.msgContent.getFlag()),
+      clientUid:message.clientId,
       pushData: MessageOptionUtil.toProtoPushData(message.pushData),
       mentionInfo: MessageOptionUtil.toProtoMentionInfo(message.mentionInfo),
       referMsg: referMsg != undefined ? MessageOptionUtil.toProtoDownMsg(referMsg) : undefined
     })
+  }
 
-    //save in db
-    let msgDao = JimDbManager.instance.getMessageDao()
-    let msgDbId = msgDao.insert(message)
-    //update conversation
-    this.msgSyncMgr.updConver(message)
-    console.log("sendmsg_ret:",msgDbId)
+  private resolvePublishMethod(conver:Conversation):string{
+    if(conver.conversationType == 1){
+      return 'p_msg'
+    }
+    if(conver.conversationType == 2){
+      return 'g_msg'
+    }
+    return ''
+  }
+
+  private publishOutgoingMessage(message:Message,msgDbId:number,referMsg:Message|undefined,callback:MessageCallback):void{
+    let method = this.resolvePublishMethod(message.conversation)
+    if(method == ''){
+      message.state = MessageSentState.failed
+      JimDbManager.instance.getMessageDao().updateMsgState(msgDbId,message.state)
+      this.msgSyncMgr.notifyMessageModified(message)
+      callback(-1,message)
+      return
+    }
+    let upMsg = this.buildUpMsg(message, referMsg)
     let data = immessage.UpMsg.encode(upMsg).finish()
-    this.imclient.publish(method,targetId,data,(code,pubAck)=>{
+    let flags = MsgFlagTool.toFlag(message.msgContent.getFlag())
+    this.imclient.publish(method,message.conversation.conversationId,data,(code,pubAck)=>{
+      let msgDao = JimDbManager.instance.getMessageDao()
       if(code==0){
         if(typeof pubAck.msgId == 'string'){
           message.messageId = pubAck.msgId
@@ -197,7 +261,7 @@ export class MessageManager implements IMessageManager{
         if(typeof pubAck.msgSeqNo == 'number'){
           message.msgSeqNo = pubAck.msgSeqNo
         }
-        if(conver.conversationType == 2 && typeof pubAck.memberCount == 'number' && pubAck.memberCount >= 0){
+        if(message.conversation.conversationType == 2 && typeof pubAck.memberCount == 'number' && pubAck.memberCount >= 0){
           message.memberCount = pubAck.memberCount
           message.readCount = 0
         }
@@ -211,14 +275,14 @@ export class MessageManager implements IMessageManager{
           message.messageId,
           message.sentTime,
           message.msgSeqNo,
-          conver.conversationType == 2 ? message.memberCount : undefined
+          message.conversation.conversationType == 2 ? message.memberCount : undefined
         )
-        this.msgSyncMgr.updConver(message)
+        this.msgSyncMgr.notifyMessageModified(message)
         callback(code,message)
       }else{
         message.state = MessageSentState.failed
         msgDao.updateMsgState(msgDbId,message.state)
-        this.msgSyncMgr.updConver(message)
+        this.msgSyncMgr.notifyMessageModified(message)
         callback(code,message)
       }
     })
@@ -266,7 +330,393 @@ export class MessageManager implements IMessageManager{
     return ''
   }
 
-  sendMediaMessage(msg:MessageContent,conver:Conversation){}
+  queryUploadFileCredential(fileType:number, ext:string, callback:MediaUploadCredentialCallback):void{
+    let req = immessage.QryFileCredReq.create({
+      fileType: fileType,
+      ext: ext
+    })
+    let data = immessage.QryFileCredReq.encode(req).finish()
+    this.imclient.query('file_cred', JuggleIm.instance.userId, data, (code, qryAck)=>{
+      if(code != 0){
+        callback(code, null)
+        return
+      }
+      try{
+        let resp = immessage.QryFileCredResp.decode(qryAck.data as Uint8Array)
+        let credential = new MediaUploadCredential()
+        credential.ossType = resp.ossType as number
+        if(resp.qiniuCred != undefined && resp.qiniuCred != null){
+          credential.domain = resp.qiniuCred.domain ?? ''
+          credential.token = resp.qiniuCred.token ?? ''
+        }
+        if(resp.preSignResp != undefined && resp.preSignResp != null){
+          credential.uploadUrl = resp.preSignResp.url ?? ''
+          credential.objKey = resp.preSignResp.objKey ?? ''
+          credential.downloadUrl = resp.preSignResp.downloadUrl ?? ''
+          if(credential.downloadUrl == ''){
+            credential.downloadUrl = this.removeQueryString(resp.preSignResp.url ?? '')
+          }
+        }
+        callback(0, credential)
+      }catch (e) {
+        let err = e as Error
+        console.error(`jimsdk_qry_file_cred_decode_fail:${err.message}`)
+        callback(-1, null)
+      }
+    })
+  }
+
+  private removeQueryString(url:string):string{
+    let index = url.indexOf('?')
+    if(index < 0){
+      return url
+    }
+    return url.substring(0, index)
+  }
+
+  downloadMediaMessage(
+    messageId:string,
+    onProgress:DownloadMediaMessageProgressCallback,
+    onSuccess:DownloadMediaMessageSuccessCallback,
+    onError:DownloadMediaMessageErrorCallback,
+    onCancel:DownloadMediaMessageCancelCallback
+  ):void{
+    let msgDao = JimDbManager.instance.getMessageDao()
+    let message = msgDao.getMessage(messageId)
+    if(message == null){
+      onError(-1)
+      return
+    }
+    if(!(message.msgContent instanceof MediaMessageContent)){
+      onError(-2)
+      return
+    }
+    let mediaContent = message.msgContent as MediaMessageContent
+    if(mediaContent.url == ''){
+      onError(-3)
+      return
+    }
+    if(this.isLocalMediaAvailable(mediaContent.localPath)){
+      onSuccess(message)
+      return
+    }
+    if(this.mediaDownloadTasks.get(messageId) != undefined){
+      onError(-6)
+      return
+    }
+    let savePath = this.buildMediaDownloadPath(message, mediaContent)
+    if(savePath == ''){
+      onError(-4)
+      return
+    }
+    request.downloadFile(getContext(), {
+      url: mediaContent.url,
+      filePath: savePath,
+      background: false,
+      title: this.getFileNameFromUrl(mediaContent.url),
+      description: 'juggleim media download'
+    }, (err, task)=>{
+      if(err){
+        let bizError = err as BusinessError
+        console.error(`jimsdk_media_download_start_fail:${messageId}:${bizError.code}:${bizError.message}`)
+        onError(bizError.code)
+        return
+      }
+      this.bindMediaDownloadTask(messageId, message, mediaContent, savePath, task, onProgress, onSuccess, onError, onCancel)
+    })
+  }
+
+  cancelDownloadMediaMessage(messageId:string):void{
+    let task = this.mediaDownloadTasks.get(messageId)
+    if(task == undefined){
+      return
+    }
+    task.remove().catch((error:BusinessError)=>{
+      console.error(`jimsdk_media_download_cancel_fail:${messageId}:${error.code}:${error.message}`)
+    })
+  }
+
+  private bindMediaDownloadTask(
+    persistedMessageId:string,
+    message:Message,
+    mediaContent:MediaMessageContent,
+    savePath:string,
+    task:request.DownloadTask,
+    onProgress:DownloadMediaMessageProgressCallback,
+    onSuccess:DownloadMediaMessageSuccessCallback,
+    onError:DownloadMediaMessageErrorCallback,
+    onCancel:DownloadMediaMessageCancelCallback
+  ):void{
+    this.mediaDownloadTasks.set(persistedMessageId, task)
+    let finished = false
+    let cleanup = ()=>{
+      task.off('progress', progressListener)
+      task.off('complete', completeListener)
+      task.off('pause', pauseListener)
+      task.off('remove', removeListener)
+      task.off('fail', failListener)
+      this.mediaDownloadTasks.delete(persistedMessageId)
+    }
+    let progressListener = (receivedSize:number, totalSize:number)=>{
+      if(totalSize <= 0){
+        onProgress(0, message)
+        return
+      }
+      let progress = Math.floor(receivedSize * 100 / totalSize)
+      if(progress < 0){
+        progress = 0
+      }
+      if(progress > 100){
+        progress = 100
+      }
+      onProgress(progress, message)
+    }
+    let completeListener = ()=>{
+      if(finished){
+        return
+      }
+      finished = true
+      cleanup()
+      mediaContent.localPath = savePath
+      JimDbManager.instance.getMessageDao().updateMsgContent(persistedMessageId, mediaContent)
+      this.msgSyncMgr.notifyMessageModified(message)
+      onSuccess(message)
+    }
+    let pauseListener = ()=>{
+      if(finished){
+        return
+      }
+      finished = true
+      cleanup()
+      onCancel(message)
+    }
+    let removeListener = ()=>{
+      if(finished){
+        return
+      }
+      finished = true
+      cleanup()
+      onCancel(message)
+    }
+    let failListener = (code:number)=>{
+      if(finished){
+        return
+      }
+      finished = true
+      cleanup()
+      this.deleteDownloadFileIfExists(savePath)
+      console.error(`jimsdk_media_download_fail:${persistedMessageId}:${code}`)
+      onError(code == 0 ? -5 : code)
+    }
+    task.on('progress', progressListener)
+    task.on('complete', completeListener)
+    task.on('pause', pauseListener)
+    task.on('remove', removeListener)
+    task.on('fail', failListener)
+  }
+
+  private isLocalMediaAvailable(path:string):boolean{
+    if(path == ''){
+      return false
+    }
+    try{
+      fileIo.statSync(path)
+      return true
+    }catch (error) {
+      return false
+    }
+  }
+
+  private buildMediaDownloadPath(message:Message, mediaContent:MediaMessageContent):string{
+    let context = getContext()
+    let cacheDir = context.cacheDir
+    if(cacheDir == undefined || cacheDir == ''){
+      return ''
+    }
+    let dir = `${cacheDir}/media/${JuggleIm.instance.config.appkey}/${JuggleIm.instance.userId}/${this.getMediaDownloadDir(mediaContent)}`
+    try{
+      fileIo.mkdirSync(dir, true)
+    }catch (error) {
+    }
+    let fileName = this.buildMediaDownloadFileName(message, mediaContent.url)
+    return `${dir}/${fileName}`
+  }
+
+  private getMediaDownloadDir(mediaContent:MediaMessageContent):string{
+    if(mediaContent instanceof ImageMessage){
+      return 'image'
+    }
+    if(mediaContent instanceof VoiceMessage){
+      return 'voice'
+    }
+    if(mediaContent instanceof VideoMessage){
+      return 'video'
+    }
+    return 'file'
+  }
+
+  private buildMediaDownloadFileName(message:Message, url:string):string{
+    let prefix = message.messageId != '' ? message.messageId : message.clientId
+    let sourceName = this.getFileNameFromUrl(url)
+    if(sourceName == ''){
+      sourceName = 'media.bin'
+    }
+    return `${prefix}_${this.sanitizeFileName(sourceName)}`
+  }
+
+  private getFileNameFromUrl(url:string):string{
+    let normalizedUrl = this.removeQueryString(url)
+    let index = normalizedUrl.lastIndexOf('/')
+    if(index < 0 || index >= normalizedUrl.length - 1){
+      return ''
+    }
+    return normalizedUrl.substring(index + 1)
+  }
+
+  private sanitizeFileName(name:string):string{
+    return name.replaceAll('\\', '_')
+      .replaceAll('/', '_')
+      .replaceAll(':', '_')
+      .replaceAll('*', '_')
+      .replaceAll('?', '_')
+      .replaceAll('"', '_')
+      .replaceAll('<', '_')
+      .replaceAll('>', '_')
+      .replaceAll('|', '_')
+  }
+
+  private deleteDownloadFileIfExists(path:string):void{
+    if(path == ''){
+      return
+    }
+    try{
+      fileIo.unlinkSync(path)
+    }catch (error) {
+    }
+  }
+
+  sendMediaMessage(msg:MessageContent,conver:Conversation):void
+  sendMediaMessage(msg:MessageContent,conver:Conversation,callback:MessageCallback):void
+  sendMediaMessage(msg:MessageContent,conver:Conversation,callback?:MessageCallback):void{
+    let completed = callback != undefined ? callback : ()=>{}
+    if(!(msg instanceof MediaMessageContent)){
+      this.sendMessage(msg, conver, completed)
+      return
+    }
+    let mediaMsg = msg as MediaMessageContent
+    if(mediaMsg.url != ''){
+      mediaMsg.setUploadState(MediaMessageUploadState.success, 100)
+      this.sendMessage(mediaMsg, conver, completed)
+      return
+    }
+    if(this.messageUploadProvider == null){
+      mediaMsg.setUploadState(MediaMessageUploadState.failed)
+      completed(-1, null)
+      return
+    }
+    mediaMsg.setUploadState(MediaMessageUploadState.uploading, 0)
+    let localMessage = this.buildOutgoingMessage(mediaMsg, conver)
+    localMessage.state = MessageSentState.uploading
+    let msgDao = JimDbManager.instance.getMessageDao()
+    let msgDbId = msgDao.insert(localMessage)
+    this.msgSyncMgr.updConver(localMessage)
+    this.msgSyncMgr.notifyMessageModified(localMessage)
+    this.messageUploadProvider.uploadMediaMessage(
+      mediaMsg,
+      (progress)=>{
+        mediaMsg.setUploadState(MediaMessageUploadState.uploading, progress)
+        localMessage.state = MessageSentState.uploading
+        this.updateLocalMediaMessage(msgDbId, localMessage)
+      },
+      (result)=>{
+        this.applyMediaUploadResult(mediaMsg, result)
+        mediaMsg.setUploadState(MediaMessageUploadState.success, 100)
+        localMessage.state = MessageSentState.sending
+        this.updateLocalMediaMessage(msgDbId, localMessage)
+        this.publishOutgoingMessage(localMessage, msgDbId, undefined, completed)
+      },
+      (code, message)=>{
+        console.error(`jimsdk_media_upload_fail. code:${code}, message:${message}`)
+        mediaMsg.setUploadState(MediaMessageUploadState.failed)
+        localMessage.state = MessageSentState.failed
+        msgDao.updateMsgState(msgDbId, localMessage.state)
+        this.updateLocalMediaMessage(msgDbId, localMessage)
+        completed(code == 0 ? -1 : code, null)
+      },
+      ()=>{
+        mediaMsg.setUploadState(MediaMessageUploadState.canceled)
+        localMessage.state = MessageSentState.failed
+        msgDao.updateMsgState(msgDbId, localMessage.state)
+        this.updateLocalMediaMessage(msgDbId, localMessage)
+        completed(-2, null)
+      }
+    )
+  }
+
+  private updateLocalMediaMessage(msgDbId:number, message:Message):void{
+    let msgDao = JimDbManager.instance.getMessageDao()
+    msgDao.updateMsgContentByDbId(msgDbId, message.msgContent)
+    msgDao.updateMsgState(msgDbId, message.state)
+    this.msgSyncMgr.notifyMessageModified(message)
+  }
+
+  private applyMediaUploadResult(msg:MediaMessageContent, result:MediaUploadResult):void{
+    if(result.url != ''){
+      msg.url = result.url
+    }
+    if(result.type != ''){
+      if(msg instanceof VoiceMessage){
+        msg.type = result.type
+      }
+      if(msg instanceof FileMessage){
+        msg.type = result.type
+      }
+    }
+    if(result.size > 0){
+      if(msg instanceof ImageMessage){
+        msg.size = result.size
+      }
+      if(msg instanceof FileMessage){
+        msg.size = result.size
+      }
+      if(msg instanceof VideoMessage){
+        msg.size = result.size
+      }
+    }
+    if(result.duration > 0){
+      if(msg instanceof VoiceMessage){
+        msg.duration = result.duration
+      }
+      if(msg instanceof VideoMessage){
+        msg.duration = result.duration
+      }
+    }
+    if(result.width > 0){
+      if(msg instanceof ImageMessage){
+        msg.width = result.width
+      }
+      if(msg instanceof VideoMessage){
+        msg.width = result.width
+      }
+    }
+    if(result.height > 0){
+      if(msg instanceof ImageMessage){
+        msg.height = result.height
+      }
+      if(msg instanceof VideoMessage){
+        msg.height = result.height
+      }
+    }
+    if(result.thumbnail != '' && msg instanceof ImageMessage){
+      msg.thumbnail = result.thumbnail
+    }
+    if(result.poster != '' && msg instanceof VideoMessage){
+      msg.poster = result.poster
+    }
+    if(result.name != '' && msg instanceof FileMessage){
+      msg.name = result.name
+    }
+  }
 
   queryMessages(conver:Conversation,options:GetMessageOptions,callback:QryMessagesCallback){
     let normalizedOptions = this.normalizeMessageOptions(options)

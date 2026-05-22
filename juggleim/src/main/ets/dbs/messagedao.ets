@@ -291,6 +291,22 @@ export class MessageDao{
     return 0
   }
 
+  updateMsgContentByDbId(dbId:number,msgContent:MessageContent):number{
+    let sql = `UPDATE ${this.tableName} SET msg_type=?, msg_content=?, search_content=? WHERE id=?`
+    let args:Array<relationalStore.ValueType> = []
+    args.push(msgContent.getMsgType())
+    args.push(JimUtil.uint8ArrayToString(msgContent.encode()))
+    args.push(this.buildSearchContent(msgContent))
+    args.push(dbId)
+    try{
+      let vt = JimDbManager.instance.getDb()?.executeSync(sql,args)
+      return vt as number
+    }catch (e) {
+      console.error(`jimsdk_db_fail. [${this.tableName}] err:${e.message}`)
+    }
+    return 0
+  }
+
   updateMsgFlags(msgId:string, flags:number):number{
     let sql = `UPDATE ${this.tableName} SET flags=? WHERE msg_id=?`
     let args:Array<relationalStore.ValueType> = [flags, msgId]

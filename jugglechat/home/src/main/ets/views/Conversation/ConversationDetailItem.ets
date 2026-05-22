@@ -32,6 +32,11 @@ export struct ConversationDetailItem {
   private memberCount?:number
   private sentState?:number
   private conversationType?:number
+  private downloadState?:number
+  private downloadProgress?:number
+  private showDownloadAction?:boolean
+  private onDownloadTap?:()=>void
+  private onCancelDownloadTap?:()=>void
 
   private isReceived?: boolean = false;
   private msgTime:number=0
@@ -53,6 +58,11 @@ export struct ConversationDetailItem {
         memberCount:this.memberCount,
         sentState:this.sentState,
         conversationType:this.conversationType,
+        downloadState:this.downloadState,
+        downloadProgress:this.downloadProgress,
+        showDownloadAction:this.showDownloadAction,
+        onDownloadTap:this.onDownloadTap,
+        onCancelDownloadTap:this.onCancelDownloadTap,
         isReceived: this.isReceived,
         msgTime:this.msgTime
       })

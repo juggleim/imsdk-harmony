@@ -41964,6 +41964,14 @@ export const immessage = $root.immessage = (() => {
         PreSignResp.prototype.signature = "";
 
         /**
+         * PreSignResp downloadUrl.
+         * @member {string} downloadUrl
+         * @memberof immessage.PreSignResp
+         * @instance
+         */
+        PreSignResp.prototype.downloadUrl = "";
+
+        /**
          * Creates a new PreSignResp instance using the specified properties.
          * @function create
          * @memberof immessage.PreSignResp
@@ -42001,6 +42009,8 @@ export const immessage = $root.immessage = (() => {
                 writer.uint32(/* id 6, wireType 2 =*/50).string(message.date);
             if (message.signature != null && Object.hasOwnProperty.call(message, "signature"))
                 writer.uint32(/* id 7, wireType 2 =*/58).string(message.signature);
+            if (message.downloadUrl != null && Object.hasOwnProperty.call(message, "downloadUrl"))
+                writer.uint32(/* id 8, wireType 2 =*/66).string(message.downloadUrl);
             return writer;
         };
 
@@ -42063,6 +42073,10 @@ export const immessage = $root.immessage = (() => {
                         message.signature = reader.string();
                         break;
                     }
+                case 8: {
+                        message.downloadUrl = reader.string();
+                        break;
+                    }
                 default:
                     reader.skipType(tag & 7);
                     break;
@@ -42119,6 +42133,9 @@ export const immessage = $root.immessage = (() => {
             if (message.signature != null && message.hasOwnProperty("signature"))
                 if (!$util.isString(message.signature))
                     return "signature: string expected";
+            if (message.downloadUrl != null && message.hasOwnProperty("downloadUrl"))
+                if (!$util.isString(message.downloadUrl))
+                    return "downloadUrl: string expected";
             return null;
         };
 
@@ -42148,6 +42165,8 @@ export const immessage = $root.immessage = (() => {
                 message.date = String(object.date);
             if (object.signature != null)
                 message.signature = String(object.signature);
+            if (object.downloadUrl != null)
+                message.downloadUrl = String(object.downloadUrl);
             return message;
         };
 
@@ -42172,6 +42191,7 @@ export const immessage = $root.immessage = (() => {
                 object.credential = "";
                 object.date = "";
                 object.signature = "";
+                object.downloadUrl = "";
             }
             if (message.url != null && message.hasOwnProperty("url"))
                 object.url = message.url;
@@ -42187,6 +42207,8 @@ export const immessage = $root.immessage = (() => {
                 object.date = message.date;
             if (message.signature != null && message.hasOwnProperty("signature"))
                 object.signature = message.signature;
+            if (message.downloadUrl != null && message.hasOwnProperty("downloadUrl"))
+                object.downloadUrl = message.downloadUrl;
             return object;
         };
 

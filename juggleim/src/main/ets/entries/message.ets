@@ -12,6 +12,15 @@ export class MessageSentState{
   static uploading:number = 4
 }
 
+export class MediaMessageUploadState{
+  static none:number = 0
+  static pending:number = 1
+  static uploading:number = 2
+  static success:number = 3
+  static failed:number = 4
+  static canceled:number = 5
+}
+
 export class MessageContent{
   private msgType:string
   private msgFlag:MsgFlag
@@ -45,6 +54,92 @@ export class MessageContent{
   }
 
   decode(data:Uint8Array){
+  }
+}
+
+class MediaMessagePayload{
+  local:string = ''
+  localPath:string = ''
+  url:string = ''
+  extra:string = ''
+  uploadState:number = MediaMessageUploadState.none
+  uploadProgress:number = 0
+  type:string = ''
+  duration:number = 0
+  thumbnail:string = ''
+  height:number = 0
+  width:number = 0
+  size:number = 0
+  name:string = ''
+  poster:string = ''
+  constructor() {
+  }
+}
+
+export class MediaMessageContent extends MessageContent{
+  public localPath:string = ''
+  public url:string = ''
+  public extra:string = ''
+  public uploadState:number = MediaMessageUploadState.none
+  public uploadProgress:number = 0
+
+  constructor() {
+    super()
+  }
+
+  setUploadState(uploadState:number, uploadProgress:number = this.uploadProgress):void{
+    this.uploadState = uploadState
+    this.uploadProgress = uploadProgress
+  }
+
+  protected encodeMediaPayload(payload:MediaMessagePayload):Uint8Array{
+    payload.local = this.localPath
+    payload.localPath = this.localPath
+    payload.url = this.url
+    payload.extra = this.extra
+    payload.uploadState = this.uploadState
+    payload.uploadProgress = this.uploadProgress
+    let str = JSON.stringify(payload)
+    return JimUtil.stringToUint8Array(str)
+  }
+
+  protected decodeMediaPayload(data:Uint8Array):MediaMessagePayload{
+    let str = JimUtil.uint8ArrayToString(data)
+    let dataObj = JSON.parse(str) as MediaMessagePayload
+    let payload = new MediaMessagePayload()
+    payload.local = dataObj.local != undefined ? dataObj.local : ''
+    payload.localPath = dataObj.localPath != undefined ? dataObj.localPath : payload.local
+    payload.url = dataObj.url != undefined ? dataObj.url : ''
+    payload.extra = dataObj.extra != undefined ? dataObj.extra : ''
+    payload.uploadState = dataObj.uploadState != undefined ? dataObj.uploadState : MediaMessageUploadState.none
+    payload.uploadProgress = dataObj.uploadProgress != undefined ? dataObj.uploadProgress : 0
+    payload.type = dataObj.type != undefined ? dataObj.type : ''
+    payload.duration = dataObj.duration != undefined ? dataObj.duration : 0
+    payload.thumbnail = dataObj.thumbnail != undefined ? dataObj.thumbnail : ''
+    payload.height = dataObj.height != undefined ? dataObj.height : 0
+    payload.width = dataObj.width != undefined ? dataObj.width : 0
+    payload.size = dataObj.size != undefined ? dataObj.size : 0
+    payload.name = dataObj.name != undefined ? dataObj.name : ''
+    payload.poster = dataObj.poster != undefined ? dataObj.poster : ''
+    this.localPath = payload.localPath
+    this.url = payload.url
+    this.extra = payload.extra
+    this.uploadProgress = payload.uploadProgress
+    this.uploadState = this.normalizeUploadState(payload.uploadState)
+    return payload
+  }
+
+  private normalizeUploadState(uploadState:number|undefined):number{
+    if(uploadState != undefined){
+      return uploadState
+    }
+    if(this.url != ''){
+      return MediaMessageUploadState.success
+    }
+    if(this.localPath != ''){
+      return MediaMessageUploadState.pending
+    }
+    return MediaMessageUploadState.none
   }
 }
 
@@ -162,16 +257,12 @@ export class MergeMessage extends  MessageContent{
 }
 
 interface IVoiceMessage{
-  url:string
   type:string
   duration:number
-  extra:string
 }
-export class VoiceMessage extends MessageContent{
-  public url:string = ''
+export class VoiceMessage extends MediaMessageContent{
   public type:string = ''
   public duration:number = 0
-  public extra:string = ''
   constructor() {
     super()
     this.setMsgType(JimMsgType.Voice)
@@ -179,41 +270,31 @@ export class VoiceMessage extends MessageContent{
   }
 
   encode():Uint8Array{
-    let str = JSON.stringify({
-      url:this.url,
-      type:this.type,
-      duration:this.duration,
-      extra:this.extra
-    })
-    return JimUtil.stringToUint8Array(str)
+    let payload = new MediaMessagePayload()
+    payload.type = this.type
+    payload.duration = this.duration
+    return this.encodeMediaPayload(payload)
   }
 
   decode(data:Uint8Array){
-    let str = JimUtil.uint8ArrayToString(data)
-    let t = JSON.parse(str) as IVoiceMessage
-    this.url = t.url
+    let t = this.decodeMediaPayload(data) as IVoiceMessage
     this.type = t.type
     this.duration = t.duration
-    this.extra = t.extra
   }
 }
 
 interface IImageMessage{
-  url:string
   thumbnail:string
   height:number
   width:number
   size:number
-  extra:string
 }
 
-export class ImageMessage extends MessageContent{
-  url:string = ''
+export class ImageMessage extends MediaMessageContent{
   thumbnail:string=''
   height:number=0
   width:number=0
   size:number=0
-  extra:string=''
   constructor() {
     super()
     this.setMsgType(JimMsgType.Image)
@@ -221,43 +302,33 @@ export class ImageMessage extends MessageContent{
   }
 
   encode():Uint8Array{
-    let str = JSON.stringify({
-      url:this.url,
-      thumbnail:this.thumbnail,
-      height:this.height,
-      width:this.width,
-      size:this.size,
-      extra:this.extra
-    })
-    return JimUtil.stringToUint8Array(str)
+    let payload = new MediaMessagePayload()
+    payload.thumbnail = this.thumbnail
+    payload.height = this.height
+    payload.width = this.width
+    payload.size = this.size
+    return this.encodeMediaPayload(payload)
   }
 
   decode(data:Uint8Array){
-    let str = JimUtil.uint8ArrayToString(data)
-    let t = JSON.parse(str) as IImageMessage
-    this.url = t.url
+    let t = this.decodeMediaPayload(data) as IImageMessage
     this.thumbnail = t.thumbnail
     this.height = t.height
     this.width = t.width
     this.size = t.size
-    this.extra = t.extra
   }
 }
 
 interface IFileMessage{
   name:string
-  url:string
   size:number
   type:string
-  extra:string
 }
 
-export class FileMessage extends MessageContent{
+export class FileMessage extends MediaMessageContent{
   name:string=''
-  url:string=''
   size:number=0
   type:string=''
-  extra:string=''
   constructor() {
     super()
     this.setMsgType(JimMsgType.File)
@@ -265,45 +336,35 @@ export class FileMessage extends MessageContent{
   }
 
   encode():Uint8Array{
-    let str = JSON.stringify({
-      name:this.name,
-      url:this.url,
-      size:this.size,
-      type:this.type,
-      extra:this.extra
-    })
-    return JimUtil.stringToUint8Array(str)
+    let payload = new MediaMessagePayload()
+    payload.name = this.name
+    payload.size = this.size
+    payload.type = this.type
+    return this.encodeMediaPayload(payload)
   }
 
   decode(data:Uint8Array){
-    let str = JimUtil.uint8ArrayToString(data)
-    let t = JSON.parse(str) as IFileMessage
+    let t = this.decodeMediaPayload(data) as IFileMessage
     this.name = t.name
-    this.url = t.url
     this.size = t.size
     this.type = t.type
-    this.extra = t.extra
   }
 }
 
 interface IVideoMessage{
-  url:string
   poster:string
   height:number
   width:number
   size:number
   duration:number
-  extra:string
 }
 
-export class VideoMessage extends MessageContent{
-  url:string=''
+export class VideoMessage extends MediaMessageContent{
   poster:string=''
   height:number=0
   width:number=0
   size:number = 0
   duration:number=0
-  extra:string=''
   constructor() {
     super()
     this.setMsgType(JimMsgType.Video)
@@ -311,28 +372,22 @@ export class VideoMessage extends MessageContent{
   }
 
   encode():Uint8Array{
-    let str = JSON.stringify({
-      url:this.url,
-      poster:this.poster,
-      height:this.height,
-      width:this.width,
-      size:this.size,
-      duration:this.duration,
-      extra:this.extra
-    })
-    return JimUtil.stringToUint8Array(str)
+    let payload = new MediaMessagePayload()
+    payload.poster = this.poster
+    payload.height = this.height
+    payload.width = this.width
+    payload.size = this.size
+    payload.duration = this.duration
+    return this.encodeMediaPayload(payload)
   }
 
   decode(data:Uint8Array){
-    let str = JimUtil.uint8ArrayToString(data)
-    let t = JSON.parse(str) as IVideoMessage
-    this.url = t.url
+    let t = this.decodeMediaPayload(data) as IVideoMessage
     this.poster = t.poster
     this.height = t.height
     this.width = t.width
     this.size = t.size
     this.duration = t.duration
-    this.extra = t.extra
   }
 }
 
