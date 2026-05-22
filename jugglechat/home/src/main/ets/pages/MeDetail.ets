@@ -305,6 +305,96 @@ export struct MeDetail {
               })
 
               Column(){
+                Text('广播消息')
+                  .fontSize(18)
+                  .fontFamily(BaseConstants.FONT_FAMILY_MEDIUM)
+              }.width('80%')
+              .alignItems(HorizontalAlign.Start)
+              .padding({left:20})
+
+              Column(){
+                StandardIcon({ icon: $r('app.media.ic_public_more') })
+                  .margin({ right: $r('app.float.phone_icon_right') })
+              }.width('10%')
+              .alignItems(HorizontalAlign.End)
+            }.alignItems(VerticalAlign.Center)
+            .height(BaseConstants.FULL_HEIGHT)
+          }
+          .height(40)
+          .width('90%')
+          .alignItems(HorizontalAlign.Start)
+          .backgroundColor('#F1F3F5')
+          .margin({top:20})
+          .borderRadius({
+            topLeft: 6,
+            topRight: 6,
+            bottomLeft:6,
+            bottomRight:6,
+          }).onClick(()=>{
+            if (this.mySettingPageInfo.size() > 1) {
+              this.mySettingPageInfo.pop()
+            }
+            this.mySettingPageInfo.pushPath({name:'BroadcastMessage'})
+          })
+
+          Column(){
+            Row(){
+              Column(){
+                StandardIcon({ icon: $r('app.media.ic_public_phone') })
+                  .margin({ right: $r('app.float.phone_icon_right') })
+              }
+              .width('10%')
+              .alignItems(HorizontalAlign.Start)
+              .padding({
+                left:15
+              })
+
+              Column(){
+                Text('聊天室')
+                  .fontSize(18)
+                  .fontFamily(BaseConstants.FONT_FAMILY_MEDIUM)
+              }.width('80%')
+              .alignItems(HorizontalAlign.Start)
+              .padding({left:20})
+
+              Column(){
+                StandardIcon({ icon: $r('app.media.ic_public_more') })
+                  .margin({ right: $r('app.float.phone_icon_right') })
+              }.width('10%')
+              .alignItems(HorizontalAlign.End)
+            }.alignItems(VerticalAlign.Center)
+            .height(BaseConstants.FULL_HEIGHT)
+          }
+          .height(40)
+          .width('90%')
+          .alignItems(HorizontalAlign.Start)
+          .backgroundColor('#F1F3F5')
+          .margin({top:20})
+          .borderRadius({
+            topLeft: 6,
+            topRight: 6,
+            bottomLeft:6,
+            bottomRight:6,
+          }).onClick(()=>{
+            if (this.mySettingPageInfo.size() > 1) {
+              this.mySettingPageInfo.pop()
+            }
+            this.mySettingPageInfo.pushPath({name:'ChatroomList'})
+          })
+
+          Column(){
+            Row(){
+              Column(){
+                StandardIcon({ icon: $r('app.media.ic_public_phone') })
+                  .margin({ right: $r('app.float.phone_icon_right') })
+              }
+              .width('10%')
+              .alignItems(HorizontalAlign.Start)
+              .padding({
+                left:15
+              })
+
+              Column(){
                 Text('用户协议')
                   .fontSize(18)
                   .fontFamily(BaseConstants.FONT_FAMILY_MEDIUM)

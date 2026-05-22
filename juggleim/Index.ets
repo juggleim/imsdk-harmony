@@ -1,11 +1,18 @@
 export { JuggleIm, JimConfig } from './src/main/ets/juggleim'
 
 export { ConnectionStatusListener, IConnectionManager } from './src/main/ets/interfaces/iconnectionmanager'
+export { IChatroomManager } from './src/main/ets/interfaces/ichatroommanager'
 export { IConversationManager } from './src/main/ets/interfaces/iconversationmanager'
 export { IMessageManager } from './src/main/ets/interfaces/imessagemanager'
 export { IUserInfoManager } from './src/main/ets/interfaces/iuserinfomanager'
 export { GroupInfoCallback, GroupMemberCallback, GroupMembersCallback, IGroupInfoManager } from './src/main/ets/interfaces/igroupinfomanager'
 export { CommonCallback } from './src/main/ets/interfaces/commoncallback'
+export {
+  ChatroomAttributesCallback,
+  ChatroomAttributesListener,
+  ChatroomAttributesUpdateCallback,
+  ChatroomListener
+} from './src/main/ets/interfaces/chatroomtypes'
 export {
   IMessageUploadProvider,
   MediaUploadCredential,
@@ -33,6 +40,7 @@ export {
   TotalUnreadCountUpdateListener
 } from './src/main/ets/interfaces/conversationtypes'
 export {
+  BroadcastMessageCallback,
   ClearMsgOptions,
   DownloadMediaMessageCancelCallback,
   DownloadMediaMessageErrorCallback,

@@ -3,6 +3,7 @@ import { PreferenceUtil } from '../commons/preferenceutil'
 import { JimDbManager } from '../dbs/dbmanager'
 import {ImClient,ConnStatusListener} from '../imclients/imclient'
 import { IConnectionManager } from '../interfaces/iconnectionmanager'
+import { ChatroomManager } from './chatroommanager'
 
 
 export class ConnectionManager implements IConnectionManager {
@@ -23,6 +24,7 @@ export class ConnectionManager implements IConnectionManager {
   }
 
   disconnect(){
+    (JuggleIm.instance.getChatroomManager() as ChatroomManager).userDisconnect()
     this.imclient.disconnect(true)
   }
 

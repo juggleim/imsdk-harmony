@@ -11,7 +11,9 @@ import { MsgSyncManager } from './managers/msgsyncmanager';
 import { MsgHandler } from './entries/msghandler';
 import { Conversation, ConversationInfo } from './entries/conversation';
 import { Message } from './entries/message';
+import { ChatroomManager } from './managers/chatroommanager';
 import { IConnectionManager } from './interfaces/iconnectionmanager'
+import { IChatroomManager } from './interfaces/ichatroommanager'
 import { IConversationManager } from './interfaces/iconversationmanager'
 import { IMessageManager } from './interfaces/imessagemanager'
 import { IUserInfoManager } from './interfaces/iuserinfomanager'
@@ -40,6 +42,7 @@ export class JuggleIm{
   private converManager:ConversationManager
   private userInfoManager:UserInfoManager
   private groupInfoManager:GroupInfoManager
+  private chatroomManager:ChatroomManager
 
   private constructor() {
     this.config = new JimConfig();
@@ -53,6 +56,7 @@ export class JuggleIm{
     this.converManager = new ConversationManager(this.imclient,this.msgSyncManager)
     this.userInfoManager = new UserInfoManager(this.imclient)
     this.groupInfoManager = new GroupInfoManager(this.imclient)
+    this.chatroomManager = new ChatroomManager(this.imclient, this.msgSyncManager)
   }
 
   async init(address:string, appkey:string):Promise<void>{
@@ -96,6 +100,10 @@ export class JuggleIm{
 
   getConversationManager():IConversationManager{
     return this.converManager
+  }
+
+  getChatroomManager():IChatroomManager{
+    return this.chatroomManager
   }
 
   getUserInfoManager():IUserInfoManager{

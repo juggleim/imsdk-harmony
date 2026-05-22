@@ -21,6 +21,7 @@ export interface  MsgFlag{
   isModified?:boolean
   isMerged?:boolean
   isUndisturb?:boolean
+  isBroadcast?:boolean
   isNoAffectSenderConver?:boolean
   isExtMsg?:boolean
   isReactionMsg?:boolean
@@ -51,7 +52,7 @@ export class MsgFlagTool{
     if(f.isUndisturb){
       flag |= 64
     }
-    if(f.isNoAffectSenderConver){
+    if(f.isBroadcast || f.isNoAffectSenderConver){
       flag |= 128
     }
     if(f.isExtMsg){
@@ -75,6 +76,7 @@ export class MsgFlagTool{
       isModified:(flag&0x10)==16,
       isMerged:(flag&0x20)==32,
       isUndisturb:(flag&0x40)==64,
+      isBroadcast:(flag&0x80)==128,
       isNoAffectSenderConver:(flag&0x80)==128,
       isExtMsg:(flag&0x100)==256,
       isReactionMsg:(flag&0x200)==512,

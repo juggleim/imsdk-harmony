@@ -4,6 +4,7 @@ import { MessageOptions } from '../entries/messageoptions'
 import { CommonCallback } from './commoncallback'
 import { IMessageUploadProvider, MediaUploadCredentialCallback } from './imessageuploadprovider'
 import {
+    BroadcastMessageCallback,
     ClearMsgOptions,
     DownloadMediaMessageCancelCallback,
     DownloadMediaMessageErrorCallback,
@@ -58,6 +59,7 @@ export interface IMessageManager {
   addFavorite(msgIds: string[], callback: CommonCallback): void
   removeFavorite(msgIds: string[], callback: CommonCallback): void
   getFavorite(option: GetFavoriteMessageOption, callback: FavoriteMessagesCallback): void
+  broadcastMessage(msg: MessageContent, convers: Conversation[], callback: BroadcastMessageCallback): void
   setMute(isMute: boolean, periods: TimePeriod[], callback: CommonCallback): void
   getMuteStatus(callback: MuteStatusCallback): void
   setTop(messageId: string, conver: Conversation, isTop: boolean, callback: CommonCallback): void

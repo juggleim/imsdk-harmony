@@ -11,6 +11,7 @@ import { MsgFlag, MsgFlagTool } from "../improto/msgflag";
 import Long from 'long'
 import { ConversationAddListener,ConversationUpdateListener,ConversationDeleteListener,TotalUnreadCountUpdateListener } from "./conversationmanager";
 import { JuggleIm } from "../juggleim";
+import { ChatroomManager } from "./chatroommanager";
 import {
   MsgCleanedListener,
   MsgDeletedListener,
@@ -337,10 +338,15 @@ export class MsgSyncManager{
   private onMsgNotify(index:number,data:Uint8Array){
     if(data!=null&&data!=undefined){
       let notify = immessage.Notify.decode(data)
+      let chatroomMgr = JuggleIm.instance.getChatroomManager() as ChatroomManager
       if(notify.type == immessage.NotifyType.Msg) {
         this.handleMsgNtf(new MsgNtfTask(1,notify.syncTime as number,undefined,''))
       }else if(notify.type == immessage.NotifyType.ChatroomMsg){
-        //TODO
+        chatroomMgr.handleChatroomSyncNotify(notify.chatroomId as string, JimUtil.toNumber(notify.syncTime as number))
+      }else if(notify.type == immessage.NotifyType.ChatroomAtt){
+        chatroomMgr.handleChatroomAttributesNotify(notify.chatroomId as string, JimUtil.toNumber(notify.syncTime as number))
+      }else if(notify.type == immessage.NotifyType.ChatroomDestroy){
+        chatroomMgr.handleChatroomDestroy(notify.chatroomId as string)
       }
     }
   }
@@ -429,13 +435,14 @@ export class MsgSyncManager{
 
   public handleMsg(downMsg:immessage.IDownMsg,callback:(isFinish:boolean)=>void){
     let msg = MsgHandler.downMsg2Message(downMsg)
+    let isChatroom = msg.conversation.conversationType == immessage.ChannelType.Chatroom
     let msgFlag = MsgFlagTool.parseFlag(msg.flags)
     let isSend:boolean = false
     if(downMsg.senderId ==JuggleIm.instance.userId){
       isSend = true
     }
 
-    if(!msgFlag.isState){
+    if(!isChatroom && !msgFlag.isState){
       if(isSend){
         if((downMsg.msgTime as number) < this.getLatestSendboxMsgTime()){
           return
@@ -468,15 +475,21 @@ export class MsgSyncManager{
         if(!msgDao.existByMsgId(msg.messageId,msg.clientId)){
           //save msg
           let aff = msgDao.insert(msg)
-          if(aff>0&&msg.sentTime>this.getLatestConverSyncTime()) {
+          if(!isChatroom && aff>0 && msg.sentTime>this.getLatestConverSyncTime()) {
             //check conver exist
             let dbConver = JimDbManager.instance.getConversationDao().getConver(new Conversation(msg.conversation.conversationId,msg.conversation.conversationType))
             let newConverInfo = this.msg2Conver(msg)
             let isAdd:boolean = true
+            let isSenderBroadcast = this.isSenderBroadcastMessage(msg)
             if(dbConver===undefined){//add
               dbConver = newConverInfo
+              if(isSenderBroadcast){
+                dbConver.converTime = 0
+              }
             }else{//update
-              dbConver.converTime = newConverInfo.converTime
+              if(!isSenderBroadcast){
+                dbConver.converTime = newConverInfo.converTime
+              }
               dbConver.lastMessage = newConverInfo.lastMessage
               isAdd = false
             }
@@ -496,7 +509,7 @@ export class MsgSyncManager{
       }
     }
     //unpdate msg sync time
-    if(!msgFlag.isState){
+    if(!isChatroom && !msgFlag.isState){
       if(isSend){
         this.recordLatestSendboxMsgTime(msg.sentTime,msg.flags)
       }else {
@@ -510,7 +523,7 @@ export class MsgSyncManager{
     let converInfo = new ConversationInfo()
     converInfo.conversation = new Conversation(msg.conversation.conversationId,msg.conversation.conversationType)
     converInfo.lastMessage = msg
-    converInfo.converTime = msg.sentTime
+    converInfo.converTime = this.isSenderBroadcastMessage(msg) ? 0 : msg.sentTime
     console.log("jimsdk_syncmsg_conver:",JSON.stringify(converInfo))
     return converInfo
   }
@@ -595,9 +608,17 @@ export class MsgSyncManager{
   }
 
   public updConver(message:Message){
+    if(message.conversation.conversationType == immessage.ChannelType.Chatroom){
+      return
+    }
     let converDao = JimDbManager.instance.getConversationDao()
+    let isSenderBroadcast = this.isSenderBroadcastMessage(message)
     if(converDao.existByConver(message.conversation)){
-      converDao.updateByMessage(message)
+      if(isSenderBroadcast){
+        converDao.updateLastMessageByMessage(message)
+      }else{
+        converDao.updateByMessage(message)
+      }
       let conver = converDao.getConver(message.conversation)
       if(conver!=undefined) {
         let convers: ConversationInfo[] = []
@@ -607,7 +628,7 @@ export class MsgSyncManager{
     }else{
       let converInfo = new ConversationInfo()
       converInfo.conversation = message.conversation
-      converInfo.converTime = message.sentTime
+      converInfo.converTime = isSenderBroadcast ? 0 : message.sentTime
       converInfo.lastMessage = message
       converDao.upsert(converInfo)
 
@@ -615,6 +636,11 @@ export class MsgSyncManager{
       convers.push(converInfo)
       this.triggerConversationAdd(convers)
     }
+  }
+
+  private isSenderBroadcastMessage(message:Message):boolean{
+    let msgFlag = MsgFlagTool.parseFlag(message.flags)
+    return msgFlag.isBroadcast == true && message.direction == 0
   }
 
   private recordLatestConverSyncTime(time:number){

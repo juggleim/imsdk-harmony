@@ -15,6 +15,11 @@ export type DownloadMediaMessageErrorCallback = (code: number) => void
 export type DownloadMediaMessageCancelCallback = (msg: Message) => void
 export type MuteStatusCallback = (code: number, isMute: boolean, timezone: string, periods: TimePeriod[]) => void
 
+export interface BroadcastMessageCallback {
+  onProgress(message: Message | null, code: number, processCount: number, totalCount: number): void
+  onComplete(): void
+}
+
 export class TimePeriod {
   startTime: string = ''
   endTime: string = ''

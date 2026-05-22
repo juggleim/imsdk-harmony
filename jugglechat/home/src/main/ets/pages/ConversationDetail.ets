@@ -1394,7 +1394,8 @@ export struct ConversationDetail {
           ConversationDetailTopSearch({
             currentConversationUserName: $conversationTitle,
             conversationId: this.conversationId,
-            conversationType: this.conversationType
+            conversationType: this.conversationType,
+            showProfile: this.conversationType != 3
           })
             .height(Adaptive.ContactItemHeight(this.currentBreakpoint))
             .zIndex(1)

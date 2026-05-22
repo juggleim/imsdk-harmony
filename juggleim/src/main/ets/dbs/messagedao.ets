@@ -379,6 +379,26 @@ export class MessageDao{
     return 0
   }
 
+  clearChatroomMessagesExclude(chatroomIds:string[]):number{
+    let sql = `DELETE FROM ${this.tableName} WHERE conver_type=3`
+    let args:Array<relationalStore.ValueType> = []
+    if(chatroomIds.length > 0){
+      let placeholders:string[] = []
+      chatroomIds.forEach((chatroomId)=>{
+        placeholders.push('?')
+        args.push(chatroomId)
+      })
+      sql = sql + ` AND conver_id NOT IN (${placeholders.join(',')})`
+    }
+    try{
+      let vt = JimDbManager.instance.getDb()?.executeSync(sql, args)
+      return vt as number
+    }catch (e) {
+      console.error(`jimsdk_db_fail. [${this.tableName}] err:${e.message}`)
+    }
+    return 0
+  }
+
   private buildSearchContent(msg:MessageContent):string{
     let msgType = msg.getMsgType()
     if(msgType == JimMsgType.Text){

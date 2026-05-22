@@ -23,6 +23,7 @@ export struct ConversationDetailTopSearch {
   @Link currentConversationUserName: string;
   @Prop conversationId:string
   @Prop conversationType:number
+  @Prop showProfile:boolean = true
   @Consume('pageInfo') pageInfo: NavPathStack;
 
   build() {
@@ -45,7 +46,11 @@ export struct ConversationDetailTopSearch {
         .fontFamily(BaseConstants.FONT_FAMILY_MEDIUM)
         .fontColor($r('app.color.conversation_default_text_color'))
       StandardIcon({ icon: $r('app.media.ic_public_more') })
+        .visibility(this.showProfile ? Visibility.Visible : Visibility.Hidden)
         .onClick(()=>{
+          if(!this.showProfile){
+            return
+          }
           this.pageInfo.pushPath({
             name: 'ConversationProfile',
             param: new ConversationRouteParams(

@@ -271,6 +271,29 @@ export class ConversationDao{
     return 0
   }
 
+  updateLastMessageByMessage(msg:Message):number{
+    let sql = `UPDATE ${this.tableName} SET last_msg_id=?,last_msg_time=?,last_msg_seq_no=?,last_msg_client_id=?,last_msg_type=?,last_msg_content=?,last_msg_state=?,last_msg_sender_id=? WHERE conver_id=? AND conver_type=?`
+    let args:Array<relationalStore.ValueType> = []
+    args.push(msg.messageId)
+    args.push(msg.sentTime)
+    args.push(msg.msgSeqNo)
+    args.push(msg.clientId)
+    args.push(msg.msgContent.getMsgType())
+    args.push(JimUtil.uint8ArrayToString(msg.msgContent.encode()))
+    args.push(msg.state)
+    args.push(msg.senderId)
+    args.push(msg.conversation.conversationId)
+    args.push(msg.conversation.conversationType)
+
+    try{
+      let vt = JimDbManager.instance.getDb()?.executeSync(sql,args)
+      return vt as number
+    }catch (e) {
+      console.error(`jimsdk_db_fail. [${this.tableName}] err:${e.message}`)
+    }
+    return 0
+  }
+
   private getValuesBucket(conver:ConversationInfo):relationalStore.ValuesBucket{
     let valuesBucket:relationalStore.ValuesBucket = {
       "conver_id":conver.conversation.conversationId,

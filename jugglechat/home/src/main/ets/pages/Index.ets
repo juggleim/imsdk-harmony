@@ -30,6 +30,9 @@ import { deviceInfo } from '@kit.BasicServicesKit';
 import { initJuggleIm } from '../jim/jimsdk';
 import { MeDetail } from './MeDetail';
 import FriendVerify from '../views/MySettings/FriendVerify';
+import BroadcastMessagePage from '../views/MySettings/BroadcastMessage';
+import ChatroomListPage from '../views/MySettings/ChatroomList';
+import ChatroomRoomPage from '../views/MySettings/ChatroomRoom';
 import GlobalUndisturb from '../views/MySettings/GlobalUndisturb';
 import LanguageSetting from '../views/MySettings/LanguageSetting';
 import MyFavorite from '../views/MySettings/MyFavorite';
@@ -92,6 +95,12 @@ export struct Index {
   MySettingsPageMap(name: string) {
     if (name === 'FriendVerify') {
       FriendVerify()
+    }else if(name === 'ChatroomList'){
+      ChatroomListPage()
+    }else if(name === 'ChatroomRoom'){
+      ChatroomRoomPage()
+    }else if(name === 'BroadcastMessage'){
+      BroadcastMessagePage()
     }else if(name === 'GlobalUndisturb'){
       GlobalUndisturb()
     }else if(name === 'LanguageSetting'){

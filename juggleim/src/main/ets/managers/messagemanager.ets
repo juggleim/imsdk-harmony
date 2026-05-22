@@ -41,6 +41,7 @@ import { MentionType, MessageOptions } from '../entries/messageoptions'
 import { MessageOptionUtil } from '../commons/messageoptionutil'
 import { UserInfo } from '../entries/user'
 import {
+  BroadcastMessageCallback,
   ClearMsgOptions,
   DownloadMediaMessageCancelCallback,
   DownloadMediaMessageErrorCallback,
@@ -70,6 +71,7 @@ import {
 } from '../interfaces/messagetypes'
 
 export {
+  BroadcastMessageCallback,
   ClearMsgOptions,
   DownloadMediaMessageCancelCallback,
   DownloadMediaMessageErrorCallback,
@@ -288,6 +290,16 @@ export class MessageManager implements IMessageManager{
     })
   }
 
+  broadcastMessage(msg:MessageContent, convers:Conversation[], callback:BroadcastMessageCallback):void{
+    let targetConvers = this.normalizeBroadcastConversations(convers)
+    if(targetConvers.length == 0){
+      callback.onComplete()
+      return
+    }
+    console.log(`${TOP_TRACE_TAG} broadcast_message_start: count=${targetConvers.length}, msgType=${msg.getMsgType()}, targets=${JSON.stringify(targetConvers.map((conver)=>`${conver.conversationType}_${conver.conversationId}`))}`)
+    this.loopBroadcastMessage(msg, targetConvers, 0, targetConvers.length, callback)
+  }
+
   setMute(isMute:boolean, periods:TimePeriod[], callback:CommonCallback):void{
     let normalizedPeriods = this.normalizeTimePeriods(periods)
     let timezone = this.resolveLocalTimezone()
@@ -395,6 +407,33 @@ export class MessageManager implements IMessageManager{
     })
   }
 
+  private loopBroadcastMessage(
+    msg:MessageContent,
+    convers:Conversation[],
+    processCount:number,
+    totalCount:number,
+    callback:BroadcastMessageCallback
+  ):void{
+    if(convers.length == 0){
+      callback.onComplete()
+      return
+    }
+    let conver = convers[0]
+    let messageContent = this.cloneMessageContent(msg)
+    this.sendMessageInternal(messageContent, conver, undefined, true, (code, message)=>{
+      console.log(`${TOP_TRACE_TAG} broadcast_message_progress: processCount=${processCount}, totalCount=${totalCount}, converId=${conver.conversationId}, converType=${conver.conversationType}, code=${code}, messageId=${message != null ? message.messageId : ''}, clientId=${message != null ? message.clientId : ''}`)
+      callback.onProgress(message, code, processCount, totalCount)
+      if(convers.length <= 1){
+        callback.onComplete()
+        return
+      }
+      let nextConvers = convers.slice(1)
+      setTimeout(()=>{
+        this.loopBroadcastMessage(msg, nextConvers, processCount + 1, totalCount, callback)
+      }, 50)
+    })
+  }
+
   private normalizeTimePeriods(periods:TimePeriod[]):TimePeriod[]{
     let normalizedPeriods:TimePeriod[] = []
     periods.forEach((period)=>{
@@ -441,6 +480,23 @@ export class MessageManager implements IMessageManager{
     return ''
   }
 
+  private normalizeBroadcastConversations(convers:Conversation[]):Conversation[]{
+    let normalizedConvers:Conversation[] = []
+    let seenKeys:Map<string, boolean> = new Map()
+    convers.forEach((conver)=>{
+      if(conver.conversationId == ''){
+        return
+      }
+      let key = `${conver.conversationType}_${conver.conversationId}`
+      if(seenKeys.has(key)){
+        return
+      }
+      seenKeys.set(key, true)
+      normalizedConvers.push(new Conversation(conver.conversationId, conver.conversationType))
+    })
+    return normalizedConvers
+  }
+
   sendMessage(msg:MessageContent,conver:Conversation,callback:MessageCallback): void
   sendMessage(msg:MessageContent,conver:Conversation,options:MessageOptions,callback:MessageCallback): void
   sendMessage(msg:MessageContent,conver:Conversation,arg3:MessageCallback|MessageOptions,arg4?:MessageCallback): void{
@@ -448,12 +504,7 @@ export class MessageManager implements IMessageManager{
     if(context == null){
       return
     }
-    let message = this.buildOutgoingMessage(msg, conver)
-    let referMsg = this.applyMessageOptions(message, context.options)
-    let msgDao = JimDbManager.instance.getMessageDao()
-    let msgDbId = msgDao.insert(message)
-    this.msgSyncMgr.updConver(message)
-    this.publishOutgoingMessage(message, msgDbId, referMsg, context.callback)
+    this.sendMessageInternal(msg, conver, context.options, false, context.callback)
   }
 
   private resolveSendContext(arg3:MessageCallback|MessageOptions,arg4?:MessageCallback):MessageSendContext|null{
@@ -795,7 +846,22 @@ export class MessageManager implements IMessageManager{
     return nextReactions
   }
 
-  private buildOutgoingMessage(msg:MessageContent, conver:Conversation):Message{
+  private sendMessageInternal(
+    msg:MessageContent,
+    conver:Conversation,
+    options:MessageOptions | undefined,
+    isBroadcast:boolean,
+    callback:MessageCallback
+  ):void{
+    let message = this.buildOutgoingMessage(msg, conver, isBroadcast)
+    let referMsg = this.applyMessageOptions(message, options)
+    let msgDao = JimDbManager.instance.getMessageDao()
+    let msgDbId = msgDao.insert(message)
+    this.msgSyncMgr.updConver(message)
+    this.publishOutgoingMessage(message, msgDbId, referMsg, callback)
+  }
+
+  private buildOutgoingMessage(msg:MessageContent, conver:Conversation, isBroadcast:boolean = false):Message{
     let message = new Message()
     message.conversation = conver
     message.msgContent = msg
@@ -803,6 +869,9 @@ export class MessageManager implements IMessageManager{
     message.senderId = JuggleIm.instance.userId
     message.sentTime = new Date().getTime()
     message.flags = msg.getFlagNumber()
+    if(isBroadcast){
+      message.flags |= MsgFlagTool.toFlag({ isBroadcast:true })
+    }
     message.searchContent = this.buildSearchContent(msg)
     message.state = MessageSentState.sending
     if(conver.conversationType == 2){
@@ -818,7 +887,7 @@ export class MessageManager implements IMessageManager{
     return immessage.UpMsg.create({
       msgType:message.msgContent.getMsgType(),
       msgContent:message.msgContent.encode(),
-      flags: MsgFlagTool.toFlag(message.msgContent.getFlag()),
+      flags: message.flags > 0 ? message.flags : MsgFlagTool.toFlag(message.msgContent.getFlag()),
       clientUid:message.clientId,
       pushData: MessageOptionUtil.toProtoPushData(message.pushData),
       mentionInfo: MessageOptionUtil.toProtoMentionInfo(message.mentionInfo),
@@ -832,6 +901,9 @@ export class MessageManager implements IMessageManager{
     }
     if(conver.conversationType == 2){
       return 'g_msg'
+    }
+    if(conver.conversationType == 3){
+      return 'c_msg'
     }
     return ''
   }
@@ -847,7 +919,7 @@ export class MessageManager implements IMessageManager{
     }
     let upMsg = this.buildUpMsg(message, referMsg)
     let data = immessage.UpMsg.encode(upMsg).finish()
-    let flags = MsgFlagTool.toFlag(message.msgContent.getFlag())
+    let flags = message.flags > 0 ? message.flags : MsgFlagTool.toFlag(message.msgContent.getFlag())
     this.imclient.publish(method,message.conversation.conversationId,data,(code,pubAck)=>{
       let msgDao = JimDbManager.instance.getMessageDao()
       if(code==0){
@@ -886,6 +958,10 @@ export class MessageManager implements IMessageManager{
         callback(code,message)
       }
     })
+  }
+
+  private cloneMessageContent(msg:MessageContent):MessageContent{
+    return MsgHandler.constructByMsgType(msg.getMsgType(), msg.encode())
   }
 
   private applyMessageOptions(message:Message,options?:MessageOptions):Message|undefined{
@@ -1322,6 +1398,10 @@ export class MessageManager implements IMessageManager{
   queryMessages(conver:Conversation,options:GetMessageOptions,callback:QryMessagesCallback){
     let normalizedOptions = this.normalizeMessageOptions(options)
     this.queryLocalMessages(conver,normalizedOptions,(code,msgs)=>{
+      if(conver.conversationType == immessage.ChannelType.Chatroom){
+        callback(code, msgs, msgs.length >= normalizedOptions.count)
+        return
+      }
       //check lack msgs
       let isLack:boolean = false
       let lastSeq:number = 0
@@ -1403,6 +1483,10 @@ export class MessageManager implements IMessageManager{
 
   queryRemoteMessages(conver:Conversation,options:GetMessageOptions,callback:QryMessagesCallback){
     let normalizedOptions = this.normalizeMessageOptions(options)
+    if(conver.conversationType == immessage.ChannelType.Chatroom){
+      callback(0, [], false)
+      return
+    }
     let order:number = 0
     if(normalizedOptions.direction == GetMessageDirection.Forward){
       order = 1

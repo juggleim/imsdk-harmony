@@ -1,5 +1,6 @@
 export class JimErrorCode{
   Success:number = 0
+  NotChatroomMember:number = 14001
 
   InvalidParam:number = 21003
   OperationTimeout:number = 21004
