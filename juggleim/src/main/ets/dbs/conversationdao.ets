@@ -234,6 +234,18 @@ export class ConversationDao{
     return 0
   }
 
+  clearLastMessage(conver:Conversation):ConversationInfo|undefined{
+    let sql = `UPDATE ${this.tableName} SET last_msg_id='',last_msg_time=0,last_msg_seq_no=0,last_msg_index=last_read_msg_index,last_msg_type='',last_msg_content='',last_msg_client_id='',last_msg_direction=0,last_msg_state=0,last_msg_has_read=0,last_msg_sender_id='',mention_info='',last_msg_mention_info='',unread_tag=0 WHERE conver_id=? AND conver_type=?`
+    let args:Array<relationalStore.ValueType> = [conver.conversationId, conver.conversationType]
+    try{
+      JimDbManager.instance.getDb()?.executeSync(sql,args)
+      return this.getConver(conver)
+    }catch (e) {
+      console.error(`jimsdk_db_fail. [${this.tableName}] err:${e.message}`)
+      return this.getConver(conver)
+    }
+  }
+
   updateByMessage(msg:Message):number{
     let sql = `UPDATE ${this.tableName} SET conver_time=?,last_msg_id=?,last_msg_time=?,last_msg_seq_no=?,last_msg_client_id=?,last_msg_type=?,last_msg_content=?,last_msg_state=?,last_msg_sender_id=? WHERE conver_id=? AND conver_type=?`
     let args:Array<relationalStore.ValueType> = []

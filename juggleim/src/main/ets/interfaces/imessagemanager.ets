@@ -15,6 +15,7 @@ import {
     GroupMessageReadInfoDetailCallback,
     MessageCallback,
     MessageReactionsCallback,
+    MuteStatusCallback,
     MsgCleanedListener,
   MsgDeletedListener,
   MsgGroupReadReceiptListener,
@@ -26,6 +27,7 @@ import {
   QryMessagesCallback,
   QueryMsgOptions,
   SearchParams,
+  TimePeriod,
   TopMessageCallback
 } from './messagetypes'
 import { HashMap } from '@kit.ArkTS'
@@ -56,6 +58,8 @@ export interface IMessageManager {
   addFavorite(msgIds: string[], callback: CommonCallback): void
   removeFavorite(msgIds: string[], callback: CommonCallback): void
   getFavorite(option: GetFavoriteMessageOption, callback: FavoriteMessagesCallback): void
+  setMute(isMute: boolean, periods: TimePeriod[], callback: CommonCallback): void
+  getMuteStatus(callback: MuteStatusCallback): void
   setTop(messageId: string, conver: Conversation, isTop: boolean, callback: CommonCallback): void
   getTopMessage(conver: Conversation, callback: TopMessageCallback): void
   sendMessage(msg: MessageContent, conver: Conversation, callback: MessageCallback): void

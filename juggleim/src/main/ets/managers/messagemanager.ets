@@ -53,6 +53,7 @@ import {
   GroupMessageReadInfoDetailCallback,
   MessageCallback,
   MessageReactionsCallback,
+  MuteStatusCallback,
   MsgCleanedListener,
   MsgDeletedListener,
   MsgGroupReadReceiptListener,
@@ -64,6 +65,7 @@ import {
   QryMessagesCallback,
   QueryMsgOptions,
   SearchParams,
+  TimePeriod,
   TopMessageCallback
 } from '../interfaces/messagetypes'
 
@@ -80,6 +82,7 @@ export {
   GroupMessageReadInfoDetailCallback,
   MessageCallback,
   MessageReactionsCallback,
+  MuteStatusCallback,
   MsgCleanedListener,
   MsgDeletedListener,
   MsgGroupReadReceiptListener,
@@ -91,8 +94,11 @@ export {
   QryMessagesCallback,
   QueryMsgOptions,
   SearchParams,
+  TimePeriod,
   TopMessageCallback
 } from '../interfaces/messagetypes'
+
+const TOP_TRACE_TAG:string = 'TOPTRACE'
 
 class MessageSendContext {
   callback:MessageCallback = (_code:number, _message:Message|null)=>{}
@@ -282,6 +288,57 @@ export class MessageManager implements IMessageManager{
     })
   }
 
+  setMute(isMute:boolean, periods:TimePeriod[], callback:CommonCallback):void{
+    let normalizedPeriods = this.normalizeTimePeriods(periods)
+    let timezone = this.resolveLocalTimezone()
+    console.log(`${TOP_TRACE_TAG} global_mute_set_request: isMute=${isMute}, timezone=${timezone}, periods=${JSON.stringify(normalizedPeriods)}, userId=${JuggleIm.instance.userId}`)
+    let req = immessage.UserUndisturb.create({
+      "switch": isMute,
+      timezone: timezone,
+      rules: normalizedPeriods.map((period)=>{
+        return immessage.UserUndisturbItem.create({
+          start: period.startTime,
+          end: period.endTime
+        })
+      })
+    })
+    let data = immessage.UserUndisturb.encode(req).finish()
+    this.imclient.query('set_user_undisturb', JuggleIm.instance.userId, data, (code, qryAck)=>{
+      let timestamp = qryAck.timestamp != undefined && qryAck.timestamp != null ?
+        JimUtil.toNumber(qryAck.timestamp as number) : 0
+      console.log(`${TOP_TRACE_TAG} global_mute_set_ack: isMute=${isMute}, timezone=${timezone}, periods=${JSON.stringify(normalizedPeriods)}, code=${code}, timestamp=${timestamp}`)
+      if(code == 0 && timestamp > 0){
+        this.msgSyncMgr.recordLatestSendboxMsgTime(timestamp, MsgFlagTool.toFlag({ isCmd:true }))
+      }
+      callback(code)
+    })
+  }
+
+  getMuteStatus(callback:MuteStatusCallback):void{
+    console.log(`${TOP_TRACE_TAG} global_mute_get_request: userId=${JuggleIm.instance.userId}`)
+    let req = immessage.Nil.create({})
+    let data = immessage.Nil.encode(req).finish()
+    this.imclient.query('get_user_undisturb', JuggleIm.instance.userId, data, (code, qryAck)=>{
+      if(code != 0){
+        console.log(`${TOP_TRACE_TAG} global_mute_get_ack: code=${code}, hasData=false`)
+        callback(code, false, '', [])
+        return
+      }
+      try{
+        let resp = immessage.UserUndisturb.decode(qryAck.data as Uint8Array)
+        let periods = this.buildTimePeriodsFromProto(resp.rules)
+        let timezone = resp.timezone != undefined ? resp.timezone as string : ''
+        let isMute = resp['switch'] != undefined ? resp['switch'] as boolean : false
+        console.log(`${TOP_TRACE_TAG} global_mute_get_ack: code=${code}, isMute=${isMute}, timezone=${timezone}, periods=${JSON.stringify(periods)}`)
+        callback(0, isMute, timezone, periods)
+      }catch (error) {
+        let err = error as Error
+        console.error(`${TOP_TRACE_TAG} global_mute_get_decode_fail: ${err.message}`)
+        callback(-1, false, '', [])
+      }
+    })
+  }
+
   setTop(messageId:string, conver:Conversation, isTop:boolean, callback:CommonCallback):void{
     let normalizedMessageId = messageId.trim()
     if(normalizedMessageId == '' || conver.conversationId == ''){
@@ -336,6 +393,52 @@ export class MessageManager implements IMessageManager{
       let operator = this.buildUserInfoFromProto(resp.operator)
       callback(0, persistedMessage, operator, JimUtil.toNumber(resp.createdTime as number))
     })
+  }
+
+  private normalizeTimePeriods(periods:TimePeriod[]):TimePeriod[]{
+    let normalizedPeriods:TimePeriod[] = []
+    periods.forEach((period)=>{
+      let startTime = period.startTime.trim()
+      let endTime = period.endTime.trim()
+      if(startTime == '' || endTime == ''){
+        return
+      }
+      let nextPeriod = new TimePeriod()
+      nextPeriod.startTime = startTime
+      nextPeriod.endTime = endTime
+      normalizedPeriods.push(nextPeriod)
+    })
+    return normalizedPeriods
+  }
+
+  private buildTimePeriodsFromProto(items:immessage.IUserUndisturbItem[] | null | undefined):TimePeriod[]{
+    let periods:TimePeriod[] = []
+    if(items == undefined || items == null){
+      return periods
+    }
+    items.forEach((item)=>{
+      let startTime = item.start != undefined ? (item.start as string).trim() : ''
+      let endTime = item.end != undefined ? (item.end as string).trim() : ''
+      if(startTime == '' || endTime == ''){
+        return
+      }
+      let period = new TimePeriod()
+      period.startTime = startTime
+      period.endTime = endTime
+      periods.push(period)
+    })
+    return periods
+  }
+
+  private resolveLocalTimezone():string{
+    try{
+      let timezone = Intl.DateTimeFormat().resolvedOptions().timeZone
+      if(timezone != undefined && timezone != null){
+        return timezone
+      }
+    }catch (error) {
+    }
+    return ''
   }
 
   sendMessage(msg:MessageContent,conver:Conversation,callback:MessageCallback): void
@@ -1480,6 +1583,7 @@ export class MessageManager implements IMessageManager{
   }
 
   clearMessages(conver:Conversation,options:ClearMsgOptions,callback:CommonCallback){
+    console.log(`TOPTRACE conversation_clear_messages_request: converId=${conver.conversationId}, converType=${conver.conversationType}, cleanTime=${options.cleanTime}, cleanScope=${options.cleanScope}, senderId=${options.senderId}, cleanTimeOffset=${options.cleanTimeOffset}`)
     let req = immessage.CleanHisMsgReq.create({
       "targetId":conver.conversationId,
       "channelType":conver.conversationType,
@@ -1489,7 +1593,23 @@ export class MessageManager implements IMessageManager{
       "cleanTimeOffset":options.cleanTimeOffset
     })
     let data = immessage.CleanHisMsgReq.encode(req).finish()
-    this.imclient.query("clean_hismsg",conver.conversationId,data,(code)=>{
+    this.imclient.query("clean_hismsg",conver.conversationId,data,(code,qryAck)=>{
+      let timestamp = qryAck.timestamp != undefined && qryAck.timestamp != null ?
+        JimUtil.toNumber(qryAck.timestamp as number) : 0
+      console.log(`TOPTRACE conversation_clear_messages_ack: converId=${conver.conversationId}, converType=${conver.conversationType}, code=${code}, timestamp=${timestamp}`)
+      if(code == 0){
+        JimDbManager.instance.getMessageDao().clearConversationMessages(conver, options.cleanTime, options.senderId)
+        let localConver = JimDbManager.instance.getConversationDao().clearLastMessage(conver)
+        if(timestamp > 0){
+          this.msgSyncMgr.recordLatestSendboxMsgTime(timestamp, MsgFlagTool.toFlag({ isCmd:true }))
+        }
+        if(localConver != undefined){
+          console.log(`TOPTRACE conversation_clear_messages_local_update: converId=${conver.conversationId}, converType=${conver.conversationType}, converTime=${localConver.converTime}, lastMsgId=${localConver.lastMessage.messageId}`)
+          this.msgSyncMgr.notifyConversationUpdate([localConver])
+        }else{
+          console.log(`TOPTRACE conversation_clear_messages_local_missing: converId=${conver.conversationId}, converType=${conver.conversationType}`)
+        }
+      }
       callback(code)
     })
   }

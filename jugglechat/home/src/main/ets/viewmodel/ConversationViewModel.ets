@@ -105,7 +105,8 @@ export function toConverViewItem(conver:ConversationInfo):ConversationViewItem{
   let tags = conver.tags.map((tag)=>tag.tagId)
   if(isDraft){
     msgStr = `[草稿] ${conver.draft}`
-  } else if(conver.lastMessage!=undefined&&conver.lastMessage!=null) {
+  } else if(conver.lastMessage!=undefined&&conver.lastMessage!=null &&
+    (conver.lastMessage.messageId != '' || conver.lastMessage.clientId != '' || conver.lastMessage.sentTime > 0)) {
     msgStr = buildMessagePreview(conver.lastMessage.msgContent)
   }
   //time str

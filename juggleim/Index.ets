@@ -45,6 +45,7 @@ export {
   GroupMessageReadInfoDetailCallback,
   MessageCallback,
   MessageReactionsCallback,
+  MuteStatusCallback,
   MsgCleanedListener,
   MsgDeletedListener,
   MsgGroupReadReceiptListener,
@@ -56,6 +57,7 @@ export {
   QryMessagesCallback,
   QueryMsgOptions,
   SearchParams,
+  TimePeriod,
   TopMessageCallback
 } from './src/main/ets/interfaces/messagetypes'
 export { UserInfoCallback } from './src/main/ets/interfaces/userinfotypes'

@@ -13,6 +13,12 @@ export type DownloadMediaMessageProgressCallback = (progress: number, msg: Messa
 export type DownloadMediaMessageSuccessCallback = (msg: Message) => void
 export type DownloadMediaMessageErrorCallback = (code: number) => void
 export type DownloadMediaMessageCancelCallback = (msg: Message) => void
+export type MuteStatusCallback = (code: number, isMute: boolean, timezone: string, periods: TimePeriod[]) => void
+
+export class TimePeriod {
+  startTime: string = ''
+  endTime: string = ''
+}
 
 export enum GetMessageDirection {
   Backward = 0,

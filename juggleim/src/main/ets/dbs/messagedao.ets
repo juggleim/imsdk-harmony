@@ -358,6 +358,27 @@ export class MessageDao{
     return 0
   }
 
+  clearConversationMessages(conver:Conversation, cleanTime:number, senderId:string):number{
+    let sql = `DELETE FROM ${this.tableName} WHERE conver_type=? AND conver_id=?`
+    let args:Array<relationalStore.ValueType> = [conver.conversationType, conver.conversationId]
+    if(cleanTime > 0){
+      sql = sql + ` AND sent_time<=?`
+      args.push(cleanTime)
+    }
+    let normalizedSenderId = senderId.trim()
+    if(normalizedSenderId != ''){
+      sql = sql + ` AND sender_id=?`
+      args.push(normalizedSenderId)
+    }
+    try{
+      let vt = JimDbManager.instance.getDb()?.executeSync(sql,args)
+      return vt as number
+    }catch (e) {
+      console.error(`jimsdk_db_fail. [${this.tableName}] err:${e.message}`)
+    }
+    return 0
+  }
+
   private buildSearchContent(msg:MessageContent):string{
     let msgType = msg.getMsgType()
     if(msgType == JimMsgType.Text){

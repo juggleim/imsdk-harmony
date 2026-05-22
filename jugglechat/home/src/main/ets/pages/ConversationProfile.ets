@@ -1,6 +1,7 @@
 import { StandardIcon } from 'base'
 import { promptAction } from '@kit.ArkUI'
 import {
+  ClearMsgOptions,
   Conversation,
   ConversationInfo,
   ConversationUpdateListener,
@@ -41,6 +42,7 @@ export struct ConversationProfile {
   @State private isUpdatingConversationTop:boolean = false
   @State private isConversationMute:boolean = false
   @State private isUpdatingConversationMute:boolean = false
+  @State private isClearingMessages:boolean = false
   private conversationUpdateListener:ConversationUpdateListener = (_convers)=>{}
 
   aboutToAppear(): void {
@@ -57,6 +59,7 @@ export struct ConversationProfile {
     this.isUpdatingConversationTop = false
     this.isConversationMute = false
     this.isUpdatingConversationMute = false
+    this.isClearingMessages = false
     this.bindConversationUpdateListener()
     this.loadConversationMeta()
     this.loadConversationSettings()
@@ -231,6 +234,48 @@ export struct ConversationProfile {
     })
   }
 
+  private confirmClearMessages():void{
+    if(this.isClearingMessages){
+      return
+    }
+    AlertDialog.show({
+      title: '清空消息',
+      message: '确认清空当前会话的历史消息吗？',
+      autoCancel: true,
+      primaryButton: {
+        value: '取消',
+        action: () => {}
+      },
+      secondaryButton: {
+        value: '清空',
+        action: () => {
+          this.clearConversationMessages()
+        }
+      }
+    })
+  }
+
+  private clearConversationMessages():void{
+    if(this.isClearingMessages){
+      return
+    }
+    this.isClearingMessages = true
+    let options = new ClearMsgOptions()
+    options.cleanTime = 0
+    options.cleanScope = 0
+    options.senderId = ''
+    options.cleanTimeOffset = 0
+    JuggleIm.instance.getMessageManager().clearMessages(this.getConversation(), options, (code)=>{
+      this.isClearingMessages = false
+      console.log(`${TOP_TRACE_TAG} profile_clear_messages_finish: converId=${this.conversationId}, converType=${this.conversationType}, code=${code}`)
+      if(code != 0){
+        this.showToast(`清空消息失败: ${code}`)
+        return
+      }
+      this.showToast('已清空消息')
+    })
+  }
+
   private async buildGroupMemberPreview(members:GroupMember[]):Promise<void>{
     let previews:GroupMemberPreviewItem[] = []
     let limit = Math.min(members.length, 8)
@@ -337,6 +382,19 @@ export struct ConversationProfile {
     .opacity(isUpdating ? 0.6 : 1)
   }
 
+  @Builder
+  private actionRow(label:string, color:ResourceColor = '#111111') {
+    Row() {
+      Text(label)
+        .fontSize(16)
+        .fontColor(color)
+      Blank()
+      StandardIcon({ icon: $r('app.media.ic_public_more') })
+    }
+    .width('100%')
+    .padding({ left: 16, right: 16, top: 16, bottom: 16 })
+  }
+
   build() {
     NavDestination() {
       Column() {
@@ -395,6 +453,17 @@ export struct ConversationProfile {
         .width('100%')
         .backgroundColor(Color.White)
         .margin({ top: 12 })
+
+        Column() {
+          this.actionRow('清空消息', '#E24A4A')
+        }
+        .width('100%')
+        .backgroundColor(Color.White)
+        .margin({ top: 12 })
+        .opacity(this.isClearingMessages ? 0.6 : 1)
+        .onClick(()=>{
+          this.confirmClearMessages()
+        })
 
         if(this.conversationType == 2){
           Column() {
