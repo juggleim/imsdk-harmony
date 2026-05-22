@@ -9,11 +9,36 @@ export class ConverTagDao{
   private constructor() {
   }
 
-  insert(converTag:ConversationTag):number{
-    let valueBucket = this.getValuesBucket(converTag)
+  upsert(converTag:ConversationTag):number{
+    let sql = `INSERT OR REPLACE INTO ${this.tableName} (tag_id,conver_type,conver_id) VALUES (?,?,?)`
+    let args:Array<relationalStore.ValueType> = [
+      converTag.tagId,
+      converTag.conversation.conversationType,
+      converTag.conversation.conversationId
+    ]
     try{
-      let row = JimDbManager.instance.getDb()?.insertSync(this.tableName,valueBucket)
-      if(row!==undefined){
+      let row = JimDbManager.instance.getDb()?.executeSync(sql,args)
+      return row as number
+    }catch (e) {
+    }
+    return 0
+  }
+
+  addTag(conver:Conversation,tagId:string):number{
+    let converTag = new ConversationTag()
+    converTag.conversation = conver
+    converTag.tagId = tagId
+    return this.upsert(converTag)
+  }
+
+  removeTag(conver:Conversation,tagId:string):number{
+    let pred = new relationalStore.RdbPredicates(this.tableName)
+    pred.equalTo('conver_id',conver.conversationId)
+    pred.equalTo('conver_type',conver.conversationType)
+    pred.equalTo('tag_id',tagId)
+    try{
+      let row = JimDbManager.instance.getDb()?.deleteSync(pred)
+      if(row != undefined){
         return row
       }
     }catch (e) {
@@ -21,13 +46,45 @@ export class ConverTagDao{
     return 0
   }
 
-  private getValuesBucket(tag:ConversationTag):relationalStore.ValuesBucket{
-    let valuesBucket:relationalStore.ValuesBucket = {
-      "tag_id":tag.tagId,
-      "conver_type":tag.conversation.conversationType,
-      "conver_id":tag.conversation.conversationId
+  clearTags(conver:Conversation):number{
+    let pred = new relationalStore.RdbPredicates(this.tableName)
+    pred.equalTo('conver_id',conver.conversationId)
+    pred.equalTo('conver_type',conver.conversationType)
+    try{
+      let row = JimDbManager.instance.getDb()?.deleteSync(pred)
+      if(row != undefined){
+        return row
+      }
+    }catch (e) {
     }
-    return valuesBucket
+    return 0
+  }
+
+  replaceTags(conver:Conversation,tags:ConversationTag[]):void{
+    this.clearTags(conver)
+    tags.forEach((tag)=>{
+      if(tag.tagId != ''){
+        tag.conversation = conver
+        this.upsert(tag)
+      }
+    })
+  }
+
+  queryByConversation(conver:Conversation):ConversationTag[]{
+    let sql = `SELECT * FROM ${this.tableName} WHERE conver_type=? AND conver_id=? ORDER BY id ASC`
+    let args:Array<relationalStore.ValueType> = [conver.conversationType, conver.conversationId]
+    let resultSet:relationalStore.ResultSet|undefined
+    let tags:ConversationTag[] = []
+    try{
+      resultSet = JimDbManager.instance.getDb()?.querySqlSync(sql,args)
+      while(resultSet?.goToNextRow()){
+        tags.push(this.toConverTag(resultSet))
+      }
+    }catch (e) {
+    }finally {
+      resultSet?.close()
+    }
+    return tags
   }
 
   private toConverTag(resultSet:relationalStore.ResultSet):ConversationTag{

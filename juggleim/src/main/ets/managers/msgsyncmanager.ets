@@ -1,6 +1,6 @@
 import { JimUtil } from "../commons/jimutil";
 import { JimDbManager } from "../dbs/dbmanager";
-import { Conversation, ConversationInfo } from "../entries/conversation";
+import { Conversation, ConversationInfo, ConversationTag } from "../entries/conversation";
 import { GroupInfo, GroupMessageReadInfo } from "../entries/group";
 import { Message, RecallInfoMessage } from "../entries/message";
 import { MsgHandler } from "../entries/msghandler";
@@ -528,6 +528,7 @@ export class MsgSyncManager{
                 updateConvers.push(converInfo)
               }
               JimDbManager.instance.getConversationDao().upsert(converInfo)
+              JimDbManager.instance.getConverTagDao().replaceTags(converInfo.conversation, converInfo.tags)
             }
           }
         })
@@ -633,6 +634,7 @@ export class MsgSyncManager{
     converInfo.draft = ""
     converInfo.lastReadMsgIndex = JimUtil.toNumber(conver.latestReadIndex as number)
     converInfo.unreadTag = JimUtil.toNumber(conver.unreadTag as number)
+    converInfo.tags = this.toConversationTags(conver.converTags, converInfo.conversation)
     if (conver.msg != undefined && conver.msg != null) {
       converInfo.lastMessage = new Message()
       converInfo.lastMessage.conversation =
@@ -681,6 +683,24 @@ export class MsgSyncManager{
       converInfo.lastMessage.referMsgId = conver.msg.referMsg?.msgId as string
     }
     return converInfo
+  }
+
+  private toConversationTags(protoTags:immessage.IConverTag[]|null|undefined, conver:Conversation):ConversationTag[]{
+    let tags:ConversationTag[] = []
+    if(protoTags == undefined || protoTags == null){
+      return tags
+    }
+    protoTags.forEach((protoTag)=>{
+      let tagId = (protoTag.tag as string || '').trim()
+      if(tagId == ''){
+        return
+      }
+      let tag = new ConversationTag()
+      tag.conversation = conver
+      tag.tagId = tagId
+      tags.push(tag)
+    })
+    return tags
   }
 
   private handleRecallCmdMsg(msg:Message){

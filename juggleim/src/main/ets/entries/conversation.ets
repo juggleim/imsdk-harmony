@@ -24,6 +24,7 @@ export class ConversationInfo{
   draft:string = ''
   lastReadMsgIndex:number = 0
   unreadTag:number = 0
+  tags:ConversationTag[] = []
   constructor() {
   }
 }

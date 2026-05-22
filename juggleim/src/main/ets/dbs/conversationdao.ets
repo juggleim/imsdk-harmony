@@ -6,6 +6,7 @@ import { Message } from "../entries/message";
 import { JimDbManager } from "./dbmanager";
 import { MsgHandler } from "../entries/msghandler";
 import { GetConversationDirection, GetConversationOptions } from "../interfaces/conversationtypes";
+import { ConverTagDao } from "./convertagdao";
 
 export class ConversationDao{
   static instance:ConversationDao = new ConversationDao()
@@ -59,6 +60,11 @@ export class ConversationDao{
         args.push(conversationType)
       })
       sql = sql + ` AND conver_type IN (${placeholders.join(', ')})`
+    }
+    if(options.tagId != ''){
+      sql = sql +
+        ` AND EXISTS (SELECT 1 FROM conversation_tags tags WHERE tags.conver_type=${this.tableName}.conver_type AND tags.conver_id=${this.tableName}.conver_id AND tags.tag_id=?)`
+      args.push(options.tagId)
     }
     sql = sql + ` ORDER BY is_top DESC, top_time DESC, conver_time DESC LIMIT ${options.count}`
     let resultSet:relationalStore.ResultSet|undefined
@@ -190,6 +196,28 @@ export class ConversationDao{
     return converInfo
   }
 
+  queryUnreadCountByTag(tagId:string):number{
+    if(tagId == ''){
+      return 0
+    }
+    let sql = `SELECT SUM(CASE WHEN conver.last_msg_index > conver.last_read_msg_index THEN conver.last_msg_index - conver.last_read_msg_index ELSE 0 END) AS unread_count
+      FROM ${this.tableName} conver
+      INNER JOIN conversation_tags tags ON tags.conver_type = conver.conver_type AND tags.conver_id = conver.conver_id
+      WHERE tags.tag_id = ?`
+    let resultSet:relationalStore.ResultSet|undefined
+    try{
+      resultSet = JimDbManager.instance.getDb()?.querySqlSync(sql,[tagId])
+      if(resultSet?.goToNextRow()){
+        return JimDbUtil.toNumber(resultSet,'unread_count')
+      }
+    }catch (e) {
+      console.error(`jimsdk_db_fail. [${this.tableName}] err:${e.message}`)
+    }finally {
+      resultSet?.close()
+    }
+    return 0
+  }
+
   delConver(converId:string,converType:number):number{
     let delPre = new relationalStore.RdbPredicates(this.tableName)
     delPre.equalTo("conver_id",converId)
@@ -197,6 +225,7 @@ export class ConversationDao{
     try{
       let row = JimDbManager.instance.getDb()?.deleteSync(delPre)
       if(row!==undefined){
+        ConverTagDao.instance.clearTags(new Conversation(converId, converType))
         return row
       }
     }catch (e) {
@@ -286,6 +315,8 @@ export class ConversationDao{
     conver.topTime = JimDbUtil.toNumber(resultSet,"top_time")
     conver.isMute = JimDbUtil.toNumber(resultSet,"is_mute")>0
     conver.unreadTag = JimDbUtil.toNumber(resultSet,"unread_tag")
+    conver.unreadCount = Math.max(msg.msgUnreadIndex - conver.lastReadMsgIndex, 0)
+    conver.tags = ConverTagDao.instance.queryByConversation(conver.conversation)
 
     conver.lastMessage = msg
     return conver

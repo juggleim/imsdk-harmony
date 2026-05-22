@@ -5,6 +5,7 @@ import {
   ConversationCallback,
   ConversationDeleteListener,
   ConversationInsertCallback,
+  ConversationTagsCallback,
   ConversationsCallback,
   ConversationUpdateListener,
   GetConversationOptions,
@@ -28,12 +29,16 @@ export interface IConversationManager {
   setDraft(conver: Conversation, draft: string): void
   clearDraft(conver: Conversation): void
   insertConversation(conver: Conversation, callback: ConversationInsertCallback): void
+  addConversationTag(conver: Conversation, tagId: string, callback: CommonCallback): void
+  removeConversationTag(conver: Conversation, tagId: string, callback: CommonCallback): void
+  getConversationTags(conver: Conversation, callback: ConversationTagsCallback): void
   setUnread(conver: Conversation, callback: CommonCallback): void
   delConversation(conver: Conversation, callback: CommonCallback): void
   setTop(conver: Conversation, isTop: boolean, callback: CommonCallback): void
   getTopConversations(sortType: TopConverSortType, start: number, isPositive: boolean, callback: ConversationsCallback): void
   setMute(conver: Conversation, isMute: boolean, callback: CommonCallback): void
   getTotalUnreadCount(callback: TotalUnreadCountCallback): void
+  getTotalUnreadCountByTag(tagId: string, callback: TotalUnreadCountCallback): void
   clearTotalUnreadCount(callback: CommonCallback): void
   clearUnreadCount(conver: Conversation, callback: CommonCallback): void
 }

@@ -1,9 +1,10 @@
-import { Conversation, ConversationInfo } from '../entries/conversation'
+import { Conversation, ConversationInfo, ConversationTag } from '../entries/conversation'
 
 export type ConversationCallback = (code: number, conver: ConversationInfo | null) => void
 export type ConversationsCallback = (code: number, convers: ConversationInfo[]) => void
 export type ConversationInsertCallback = (code: number, conver: ConversationInfo | null) => void
 export type TotalUnreadCountCallback = (code: number, count: number) => void
+export type ConversationTagsCallback = (code: number, tags: ConversationTag[]) => void
 
 export enum TopConverSortType {
   ByTopTime,
@@ -20,6 +21,7 @@ export class GetConversationOptions {
   time: number = 0
   direction: GetConversationDirection = GetConversationDirection.Backward
   conversationTypes: number[] = []
+  tagId: string = ''
 
   constructor() {
   }

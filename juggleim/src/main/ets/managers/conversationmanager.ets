@@ -1,5 +1,5 @@
 import {JuggleIm} from '../juggleim'
-import { Conversation, ConversationInfo } from "../entries/conversation"
+import { Conversation, ConversationInfo, ConversationTag } from "../entries/conversation"
 import {immessage} from  '../improto/immessage'
 import { ImClient } from '../imclients/imclient'
 import {CommonCallback} from '../interfaces/commoncallback'
@@ -7,11 +7,13 @@ import { JimDbManager } from '../dbs/dbmanager'
 import { MsgHandler } from '../entries/msghandler'
 import { MsgSyncManager } from './msgsyncmanager'
 import { IConversationManager } from '../interfaces/iconversationmanager'
+import { JimErrorCode } from '../entries/errcode'
 import {
   ConversationAddListener,
   ConversationCallback,
   ConversationDeleteListener,
   ConversationInsertCallback,
+  ConversationTagsCallback,
   ConversationsCallback,
   ConversationUpdateListener,
   GetConversationOptions,
@@ -25,6 +27,7 @@ export {
   ConversationCallback,
   ConversationDeleteListener,
   ConversationInsertCallback,
+  ConversationTagsCallback,
   ConversationsCallback,
   ConversationUpdateListener,
   GetConversationOptions,
@@ -107,6 +110,7 @@ export class ConversationManager implements IConversationManager{
     normalizedOptions.direction = options.direction
     normalizedOptions.time = options.time
     normalizedOptions.conversationTypes = options.conversationTypes.slice()
+    normalizedOptions.tagId = options.tagId.trim()
     if(normalizedOptions.time <= 0){
       normalizedOptions.time = new Date().getTime()
     }
@@ -130,6 +134,8 @@ export class ConversationManager implements IConversationManager{
         converInfo.isTop = (resp.isTop as number)>0
         converInfo.topTime = resp.topUpdatedTime as number
         converInfo.isMute = (resp.undisturbType as number)>0
+        converInfo.tags = this.toConversationTags(resp.converTags, converInfo.conversation)
+        JimDbManager.instance.getConverTagDao().replaceTags(converInfo.conversation, converInfo.tags)
         callback(code,converInfo)
       }else{
         callback(code,null)
@@ -182,6 +188,43 @@ export class ConversationManager implements IConversationManager{
         callback(code,null)
       }
     })
+  }
+
+  addConversationTag(conver:Conversation,tagId:string,callback:CommonCallback){
+    let normalizedTagId = tagId.trim()
+    if(normalizedTagId == ''){
+      callback(new JimErrorCode().InvalidParam)
+      return
+    }
+    let converInfo = JimDbManager.instance.getConversationDao().getConver(conver)
+    if(converInfo == undefined){
+      callback(new JimErrorCode().InvalidParam)
+      return
+    }
+    JimDbManager.instance.getConverTagDao().addTag(conver, normalizedTagId)
+    let updatedConver = JimDbManager.instance.getConversationDao().getConver(conver)
+    if(updatedConver != undefined){
+      this.msgSyncMgr.notifyConversationUpdate([updatedConver])
+    }
+    callback(0)
+  }
+
+  removeConversationTag(conver:Conversation,tagId:string,callback:CommonCallback){
+    let normalizedTagId = tagId.trim()
+    if(normalizedTagId == ''){
+      callback(new JimErrorCode().InvalidParam)
+      return
+    }
+    JimDbManager.instance.getConverTagDao().removeTag(conver, normalizedTagId)
+    let updatedConver = JimDbManager.instance.getConversationDao().getConver(conver)
+    if(updatedConver != undefined){
+      this.msgSyncMgr.notifyConversationUpdate([updatedConver])
+    }
+    callback(0)
+  }
+
+  getConversationTags(conver:Conversation,callback:ConversationTagsCallback){
+    callback(0, JimDbManager.instance.getConverTagDao().queryByConversation(conver))
   }
 
   setUnread(conver:Conversation,callback:CommonCallback){
@@ -294,6 +337,15 @@ export class ConversationManager implements IConversationManager{
     })
   }
 
+  getTotalUnreadCountByTag(tagId:string,callback:TotalUnreadCountCallback){
+    let normalizedTagId = tagId.trim()
+    if(normalizedTagId == ''){
+      callback(new JimErrorCode().InvalidParam, 0)
+      return
+    }
+    callback(0, JimDbManager.instance.getConversationDao().queryUnreadCountByTag(normalizedTagId))
+  }
+
   clearTotalUnreadCount(callback:CommonCallback){
     let req = immessage.QryTotalUnreadCountReq.create({
       "time":0
@@ -334,5 +386,23 @@ export class ConversationManager implements IConversationManager{
       }
       callback(code)
     })
+  }
+
+  private toConversationTags(protoTags:immessage.IConverTag[]|null|undefined, conver:Conversation):ConversationTag[]{
+    let tags:ConversationTag[] = []
+    if(protoTags == undefined || protoTags == null){
+      return tags
+    }
+    protoTags.forEach((protoTag)=>{
+      let tagId = (protoTag.tag as string || '').trim()
+      if(tagId == ''){
+        return
+      }
+      let tag = new ConversationTag()
+      tag.conversation = conver
+      tag.tagId = tagId
+      tags.push(tag)
+    })
+    return tags
   }
 }

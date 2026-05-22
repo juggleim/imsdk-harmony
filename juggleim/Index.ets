@@ -23,6 +23,7 @@ export {
   ConversationCallback,
   ConversationDeleteListener,
   ConversationInsertCallback,
+  ConversationTagsCallback,
   ConversationsCallback,
   ConversationUpdateListener,
   GetConversationDirection,
