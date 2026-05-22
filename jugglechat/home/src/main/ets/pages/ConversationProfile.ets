@@ -39,6 +39,8 @@ export struct ConversationProfile {
   @State private groupMemberCount:number = 0
   @State private isConversationTop:boolean = false
   @State private isUpdatingConversationTop:boolean = false
+  @State private isConversationMute:boolean = false
+  @State private isUpdatingConversationMute:boolean = false
   private conversationUpdateListener:ConversationUpdateListener = (_convers)=>{}
 
   aboutToAppear(): void {
@@ -53,6 +55,8 @@ export struct ConversationProfile {
     this.groupMemberCount = 0
     this.isConversationTop = false
     this.isUpdatingConversationTop = false
+    this.isConversationMute = false
+    this.isUpdatingConversationMute = false
     this.bindConversationUpdateListener()
     this.loadConversationMeta()
     this.loadConversationSettings()
@@ -135,7 +139,7 @@ export struct ConversationProfile {
         let item = convers[i]
         if(item.conversation.conversationId == this.conversationId &&
           item.conversation.conversationType == this.conversationType){
-          console.log(`${TOP_TRACE_TAG} profile_conversation_update: converId=${item.conversation.conversationId}, converType=${item.conversation.conversationType}, isTop=${item.isTop}, topTime=${item.topTime}`)
+          console.log(`${TOP_TRACE_TAG} profile_conversation_update: converId=${item.conversation.conversationId}, converType=${item.conversation.conversationType}, isTop=${item.isTop}, topTime=${item.topTime}, isMute=${item.isMute}`)
           this.applyConversationInfo(item)
           return
         }
@@ -145,14 +149,16 @@ export struct ConversationProfile {
   }
 
   private loadConversationSettings():void{
+    this.loadConversationSettingsFromLocal()
+  }
+
+  private loadConversationSettingsFromRemote():void{
     let conversation = this.getConversation()
     JuggleIm.instance.getConversationManager().getConversation(conversation, (code, converInfo)=>{
-      console.log(`${TOP_TRACE_TAG} profile_load_conversation_settings: converId=${conversation.conversationId}, converType=${conversation.conversationType}, code=${code}, hasInfo=${converInfo != null}`)
+      console.log(`${TOP_TRACE_TAG} profile_load_conversation_settings_remote: converId=${conversation.conversationId}, converType=${conversation.conversationType}, code=${code}, hasInfo=${converInfo != null}`)
       if(code == 0 && converInfo != null){
         this.applyConversationInfo(converInfo)
-        return
       }
-      this.loadConversationSettingsFromLocal()
     })
   }
 
@@ -171,18 +177,20 @@ export struct ConversationProfile {
         let item = convers[i]
         if(item.conversation.conversationId == this.conversationId &&
           item.conversation.conversationType == this.conversationType){
-          console.log(`${TOP_TRACE_TAG} profile_load_conversation_settings_local_hit: converId=${item.conversation.conversationId}, converType=${item.conversation.conversationType}, isTop=${item.isTop}, topTime=${item.topTime}`)
+          console.log(`${TOP_TRACE_TAG} profile_load_conversation_settings_local_hit: converId=${item.conversation.conversationId}, converType=${item.conversation.conversationType}, isTop=${item.isTop}, topTime=${item.topTime}, isMute=${item.isMute}`)
           this.applyConversationInfo(item)
           return
         }
       }
       console.log(`${TOP_TRACE_TAG} profile_load_conversation_settings_local_miss: converId=${this.conversationId}, converType=${this.conversationType}`)
+      this.loadConversationSettingsFromRemote()
     })
   }
 
   private applyConversationInfo(conversationInfo:ConversationInfo):void{
-    console.log(`${TOP_TRACE_TAG} profile_apply_conversation_info: converId=${conversationInfo.conversation.conversationId}, converType=${conversationInfo.conversation.conversationType}, isTop=${conversationInfo.isTop}, topTime=${conversationInfo.topTime}`)
+    console.log(`${TOP_TRACE_TAG} profile_apply_conversation_info: converId=${conversationInfo.conversation.conversationId}, converType=${conversationInfo.conversation.conversationType}, isTop=${conversationInfo.isTop}, topTime=${conversationInfo.topTime}, isMute=${conversationInfo.isMute}`)
     this.isConversationTop = conversationInfo.isTop
+    this.isConversationMute = conversationInfo.isMute
   }
 
   private updateConversationTop(nextValue:boolean):void{
@@ -201,6 +209,25 @@ export struct ConversationProfile {
       }
       this.isConversationTop = nextValue
       this.showToast(nextValue ? '已开启会话置顶' : '已取消会话置顶')
+    })
+  }
+
+  private updateConversationMute(nextValue:boolean):void{
+    if(this.isUpdatingConversationMute || nextValue == this.isConversationMute){
+      console.log(`${TOP_TRACE_TAG} profile_update_conversation_mute_skip: converId=${this.conversationId}, converType=${this.conversationType}, nextValue=${nextValue}, currentValue=${this.isConversationMute}, updating=${this.isUpdatingConversationMute}`)
+      return
+    }
+    console.log(`${TOP_TRACE_TAG} profile_update_conversation_mute_start: converId=${this.conversationId}, converType=${this.conversationType}, from=${this.isConversationMute}, to=${nextValue}`)
+    this.isUpdatingConversationMute = true
+    JuggleIm.instance.getConversationManager().setMute(this.getConversation(), nextValue, (code)=>{
+      this.isUpdatingConversationMute = false
+      console.log(`${TOP_TRACE_TAG} profile_update_conversation_mute_finish: converId=${this.conversationId}, converType=${this.conversationType}, target=${nextValue}, code=${code}`)
+      if(code != 0){
+        this.showToast(`消息免打扰设置失败: ${code}`)
+        return
+      }
+      this.isConversationMute = nextValue
+      this.showToast(nextValue ? '已开启消息免打扰' : '已关闭消息免打扰')
     })
   }
 
@@ -279,35 +306,35 @@ export struct ConversationProfile {
   }
 
   @Builder
-  private switchRow(label:string) {
+  private switchRow(label:string, isOn:boolean, isUpdating:boolean, activeText:string, inactiveText:string, onChanged:(value:boolean)=>void) {
     Row() {
       Text(label)
         .fontSize(15)
         .fontColor('#666666')
-      Text(this.isConversationTop ? '已置顶' : '未置顶')
+      Text(isOn ? activeText : inactiveText)
         .fontSize(14)
-        .fontColor(this.isConversationTop ? '#4C8DFF' : '#999999')
+        .fontColor(isOn ? '#4C8DFF' : '#999999')
         .margin({ left: 12 })
       Blank()
-      if(this.isConversationTop){
+      if(isOn){
         Toggle({ type: ToggleType.Switch, isOn: true })
           .selectedColor('#4C8DFF')
-          .enabled(!this.isUpdatingConversationTop)
+          .enabled(!isUpdating)
           .onChange((value:boolean)=>{
-            this.updateConversationTop(value)
+            onChanged(value)
           })
       }else{
         Toggle({ type: ToggleType.Switch, isOn: false })
           .selectedColor('#4C8DFF')
-          .enabled(!this.isUpdatingConversationTop)
+          .enabled(!isUpdating)
           .onChange((value:boolean)=>{
-            this.updateConversationTop(value)
+            onChanged(value)
           })
       }
     }
     .width('100%')
     .padding({ left: 16, right: 16, top: 12, bottom: 12 })
-    .opacity(this.isUpdatingConversationTop ? 0.6 : 1)
+    .opacity(isUpdating ? 0.6 : 1)
   }
 
   build() {
@@ -336,7 +363,13 @@ export struct ConversationProfile {
           Divider().strokeWidth(1).color('#EAEAEA')
           this.infoRow('会话 ID', this.conversationId)
           Divider().strokeWidth(1).color('#EAEAEA')
-          this.switchRow('会话置顶')
+          this.switchRow('消息免打扰', this.isConversationMute, this.isUpdatingConversationMute, '已开启', '未开启', (value:boolean)=>{
+            this.updateConversationMute(value)
+          })
+          Divider().strokeWidth(1).color('#EAEAEA')
+          this.switchRow('会话置顶', this.isConversationTop, this.isUpdatingConversationTop, '已置顶', '未置顶', (value:boolean)=>{
+            this.updateConversationTop(value)
+          })
         }
         .width('100%')
         .backgroundColor(Color.White)

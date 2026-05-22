@@ -22,6 +22,7 @@ export struct ConversationItem {
   @StorageProp('currentBreakpoint') currentBreakpoint: string = BreakpointConstants.BREAKPOINT_SM;
   private name?: ResourceStr;
   private msg?: ResourceStr;
+  private isMute?: boolean;
   private isDraft?: boolean;
   private time?: ResourceStr;
   private icon?: ResourceStr;
@@ -60,11 +61,23 @@ export struct ConversationItem {
       .margin({ left: $r('app.float.icon_margin_two'), right: $r('app.float.icon_margin_one') })
 
       Flex({ direction: FlexDirection.Column,justifyContent:FlexAlign.Center }) {
-        Text(this.name)
-          .fontSize(BaseConstants.FONT_SIZE_SIXTEEN)
-          .fontWeight(BaseConstants.FONT_WEIGHT_FIVE)
-          .lineHeight($r('app.float.text_line_height_two'))
-          .fontFamily(BaseConstants.FONT_FAMILY_MEDIUM)
+        Row() {
+          Text(this.name)
+            .fontSize(BaseConstants.FONT_SIZE_SIXTEEN)
+            .fontWeight(BaseConstants.FONT_WEIGHT_FIVE)
+            .lineHeight($r('app.float.text_line_height_two'))
+            .fontFamily(BaseConstants.FONT_FAMILY_MEDIUM)
+            .maxLines(1)
+            .textOverflow({ overflow: TextOverflow.Ellipsis })
+          if(this.isMute){
+            Image($r('app.media.ic_public_sound'))
+              .width(14)
+              .height(14)
+              .margin({ left: 6 })
+              .opacity(0.65)
+          }
+        }
+        .width(BaseConstants.FULL_WIDTH)
         Text(this.msg)
           .maxLines(HomeConstants.CONVERSATION_DETAIL_MAX_LINE)
           .textOverflow({ overflow: TextOverflow.Ellipsis })

@@ -31,6 +31,7 @@ class ConversationViewItem {
   converTime:number
   isTop:boolean
   topTime:number
+  isMute:boolean
   isDraft:boolean
   tags:string[]
   name: ResourceStr
@@ -45,6 +46,7 @@ class ConversationViewItem {
     converTime:number,
     isTop:boolean,
     topTime:number,
+    isMute:boolean,
     isDraft:boolean,
     tags:string[],
     name:ResourceStr,
@@ -59,6 +61,7 @@ class ConversationViewItem {
     this.converTime = converTime
     this.isTop = isTop
     this.topTime = topTime
+    this.isMute = isMute
     this.isDraft = isDraft
     this.tags = tags
     this.name = name
@@ -110,7 +113,7 @@ export function toConverViewItem(conver:ConversationInfo):ConversationViewItem{
 
   return new ConversationViewItem("", conver.conversation.conversationId,
     conver.conversation.conversationType, conver.lastMessage.sentTime, conver.converTime,
-    conver.isTop, conver.topTime, isDraft, tags, title,
+    conver.isTop, conver.topTime, conver.isMute, isDraft, tags, title,
     msgStr, timeStr, iconUrl)
 }
 

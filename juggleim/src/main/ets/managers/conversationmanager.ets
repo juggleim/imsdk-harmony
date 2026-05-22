@@ -121,27 +121,6 @@ export class ConversationManager implements IConversationManager{
     return normalizedOptions
   }
 
-  private syncConversationStateFromRemote(remoteConver:ConversationInfo):void{
-    let localConver = JimDbManager.instance.getConversationDao().getConver(remoteConver.conversation)
-    if(localConver == undefined){
-      console.log(`${TOP_TRACE_TAG} conversation_get_local_missing: converId=${remoteConver.conversation.conversationId}, converType=${remoteConver.conversation.conversationType}, remoteIsTop=${remoteConver.isTop}, remoteTopTime=${remoteConver.topTime}, remoteIsMute=${remoteConver.isMute}`)
-      return
-    }
-    let changed = localConver.isTop != remoteConver.isTop ||
-      localConver.topTime != remoteConver.topTime ||
-      localConver.isMute != remoteConver.isMute
-    if(!changed){
-      console.log(`${TOP_TRACE_TAG} conversation_get_local_sync_skip: converId=${remoteConver.conversation.conversationId}, converType=${remoteConver.conversation.conversationType}, localIsTop=${localConver.isTop}, localTopTime=${localConver.topTime}, localIsMute=${localConver.isMute}`)
-      return
-    }
-    localConver.isTop = remoteConver.isTop
-    localConver.topTime = remoteConver.topTime
-    localConver.isMute = remoteConver.isMute
-    JimDbManager.instance.getConversationDao().upsert(localConver)
-    console.log(`${TOP_TRACE_TAG} conversation_get_local_sync_update: converId=${remoteConver.conversation.conversationId}, converType=${remoteConver.conversation.conversationType}, localIsTop=${localConver.isTop}, localTopTime=${localConver.topTime}, localIsMute=${localConver.isMute}`)
-    this.msgSyncMgr.notifyConversationUpdate([localConver])
-  }
-
   getConversation(conver:Conversation,callback:ConversationCallback){
     let req = immessage.QryConverReq.create({
       "targetId":conver.conversationId,
@@ -154,14 +133,14 @@ export class ConversationManager implements IConversationManager{
         let resp = immessage.Conversation.decode(data)
         let converInfo = new ConversationInfo()
         converInfo.lastMessage = MsgHandler.downMsg2Message(resp.msg as immessage.DownMsg)
-        converInfo.conversation = converInfo.lastMessage.conversation
+        converInfo.conversation = conver
+        converInfo.lastMessage.conversation = conver
         converInfo.converTime = resp.sortTime as number
         converInfo.isTop = (resp.isTop as number)>0
         converInfo.topTime = JimUtil.toNumber(resp.topUpdatedTime as number)
         converInfo.isMute = (resp.undisturbType as number)>0
         converInfo.tags = this.toConversationTags(resp.converTags, converInfo.conversation)
         JimDbManager.instance.getConverTagDao().replaceTags(converInfo.conversation, converInfo.tags)
-        this.syncConversationStateFromRemote(converInfo)
         callback(code,converInfo)
       }else{
         callback(code,null)
@@ -352,15 +331,33 @@ export class ConversationManager implements IConversationManager{
   }
 
   setMute(conver:Conversation,isMute:boolean,callback:CommonCallback){
+    console.log(`${TOP_TRACE_TAG} conversation_set_mute_request: converId=${conver.conversationId}, converType=${conver.conversationType}, isMute=${isMute}, userId=${JuggleIm.instance.userInfo.userId}`)
     let req = immessage.UndisturbConversReq.create({
       "items":[{
         "targetId":conver.conversationId,
         "channelType":conver.conversationType,
-        "undisturbType":1
+        "undisturbType":isMute ? 1 : 0
       }]
     })
     let data = immessage.UndisturbConversReq.encode(req).finish()
-    this.imclient.query("undisturb_convers",JuggleIm.instance.userId,data,(code)=>{
+    this.imclient.query("undisturb_convers",JuggleIm.instance.userInfo.userId,data,(code, qryAck)=>{
+      let timestamp = qryAck.timestamp != undefined && qryAck.timestamp != null ?
+        JimUtil.toNumber(qryAck.timestamp as number) : 0
+      console.log(`${TOP_TRACE_TAG} conversation_set_mute_ack: converId=${conver.conversationId}, converType=${conver.conversationType}, isMute=${isMute}, code=${code}, timestamp=${timestamp}`)
+      if(code == 0){
+        let localConver = JimDbManager.instance.getConversationDao().getConver(conver)
+        if(localConver != undefined){
+          localConver.isMute = isMute
+          JimDbManager.instance.getConversationDao().upsert(localConver)
+          if(timestamp > 0){
+            this.msgSyncMgr.recordLatestSendboxMsgTime(timestamp, MsgFlagTool.toFlag({ isCmd:true }))
+          }
+          console.log(`${TOP_TRACE_TAG} conversation_set_mute_local_update: converId=${conver.conversationId}, converType=${conver.conversationType}, localIsMute=${localConver.isMute}`)
+          this.msgSyncMgr.notifyConversationUpdate([localConver])
+        }else{
+          console.log(`${TOP_TRACE_TAG} conversation_set_mute_local_missing: converId=${conver.conversationId}, converType=${conver.conversationType}`)
+        }
+      }
       callback(code)
     })
   }
