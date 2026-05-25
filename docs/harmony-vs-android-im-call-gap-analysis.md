@@ -392,10 +392,15 @@ Harmony 在这一类能力上接近 Android 的“基础版”，但离完整产
 - DB 中独立 `reaction` 表
 
 ### Harmony
-完全没有这些能力。
+已补齐：
+- reaction 添加 / 移除 / 批量获取 / 本地缓存与服务端同步
+- 收藏消息 add/remove/getFavorite
+- 单条消息置顶 `setTop`
+- 获取会话置顶消息 `getTopMessage`
+- 下行状态消息 `jg:topmsg` 触发本地 UI/监听刷新
 
 ### 对齐判断
-这部分属于 Android 的 IM 增强能力，Harmony 还没开始。
+Reaction、收藏、置顶消息已经进入可用状态。
 
 ### 对齐优先级
 **中**。不是最先要补，但如果要“能力对齐”，这是明确 gap。
@@ -496,10 +501,15 @@ Harmony Chatroom 是明显空缺模块。
 - token 自动上报 IM 服务端
 
 ### Harmony
-没有发现 Push 模块。
+已补最小可用 Push 链路：
+- `IConnectionManager.registerPushToken(...)`
+- Harmony PushKit `getToken()` + `tokenUpdate` 监听
+- `reg_push_token` 远端上报
+- connect 建链时携带 `pushToken/packageName/pushChannel`
+- demo “推送设置”调试页
 
 ### 对齐判断
-Harmony 当前没有系统级离线推送能力设计。
+Harmony 已具备 token 获取与上报闭环，但离线消息接收扩展能力仍未完整展开。
 
 ### 对齐优先级
 **高**，如果要进入实际可交付阶段，Push 必须补。

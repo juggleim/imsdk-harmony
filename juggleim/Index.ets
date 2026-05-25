@@ -4,6 +4,7 @@ export { ConnectionStatusListener, IConnectionManager } from './src/main/ets/int
 export { IChatroomManager } from './src/main/ets/interfaces/ichatroommanager'
 export { IConversationManager } from './src/main/ets/interfaces/iconversationmanager'
 export { IMessageManager } from './src/main/ets/interfaces/imessagemanager'
+export { IMomentManager } from './src/main/ets/interfaces/imomentmanager'
 export { IUserInfoManager } from './src/main/ets/interfaces/iuserinfomanager'
 export { GroupInfoCallback, GroupMemberCallback, GroupMembersCallback, IGroupInfoManager } from './src/main/ets/interfaces/igroupinfomanager'
 export { CommonCallback } from './src/main/ets/interfaces/commoncallback'
@@ -68,9 +69,17 @@ export {
   TimePeriod,
   TopMessageCallback
 } from './src/main/ets/interfaces/messagetypes'
+export {
+  MomentCallback,
+  MomentCommentCallback,
+  MomentCommentsCallback,
+  MomentReactionsCallback,
+  MomentsCallback
+} from './src/main/ets/interfaces/momenttypes'
 export { UserInfoCallback } from './src/main/ets/interfaces/userinfotypes'
 
 export { ConnStatus } from './src/main/ets/imclients/imclient'
+export { PushChannel } from './src/main/ets/entries/push'
 export { Conversation, ConversationInfo, ConversationTag } from './src/main/ets/entries/conversation'
 export {
   Message,
@@ -92,5 +101,15 @@ export {
 } from './src/main/ets/entries/message'
 export { MessageOptions, MessageMentionInfo, MentionType, PushData } from './src/main/ets/entries/messageoptions'
 export { JimMsgType } from './src/main/ets/entries/msgtypes'
+export {
+  GetMomentCommentOption,
+  GetMomentDirection,
+  GetMomentOption,
+  Moment,
+  MomentComment,
+  MomentMedia,
+  MomentMediaType,
+  MomentReaction
+} from './src/main/ets/entries/moment'
 export { UserInfo } from './src/main/ets/entries/user'
 export { GroupInfo, GroupMember, GroupMessageMemberReadDetail, GroupMessageReadInfo, GroupMessageReadInfoDetail } from './src/main/ets/entries/group'

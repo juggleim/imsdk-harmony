@@ -7,6 +7,7 @@ export class JimErrorCode{
   ConnectionUnavaliable:number = 21005
   ServerSetError:number = 21006
   ConnectionAlreadyExist:number = 21007
+  MomentRequestError:number = 21008
 
   MessageNotExist:number = 22001
   MessageAlreadyRecalled:number = 22002

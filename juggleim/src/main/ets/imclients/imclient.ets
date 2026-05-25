@@ -76,12 +76,16 @@ export class ImClient{
 
     this.wsSocket = webSocket.createWebSocket()
     this.wsSocket.on('open',(err,value)=>{
+      console.log(`PUSHTRACE connect_payload_prepare: pushChannel=${JuggleIm.instance.config.pushChannel}, pushTokenLength=${JuggleIm.instance.config.pushToken.length}, packageName=${JuggleIm.instance.config.packageName}`)
       let wsMsg = newConnectMessage(imconnect.ConnectMsgBody.create({
         "protoId":JuggleIm.instance.config.protoId,
         "appkey":JuggleIm.instance.config.appkey,
         "token":token,
         "platform":JuggleIm.instance.config.platform,
-        "deviceId":JuggleIm.instance.config.deviceId
+        "deviceId":JuggleIm.instance.config.deviceId,
+        "pushToken":JuggleIm.instance.config.pushToken,
+        "packageName":JuggleIm.instance.config.packageName,
+        "pushChannel":JuggleIm.instance.config.pushChannel
       }))
       this.writeImWsMessage(wsMsg)
     })

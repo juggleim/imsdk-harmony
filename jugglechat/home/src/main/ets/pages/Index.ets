@@ -36,6 +36,7 @@ import ChatroomRoomPage from '../views/MySettings/ChatroomRoom';
 import GlobalUndisturb from '../views/MySettings/GlobalUndisturb';
 import LanguageSetting from '../views/MySettings/LanguageSetting';
 import MyFavorite from '../views/MySettings/MyFavorite';
+import PushSetting from '../views/MySettings/PushSetting';
 
 @Entry
 @Component
@@ -103,6 +104,8 @@ export struct Index {
       BroadcastMessagePage()
     }else if(name === 'GlobalUndisturb'){
       GlobalUndisturb()
+    }else if(name === 'PushSetting'){
+      PushSetting()
     }else if(name === 'LanguageSetting'){
       LanguageSetting()
     }else if(name === 'MyFavorite'){

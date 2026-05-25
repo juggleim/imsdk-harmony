@@ -215,7 +215,7 @@ export struct MeDetail {
               })
 
               Column(){
-                Text('语言设置')
+                Text('推送设置')
                   .fontSize(18)
                   .fontFamily(BaseConstants.FONT_FAMILY_MEDIUM)
               }.width('80%')
@@ -244,7 +244,7 @@ export struct MeDetail {
             if (this.mySettingPageInfo.size() > 1) {
               this.mySettingPageInfo.pop()
             }
-            this.mySettingPageInfo.pushPath({name:'LanguageSetting'})
+            this.mySettingPageInfo.pushPath({name:'PushSetting'})
           })
 
           Column(){

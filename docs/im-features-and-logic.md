@@ -48,32 +48,23 @@
 20. 删除会话
 21. 新增会话
 22. 用户资料本地缓存与远端查询
-23. 群资料本地缓存
-24. 本地 SQLite 持久化
-25. 自定义消息类型注册机制
-26. 多种消息内容类型建模
+23. 群资料本地缓存与远端查询
+24. 群成员本地缓存与远端查询
+25. 本地 SQLite 持久化
+26. 自定义消息类型注册机制
+27. 多种消息内容类型建模
 
 ### 部分实现 / 能力存在但不完整
 1. 群会话发送能力
-2. 文件/图片/语音/视频消息内容模型
-3. 群资料远端查询底层逻辑
-4. 会话标签表结构
-5. 聊天室消息通知预留
-6. 已读通知消息结构
-7. 清未读命令消息结构
+2. 媒体消息发送流程
+3. 会话标签表结构
+4. 聊天室消息通知预留
+5. 已读通知消息结构
+6. 清未读命令消息结构
 
 ### 明确未实现或空壳
-1. 媒体消息上传/发送流程
-2. 消息搜索
-3. 查询指定消息 ID
-4. 修改消息主动 API
-5. 已读回执发送 API
-6. 本地消息属性设置
-7. 草稿设置/清除
-8. mention 消息查询
-9. 聊天室消息同步处理
-10. 群成员管理能力
-11. 群资料完整对外 API
+1. 聊天室消息同步处理
+2. 群成员更丰富资料字段
 
 ---
 
@@ -482,7 +473,7 @@
 - 触发修改监听器
 
 ### 结论
-**被动处理已实现；主动 `modifyMessage(...)` API 仍是空实现。**
+**被动处理与主动 `updateMessage(...)` / `modifyMessage(...)` 都已实现。**
 
 ---
 
@@ -591,13 +582,11 @@
 - 本地可通过 `getLocalGroupInfo` 读取
 
 ### 结论
-**本地缓存已实现。**
+**本地缓存与远端查询都已实现。**
 
-### 限制
-- 对外 `getGroupInfo(groupId)` 直接返回 `null`
-- 私有 `qryGroupInfo(...)` 虽然写了远端查询逻辑，但没有暴露使用
-
-所以这是 **部分实现**。
+### 补充说明
+- `getGroupInfo(groupId)` 现在会本地优先返回；本地未命中时会异步触发远端 `qry_group_info` 并回写 DB
+- `queryGroupInfo(groupId, callback)` 已对外暴露，适合 UI 在需要即时刷新资料时直接调用
 
 ---
 
@@ -688,76 +677,87 @@ SDK 从协议和数据结构层面支持群会话与群消息。
 ## 3.29 已读回执相关
 
 ### 功能描述
-代码中有已读通知相关模型，但主动发送和完整消费链路还不完整。
+Harmony 已支持私聊已读回执发送，也已补齐群聊按 Android 路径的已读统计能力，包括清未读、群已读通知消费和已读详情查询。
 
 ### 证据
 - `ReadNtfMessage` 已建模，见 [juggleim/src/main/ets/entries/cmdmsg.ets](../juggleim/src/main/ets/entries/cmdmsg.ets)
-- `sendReadReceipt(...)` 为空实现，见 [juggleim/src/main/ets/managers/messagemanager.ets](../juggleim/src/main/ets/managers/messagemanager.ets)
+- `GroupReadNtfMessage` 已建模，见 [juggleim/src/main/ets/entries/cmdmsg.ets](../juggleim/src/main/ets/entries/cmdmsg.ets)
+- `sendReadReceipt(...)` 已走 `mark_read` 上行，见 [juggleim/src/main/ets/managers/messagemanager.ets](../juggleim/src/main/ets/managers/messagemanager.ets)
+- `getGroupMessageReadInfoDetail(...)` 已支持 `qry_read_detail` 查询，见 [juggleim/src/main/ets/managers/messagemanager.ets](../juggleim/src/main/ets/managers/messagemanager.ets)
+- `MsgSyncManager` 已消费 `jg:readntf` 和 `jg:grpreadntf`，并更新本地消息已读状态/群读数，见 [juggleim/src/main/ets/managers/msgsyncmanager.ets](../juggleim/src/main/ets/managers/msgsyncmanager.ets)
+- `MsgHandler.downMsg2Message(...)` 已补消息方向赋值，避免私聊已读回执因方向缺失而不触发，见 [juggleim/src/main/ets/entries/msghandler.ets](../juggleim/src/main/ets/entries/msghandler.ets)
 
 ### 实现思路和逻辑
-目前只看到了协议层和命令结构层面的准备，没有完整 API 流程。
+私聊场景下，主动发送时会构造 `MarkReadReq`，请求成功后把本地消息标记为已读；收到远端下行 `jg:readntf` 后，会再更新本地 DB 并触发现有消息刷新链路。
+
+群聊场景下，不走 `sendReadReceipt(...)`，而是和 Android 一样在进入会话时调用 `clearUnreadCount(...)`；其他成员清未读后，发送端消费 `jg:grpreadntf` 更新消息 `readCount/memberCount`，需要看成员明细时再调用 `getGroupMessageReadInfoDetail(...)`。
 
 ### 结论
-**仅部分预留，未真正实现。**
+**私聊与群聊的基础已读链路都已实现。**
 
 ---
 
 ## 3.30 草稿能力
 
 ### 功能描述
-接口存在，但没有实现。
+已支持本地草稿保存、恢复与清空。
 
 ### 证据
-- `setDraft(...)` 空实现
-- `clearDraft(...)` 空实现
-- 文件：[juggleim/src/main/ets/managers/conversationmanager.ets](../juggleim/src/main/ets/managers/conversationmanager.ets)
+- `setDraft(...)` / `clearDraft(...)` 已实现，见 [juggleim/src/main/ets/managers/conversationmanager.ets](../juggleim/src/main/ets/managers/conversationmanager.ets)
+- `ConversationDao` 已支持草稿字段读写，见 [juggleim/src/main/ets/dbs/conversationdao.ets](../juggleim/src/main/ets/dbs/conversationdao.ets)
+- demo 会在离开聊天页时保存草稿、再次进入恢复，并在会话列表展示 `[草稿]` 预览，见 [jugglechat/home/src/main/ets/pages/ConversationDetail.ets](../jugglechat/home/src/main/ets/pages/ConversationDetail.ets) 和 [jugglechat/home/src/main/ets/views/Conversation/ConversationItem.ets](../jugglechat/home/src/main/ets/views/Conversation/ConversationItem.ets)
 
 ### 结论
-**未实现。**
+**已实现。**
 
 ---
 
 ## 3.31 搜索能力
 
 ### 功能描述
-结构上支持消息搜索参数，但 API 为空。
+已支持单会话和全局本地关键字搜索，并支持消息类型、时间范围过滤。
 
 ### 证据
-- `SearchParams` 已定义，包含关键词、消息类型、时间范围、会话
-- `searchMessages(...)` 空实现
-- 文件：[juggleim/src/main/ets/managers/messagemanager.ets](../juggleim/src/main/ets/managers/messagemanager.ets)
+- `SearchParams` 已定义，`searchMessages(...)` 已实现，见 [juggleim/src/main/ets/managers/messagemanager.ets](../juggleim/src/main/ets/managers/messagemanager.ets)
+- 本地消息入库时已写 `searchContent`，旧消息可回退匹配 `msg_content`，见 [juggleim/src/main/ets/dbs/messagedao.ets](../juggleim/src/main/ets/dbs/messagedao.ets)
+- demo 已补“会话内历史搜索”和“会话列表顶部全局搜索结果页”，见 [jugglechat/home/src/main/ets/pages/ConversationHistory.ets](../jugglechat/home/src/main/ets/pages/ConversationHistory.ets) 和 [jugglechat/home/src/main/ets/pages/GlobalMessageSearch.ets](../jugglechat/home/src/main/ets/pages/GlobalMessageSearch.ets)
 
 ### 结论
-**未实现。**
+**已实现。**
 
 ---
 
 ## 3.32 媒体消息发送
 
 ### 功能描述
-虽然已有图片/语音/视频/文件消息内容模型，但真正的上传与发送流程没有落地。
+已支持通过可替换上传 provider 发送图片/语音/视频/文件消息，demo 也已补媒体首发入口。
 
 ### 证据
-- `sendMediaMessage(...) {}` 空实现，见 [juggleim/src/main/ets/managers/messagemanager.ets](../juggleim/src/main/ets/managers/messagemanager.ets)
+- `IMessageUploadProvider` 与上传回调类型已定义，见 [juggleim/src/main/ets/interfaces/imessageuploadprovider.ets](../juggleim/src/main/ets/interfaces/imessageuploadprovider.ets)
+- `MessageManager.sendMediaMessage(...)` 已实现上传 -> 回填 -> 发送链路，见 [juggleim/src/main/ets/managers/messagemanager.ets](../juggleim/src/main/ets/managers/messagemanager.ets)
+- demo 已注册 `MockMessageUploadProvider`，见 [jugglechat/home/src/main/ets/jim/jimsdk.ets](../jugglechat/home/src/main/ets/jim/jimsdk.ets) 和 [jugglechat/home/src/main/ets/jim/mockmessageuploadprovider.ets](../jugglechat/home/src/main/ets/jim/mockmessageuploadprovider.ets)
+- demo 聊天页左下角 `+` 已补图片/文件/视频/语音首发入口，见 [jugglechat/home/src/main/ets/pages/ConversationDetail.ets](../jugglechat/home/src/main/ets/pages/ConversationDetail.ets)
 
 ### 结论
-**未实现。**
+**基础链路已实现；当前 demo 使用 mock provider 演示，真实业务上传仍需接入正式 provider。**
 
 ---
 
 ## 3.33 查询指定消息、主动修改消息、本地属性
 
 ### 功能描述
-这些接口在 SDK 里有占位，但未实现。
+- 按 ID 查询消息：已支持本地优先查询，并在提供会话上下文时远端补查缺失消息。
+- 本地属性：已支持本地存取。
+- 主动修改消息：已实现。
 
 ### 证据
 位于 [juggleim/src/main/ets/managers/messagemanager.ets](../juggleim/src/main/ets/managers/messagemanager.ets)：
-- `getMessagesByIds(...) {}`
-- `modifyMessage(...) {}`
-- `setLocalAttribue(...) {}`
+- `getMessagesByMessageIds(...)` 已实现，旧 `getMessagesByIds(...)` 保留兼容。
+- `updateMessage(...)` / `modifyMessage(...)` 已实现，旧名保留兼容。
+- `setLocalAttribute(...)` / `getLocalAttribute(...)` 已实现，旧 `setLocalAttribue(...)` 保留兼容。
 
 ### 结论
-**未实现。**
+**部分已实现：查询指定消息、本地属性、主动修改消息已完成。**
 
 ---
 
@@ -779,16 +779,37 @@ SDK 从协议和数据结构层面支持群会话与群消息。
 ## 3.35 会话标签 / mention / 群成员
 
 ### 功能描述
-数据库或实体有预留，但 SDK 层未形成完整产品能力。
+会话标签已支持本地增删查、按 tag 过滤和未读统计；当前会话的 mention 消息查询，以及基础群成员查询/缓存能力也已补齐。
 
 ### 证据
-- `conversation_tags` 表存在，见 [juggleim/src/main/resources/rawfile/202504011225.sql](../juggleim/src/main/resources/rawfile/202504011225.sql)
-- `ConverTagDao` 只有 insert，没有完整查询/删除封装，见 [juggleim/src/main/ets/dbs/convertagdao.ets](../juggleim/src/main/ets/dbs/convertagdao.ets)
-- `queryMentionMessages(...)` 空实现
-- `group_members` 表存在，但 `GroupMemberDao` 只有对象转换和 valuesBucket，没有对外能力
+- `conversation_tags` 表已用于本地会话标签缓存，见 [juggleim/src/main/resources/rawfile/202504011225.sql](../juggleim/src/main/resources/rawfile/202504011225.sql)
+- `ConverTagDao` 已支持 tag 增删改查，`ConversationDao` 已支持按 `tagId` 过滤会话与按 tag 统计未读，见 [juggleim/src/main/ets/dbs/convertagdao.ets](../juggleim/src/main/ets/dbs/convertagdao.ets) 和 [juggleim/src/main/ets/dbs/conversationdao.ets](../juggleim/src/main/ets/dbs/conversationdao.ets)
+- `IConversationManager` / `ConversationManager` 已补 `addConversationTag/removeConversationTag/getConversationTags/getTotalUnreadCountByTag`，并在会话同步时落本地 tag，见 [juggleim/src/main/ets/interfaces/iconversationmanager.ets](../juggleim/src/main/ets/interfaces/iconversationmanager.ets)、[juggleim/src/main/ets/managers/conversationmanager.ets](../juggleim/src/main/ets/managers/conversationmanager.ets) 和 [juggleim/src/main/ets/managers/msgsyncmanager.ets](../juggleim/src/main/ets/managers/msgsyncmanager.ets)
+- `QryMentionMsgsReq/QryMentionMsgsResp` 协议已定义，见 [juggleim/src/main/ets/improto/immessage.proto](../juggleim/src/main/ets/improto/immessage.proto)
+- `queryMentionMessages(...)` 已补 `qry_mention_msgs` 查询，见 [juggleim/src/main/ets/managers/messagemanager.ets](../juggleim/src/main/ets/managers/messagemanager.ets)
+- demo 已补“会话详情 -> 提及我的消息”入口，见 [jugglechat/home/src/main/ets/pages/MentionMessages.ets](../jugglechat/home/src/main/ets/pages/MentionMessages.ets)
+- `GroupMemberDao` 已支持 `queryGroupMembers(...)` 和 `getGroupMember(...)`，见 [juggleim/src/main/ets/dbs/groupmemberdao.ets](../juggleim/src/main/ets/dbs/groupmemberdao.ets)
+- `GroupInfoManager` 已补 `getLocalGroupMember/getGroupMember/queryGroupMember/queryGroupMembers`，并支持按 `offset` 分页拉全群成员，见 [juggleim/src/main/ets/managers/groupinfomanager.ets](../juggleim/src/main/ets/managers/groupinfomanager.ets)
+- demo 已补“会话详情 -> 群资料”成员预览区，`@` 面板继续复用群成员缓存，见 [jugglechat/home/src/main/ets/pages/ConversationProfile.ets](../jugglechat/home/src/main/ets/pages/ConversationProfile.ets)
 
 ### 结论
-**属于设计预留，尚未形成完整功能。**
+**会话标签、Mention 消息查询和基础群成员能力已实现。当前 tag 链路以本地闭环为主，远端写入命令仍待后续补齐。**
+
+---
+
+## 3.36 Reaction
+
+### 功能描述
+已支持消息 reaction 的服务端 add/remove/get 同步、本地缓存落库，以及聊天页 reaction 面板和聚合结果展示。
+
+### 证据
+- `MessageReaction` / `MessageReactionResult` 以及 `addMessageReaction/removeMessageReaction/getMessagesReaction(...)` 已定义，见 [juggleim/src/main/ets/entries/message.ets](../juggleim/src/main/ets/entries/message.ets)、[juggleim/src/main/ets/interfaces/imessagemanager.ets](../juggleim/src/main/ets/interfaces/imessagemanager.ets) 和 [juggleim/src/main/ets/managers/messagemanager.ets](../juggleim/src/main/ets/managers/messagemanager.ets)
+- 已对齐 Android reaction 指令：`msg_exset`、`del_msg_exset`、`qry_msg_exset`，并补 `jg:msgexset` 下行状态消息解析与本地合并，见 [juggleim/src/main/ets/entries/cmdmsg.ets](../juggleim/src/main/ets/entries/cmdmsg.ets)、[juggleim/src/main/ets/entries/msghandler.ets](../juggleim/src/main/ets/entries/msghandler.ets) 和 [juggleim/src/main/ets/managers/msgsyncmanager.ets](../juggleim/src/main/ets/managers/msgsyncmanager.ets)
+- `messages.reactions` 字段已接入序列化和反序列化，reaction 变更会回写本地 DB，见 [juggleim/src/main/ets/dbs/messagedao.ets](../juggleim/src/main/ets/dbs/messagedao.ets)
+- demo 聊天页长按消息已补 reaction 选择行，消息气泡会展示 reaction 聚合结果；历史消息加载后会批量补拉 reaction，见 [jugglechat/home/src/main/ets/pages/ConversationDetail.ets](../jugglechat/home/src/main/ets/pages/ConversationDetail.ets) 和 [jugglechat/home/src/main/ets/views/MessageBubble.ets](../jugglechat/home/src/main/ets/views/MessageBubble.ets)
+
+### 结论
+**已实现服务端协议同步与本地缓存闭环，和 Android reaction 指令保持一致。**
 
 ---
 
@@ -804,6 +825,7 @@ SDK 从协议和数据结构层面支持群会话与群消息。
 6. 实时新消息展示
 7. 联系人列表进入私聊页
 8. 用户信息按需加载并展示头像昵称
+9. 长按消息添加 / 取消 reaction，并在消息气泡展示结果
 
 关键页面：
 - [jugglechat/home/src/main/ets/pages/Index.ets](../jugglechat/home/src/main/ets/pages/Index.ets)
@@ -826,10 +848,9 @@ SDK 从协议和数据结构层面支持群会话与群消息。
 - 具备一定可扩展性，自定义消息机制已预留
 
 ### 目前缺口
-- 媒体消息只是模型，没有上传和真正发送
-- 已读、搜索、草稿、聊天室、mention 等能力未完成
-- 群资料、群成员能力未做完整闭环
+- 聊天室等能力仍未完成
+- 群成员目前只补到了成员 ID 维度缓存与查询，更丰富群内展示名 / 扩展字段还未向上层产品化
 - 示例 UI 主要验证文本单聊流程
 
 ### 最终结论
-当前仓库中的 IM SDK 已经实现了 **“连接、同步、单聊文本收发、会话管理、本地存储、资料缓存”** 这一套核心闭环；但距离完整 IM 商业 SDK 还差 **媒体消息、已读体系、搜索体系、聊天室、完整群能力** 等多个部分。
+当前仓库中的 IM SDK 已经实现了 **“连接、同步、文本消息收发、会话管理、本地存储、资料查询、已读、草稿、搜索、mention、reaction、收藏、消息置顶、媒体首发/下载”** 这一套基础闭环；但距离完整 IM 商业 SDK 还差 **聊天室、更完整群成员资料能力** 等多个部分。

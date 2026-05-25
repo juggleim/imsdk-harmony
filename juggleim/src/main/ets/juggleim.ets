@@ -18,6 +18,8 @@ import { IConversationManager } from './interfaces/iconversationmanager'
 import { IMessageManager } from './interfaces/imessagemanager'
 import { IUserInfoManager } from './interfaces/iuserinfomanager'
 import { IGroupInfoManager } from './interfaces/igroupinfomanager'
+import { IMomentManager } from './interfaces/imomentmanager'
+import { MomentManager } from './managers/momentmanager'
 
 export class JimConfig{
   address:string = ''
@@ -26,6 +28,11 @@ export class JimConfig{
   platform:string = 'Harmony'
   protoId:string = 'jug9le1m'
   deviceId:string = ''
+  packageName:string = ''
+  pushToken:string = ''
+  pushChannel:string = ''
+  appServerUrl:string = ''
+  authToken:string = ''
 }
 
 export class JuggleIm{
@@ -43,6 +50,7 @@ export class JuggleIm{
   private userInfoManager:UserInfoManager
   private groupInfoManager:GroupInfoManager
   private chatroomManager:ChatroomManager
+  private momentManager:MomentManager
 
   private constructor() {
     this.config = new JimConfig();
@@ -57,6 +65,7 @@ export class JuggleIm{
     this.userInfoManager = new UserInfoManager(this.imclient)
     this.groupInfoManager = new GroupInfoManager(this.imclient)
     this.chatroomManager = new ChatroomManager(this.imclient, this.msgSyncManager)
+    this.momentManager = new MomentManager()
   }
 
   async init(address:string, appkey:string):Promise<void>{
@@ -73,6 +82,18 @@ export class JuggleIm{
     }
     this.config.appkey = appkey
     this.config.deviceId = PreferenceUtil.getDeviceId()
+  }
+
+  setPackageName(packageName:string):void{
+    this.config.packageName = packageName
+  }
+
+  setAppServerUrl(appServerUrl:string):void{
+    let normalizedUrl = appServerUrl.trim()
+    if (normalizedUrl.endsWith('/')) {
+      normalizedUrl = normalizedUrl.substring(0, normalizedUrl.length - 1)
+    }
+    this.config.appServerUrl = normalizedUrl
   }
 
   initDb(userId:string){
@@ -112,5 +133,9 @@ export class JuggleIm{
 
   getGroupInfoManager():IGroupInfoManager{
     return this.groupInfoManager
+  }
+
+  getMomentManager():IMomentManager{
+    return this.momentManager
   }
 }
