@@ -57,7 +57,11 @@ export class MsgHandler{
 
   static downMsg2Message(downMsg:immessage.IDownMsg):Message{
     let message = new Message()
-    message.conversation = new Conversation(downMsg.targetId as string,downMsg.channelType as number)
+    message.conversation = new Conversation(
+      downMsg.targetId as string,
+      downMsg.channelType as number,
+      downMsg.subChannel != undefined ? downMsg.subChannel as string : ''
+    )
     message.messageId = downMsg.msgId as string
     message.clientId = downMsg.clientUid as string
     let msgType = downMsg.msgType as string
@@ -108,7 +112,11 @@ export class MsgHandler{
 
   private static downMsg2ReferenceMessage(downMsg:immessage.IDownMsg):Message{
     let message = new Message()
-    message.conversation = new Conversation(downMsg.targetId as string,downMsg.channelType as number)
+    message.conversation = new Conversation(
+      downMsg.targetId as string,
+      downMsg.channelType as number,
+      downMsg.subChannel != undefined ? downMsg.subChannel as string : ''
+    )
     message.messageId = downMsg.msgId as string
     message.clientId = downMsg.clientUid as string
     message.senderId = downMsg.senderId as string

@@ -21,6 +21,7 @@ import {
   MomentReactionsCallback,
   MomentsCallback
 } from '../interfaces/momenttypes'
+import { JimDbManager } from '../dbs/dbmanager'
 
 const MOMENT_TRACE_TAG:string = 'MOMENTTRACE'
 
@@ -183,7 +184,9 @@ export class MomentManager implements IMomentManager {
   }
 
   getCachedMomentList(option: GetMomentOption): Moment[] {
-    return this.filterCachedMomentList(option).map((item) => {
+    let cachedMoments = JimDbManager.instance.getMomentDao().queryCachedMomentList(option)
+    this.syncMomentCache(cachedMoments)
+    return cachedMoments.map((item) => {
       return this.cloneMoment(item)
     })
   }
@@ -575,40 +578,38 @@ export class MomentManager implements IMomentManager {
     } else {
       this.momentCache.push(target)
     }
+    JimDbManager.instance.getMomentDao().upsert(target)
   }
 
   private removeMomentFromCache(momentId: string): void {
     this.momentCache = this.momentCache.filter((item) => {
       return item.momentId != momentId
     })
+    JimDbManager.instance.getMomentDao().remove(momentId)
   }
 
   private updateMomentComments(momentId: string, comments: MomentComment[]): void {
-    let foundIndex = this.momentCache.findIndex((item) => {
-      return item.momentId == momentId
-    })
-    if (foundIndex < 0) {
+    let moment = this.getCachedMomentById(momentId)
+    if (moment == null) {
       return
     }
-    let moment = this.cloneMoment(this.momentCache[foundIndex])
-    moment.commentList = comments.map((item) => {
+    let nextMoment = this.cloneMoment(moment)
+    nextMoment.commentList = comments.map((item) => {
       return this.cloneComment(item)
     })
-    this.momentCache[foundIndex] = moment
+    this.replaceMoment(nextMoment)
   }
 
   private updateMomentReactions(momentId: string, reactions: MomentReaction[]): void {
-    let foundIndex = this.momentCache.findIndex((item) => {
-      return item.momentId == momentId
-    })
-    if (foundIndex < 0) {
+    let moment = this.getCachedMomentById(momentId)
+    if (moment == null) {
       return
     }
-    let moment = this.cloneMoment(this.momentCache[foundIndex])
-    moment.reactionList = reactions.map((item) => {
+    let nextMoment = this.cloneMoment(moment)
+    nextMoment.reactionList = reactions.map((item) => {
       return this.cloneReaction(item)
     })
-    this.momentCache[foundIndex] = moment
+    this.replaceMoment(nextMoment)
   }
 
   private refreshMomentAfterMutation(momentId: string): void {
@@ -638,6 +639,26 @@ export class MomentManager implements IMomentManager {
       return moments.slice(0, option.count)
     }
     return moments
+  }
+
+  private syncMomentCache(moments: Moment[]): void {
+    this.momentCache = moments.map((item) => {
+      return this.cloneMoment(item)
+    })
+  }
+
+  private getCachedMomentById(momentId: string): Moment | null {
+    for (let i = 0; i < this.momentCache.length; i++) {
+      if (this.momentCache[i].momentId == momentId) {
+        return this.cloneMoment(this.momentCache[i])
+      }
+    }
+    let cachedMoment = JimDbManager.instance.getMomentDao().getMoment(momentId)
+    if (cachedMoment == null) {
+      return null
+    }
+    this.replaceMoment(cachedMoment)
+    return this.cloneMoment(cachedMoment)
   }
 
   private cloneMoment(moment: Moment): Moment {

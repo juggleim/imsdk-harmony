@@ -17,6 +17,9 @@ message UpMsg {
   repeated string toUserIds = 8;//群定向消息，指定接收消息的部分群成员
   MergedMsgs mergedMsgs = 9;
   string SearchText = 10;
+  int64 lifeTime = 11;
+  int64 lifeTimeAfterRead = 12;
+  string subChannel = 13;
 
   int64 msgTime = 51;
 }
@@ -26,7 +29,7 @@ message MergedMsgs{
   string userId = 2;
   string targetId = 3;
   repeated SimpleMsg msgs = 4;
-  // string containerMsgId = 5;
+  string subChannel = 5;
 }
 
 message MentionInfo {
@@ -98,6 +101,13 @@ message DownMsg{
   map<string, TransMsgContent> transMsgMap = 28;
   string SearchText = 29;
   GrpMemberInfo grpMemberInfo = 30;
+  int64 destroyTime = 31;
+  int64 lifeTimeAfterRead = 32;
+  bool isDelete = 33;
+  string subChannel = 34;
+  repeated string toUserIds = 35;
+  int64 readTime = 36;
+  UserInfo senderInfo = 38;
 }
 
 message TransMsgContent{
@@ -187,6 +197,7 @@ message SimpleConversation {
   ChannelType channelType = 2;
   int64 msgTime = 3;
   int64 msgSeq = 4;
+  string subChannel = 5;
 }
 message AssistantMsgResp{
   string msgId = 1;
@@ -211,11 +222,13 @@ message DelHisMsgsReq{
   ChannelType channelType = 3;
   repeated SimpleMsg msgs = 4;
   int32 delScope = 5;
+  string subChannel = 6;
 }
 
 message QryLatestMsgReq{
   string converId = 1;
   ChannelType channelType = 2;
+  string subChannel = 3;
 }
 message QryLatestMsgResp{
   string converId = 1;
@@ -223,6 +236,7 @@ message QryLatestMsgResp{
   int64 msgSeqNo = 3;
   int64 msgTime = 4;
   string msgId = 5;
+  string subChannel = 6;
 }
 
 message QryHisMsgsReq{
@@ -232,6 +246,7 @@ message QryHisMsgsReq{
   int32 count = 4;
   int32 order = 5;
   repeated string msgTypes = 6;
+  string subChannel = 7;
 
 
   int32 maxHisMsgCount = 51;
@@ -241,6 +256,7 @@ message QryHisMsgsReq{
 message QryFirstUnreadMsgReq{
   string targetId = 1;
   ChannelType channelType = 2;
+  string subChannel = 3;
   // int64 startTime = 3;
   // int32 count = 4;
 }
@@ -249,6 +265,7 @@ message QryHisMsgByIdsReq{
   string targetId = 1;
   ChannelType channelType = 2;
   repeated string msgIds = 3;
+  string subChannel = 4;
 }
 
 message RecallMsgReq{
@@ -257,6 +274,7 @@ message RecallMsgReq{
   string msgId = 3;
   int64 msgTime = 4;
   repeated KvItem exts = 5;
+  string subChannel = 6;
 }
 
 message MarkReadReq{
@@ -264,12 +282,14 @@ message MarkReadReq{
   ChannelType channelType = 2;
   repeated SimpleMsg msgs = 3;
   repeated IndexScope indexScopes = 4;
+  string subChannel = 5;
 }
 
 message MarkGrpMsgReadReq{
   string groupId = 1;
   ChannelType channelType = 2;
   repeated string msgIds = 3;
+  string subChannel = 4;
 }
 
 message CleanHisMsgReq{
@@ -279,6 +299,7 @@ message CleanHisMsgReq{
   int32 cleanScope = 4;
   string senderId = 5;
   int64 cleanTimeOffset = 6;
+  string subChannel = 7;
 }
 
 message SimpleMsg{
@@ -300,6 +321,7 @@ message ModifyMsgReq{
   int64 msgSeqNo = 5;
   bytes msgContent = 6;
   string msgType = 7;
+  string subChannel = 8;
 }
 
 message MergeMsgReq{
@@ -318,6 +340,7 @@ message MsgExt {
   ChannelType channelType = 2;
   string msgId = 3;
   MsgExtItem ext = 4;
+  string subChannel = 5;
 }
 
 message MsgExtItem {
@@ -331,6 +354,7 @@ message QryMsgExtReq{
   string targetId = 1;
   ChannelType channelType = 2;
   repeated string msgIds = 3;
+  string subChannel = 4;
 }
 
 message MsgExtItemsList{
@@ -351,6 +375,7 @@ message FavoriteMsgIdItem{
   string receiverId = 2;
   ChannelType channelType = 3;
   string msgId = 4;
+  string subChannel = 5;
 }
 
 message QryFavoriteMsgsReq{
@@ -372,11 +397,13 @@ message TopMsgReq{
   string targetId = 1;
   ChannelType channelType = 2;
   string msgId = 3;
+  string subChannel = 4;
 }
 
 message GetTopMsgReq{
   string targetId = 1;
   ChannelType channelType = 2;
+  string subChannel = 3;
 }
 
 message TopMsg{
@@ -424,6 +451,7 @@ message QryGlobalConversReq{
   string targetId = 4;
   ChannelType channelType = 5;
   repeated string excludeUserIds = 6;
+  string subChannel = 7;
 }
 message QryGlobalConversResp{
   repeated GlobalConver convers = 1;
@@ -474,6 +502,7 @@ message Conversation{
   string latestReadMsgId = 18;
   int64 latestReadMsgTime = 19;
   repeated ConverTag converTags = 20;
+  string subChannel = 21;
 }
 
 message BatchAddConvers{
@@ -520,6 +549,7 @@ message QryMentionMsgsReq{
   int32 count = 4;
   int32 order = 5;
   int64 latestReadIndex = 6;
+  string subChannel = 7;
 
   int32 maxHisMsgCount = 51;
   string targetIdAlias = 52;
@@ -569,6 +599,7 @@ message UndisturbConverItem {
   string targetId = 1;
   ChannelType channelType = 2;
   int32 undisturbType = 3;
+  string subChannel = 4;
 }
 
 message QryTopConversReq{
@@ -590,6 +621,7 @@ message QryReadInfosReq{
   string targetId = 1;
   ChannelType channelType = 2;
   repeated string msgIds = 3;
+  string subChannel = 4;
 }
 
 message QryReadInfosResp{
@@ -606,6 +638,7 @@ message QryReadDetailReq{
   string targetId = 1;
   ChannelType channelType = 2;
   string msgId = 3;
+  string subChannel = 4;
 }
 
 message QryReadDetailResp{
@@ -625,6 +658,7 @@ message QryConverReq{
   ChannelType channelType = 2;
   bool isInner = 3;
   repeated string userIds = 4;
+  string subChannel = 5;
 
   string targetIdAlias = 51;
 }

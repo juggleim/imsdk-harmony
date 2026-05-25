@@ -127,6 +127,15 @@ export namespace immessage {
         /** UpMsg SearchText */
         SearchText?: (string|null);
 
+        /** UpMsg lifeTime */
+        lifeTime?: (number|Long|null);
+
+        /** UpMsg lifeTimeAfterRead */
+        lifeTimeAfterRead?: (number|Long|null);
+
+        /** UpMsg subChannel */
+        subChannel?: (string|null);
+
         /** UpMsg msgTime */
         msgTime?: (number|Long|null);
     }
@@ -169,6 +178,15 @@ export namespace immessage {
 
         /** UpMsg SearchText. */
         public SearchText: string;
+
+        /** UpMsg lifeTime. */
+        public lifeTime: (number|Long);
+
+        /** UpMsg lifeTimeAfterRead. */
+        public lifeTimeAfterRead: (number|Long);
+
+        /** UpMsg subChannel. */
+        public subChannel: string;
 
         /** UpMsg msgTime. */
         public msgTime: (number|Long);
@@ -757,6 +775,27 @@ export namespace immessage {
 
         /** DownMsg grpMemberInfo */
         grpMemberInfo?: (immessage.IGrpMemberInfo|null);
+
+        /** DownMsg destroyTime */
+        destroyTime?: (number|Long|null);
+
+        /** DownMsg lifeTimeAfterRead */
+        lifeTimeAfterRead?: (number|Long|null);
+
+        /** DownMsg isDelete */
+        isDelete?: (boolean|null);
+
+        /** DownMsg subChannel */
+        subChannel?: (string|null);
+
+        /** DownMsg toUserIds */
+        toUserIds?: (string[]|null);
+
+        /** DownMsg readTime */
+        readTime?: (number|Long|null);
+
+        /** DownMsg senderInfo */
+        senderInfo?: (immessage.IUserInfo|null);
     }
 
     /** Represents a DownMsg. */
@@ -857,6 +896,27 @@ export namespace immessage {
 
         /** DownMsg grpMemberInfo. */
         public grpMemberInfo?: (immessage.IGrpMemberInfo|null);
+
+        /** DownMsg destroyTime. */
+        public destroyTime: (number|Long);
+
+        /** DownMsg lifeTimeAfterRead. */
+        public lifeTimeAfterRead: (number|Long);
+
+        /** DownMsg isDelete. */
+        public isDelete: boolean;
+
+        /** DownMsg subChannel. */
+        public subChannel: string;
+
+        /** DownMsg toUserIds. */
+        public toUserIds: string[];
+
+        /** DownMsg readTime. */
+        public readTime: (number|Long);
+
+        /** DownMsg senderInfo. */
+        public senderInfo?: (immessage.IUserInfo|null);
 
         /**
          * Creates a new DownMsg instance using the specified properties.
@@ -2074,6 +2134,9 @@ export namespace immessage {
 
         /** SimpleConversation msgSeq */
         msgSeq?: (number|Long|null);
+
+        /** SimpleConversation subChannel */
+        subChannel?: (string|null);
     }
 
     /** Represents a SimpleConversation. */
@@ -2096,6 +2159,9 @@ export namespace immessage {
 
         /** SimpleConversation msgSeq. */
         public msgSeq: (number|Long);
+
+        /** SimpleConversation subChannel. */
+        public subChannel: string;
 
         /**
          * Creates a new SimpleConversation instance using the specified properties.
@@ -2431,6 +2497,9 @@ export namespace immessage {
 
         /** DelHisMsgsReq delScope */
         delScope?: (number|null);
+
+        /** DelHisMsgsReq subChannel */
+        subChannel?: (string|null);
     }
 
     /** Represents a DelHisMsgsReq. */
@@ -2453,6 +2522,9 @@ export namespace immessage {
 
         /** DelHisMsgsReq delScope. */
         public delScope: number;
+
+        /** DelHisMsgsReq subChannel. */
+        public subChannel: string;
 
         /**
          * Creates a new DelHisMsgsReq instance using the specified properties.
@@ -2540,6 +2612,9 @@ export namespace immessage {
 
         /** QryLatestMsgReq channelType */
         channelType?: (immessage.ChannelType|null);
+
+        /** QryLatestMsgReq subChannel */
+        subChannel?: (string|null);
     }
 
     /** Represents a QryLatestMsgReq. */
@@ -2556,6 +2631,9 @@ export namespace immessage {
 
         /** QryLatestMsgReq channelType. */
         public channelType: immessage.ChannelType;
+
+        /** QryLatestMsgReq subChannel. */
+        public subChannel: string;
 
         /**
          * Creates a new QryLatestMsgReq instance using the specified properties.
@@ -2782,6 +2860,9 @@ export namespace immessage {
 
         /** QryHisMsgsReq targetIdAlias */
         targetIdAlias?: (string|null);
+
+        /** QryHisMsgsReq subChannel */
+        subChannel?: (string|null);
     }
 
     /** Represents a QryHisMsgsReq. */
@@ -2816,6 +2897,9 @@ export namespace immessage {
 
         /** QryHisMsgsReq targetIdAlias. */
         public targetIdAlias: string;
+
+        /** QryHisMsgsReq subChannel. */
+        public subChannel: string;
 
         /**
          * Creates a new QryHisMsgsReq instance using the specified properties.
@@ -2903,6 +2987,9 @@ export namespace immessage {
 
         /** QryFirstUnreadMsgReq channelType */
         channelType?: (immessage.ChannelType|null);
+
+        /** QryFirstUnreadMsgReq subChannel */
+        subChannel?: (string|null);
     }
 
     /** Represents a QryFirstUnreadMsgReq. */
@@ -2919,6 +3006,9 @@ export namespace immessage {
 
         /** QryFirstUnreadMsgReq channelType. */
         public channelType: immessage.ChannelType;
+
+        /** QryFirstUnreadMsgReq subChannel. */
+        public subChannel: string;
 
         /**
          * Creates a new QryFirstUnreadMsgReq instance using the specified properties.
@@ -3009,6 +3099,9 @@ export namespace immessage {
 
         /** QryHisMsgByIdsReq msgIds */
         msgIds?: (string[]|null);
+
+        /** QryHisMsgByIdsReq subChannel */
+        subChannel?: (string|null);
     }
 
     /** Represents a QryHisMsgByIdsReq. */
@@ -3028,6 +3121,9 @@ export namespace immessage {
 
         /** QryHisMsgByIdsReq msgIds. */
         public msgIds: string[];
+
+        /** QryHisMsgByIdsReq subChannel. */
+        public subChannel: string;
 
         /**
          * Creates a new QryHisMsgByIdsReq instance using the specified properties.
@@ -3124,6 +3220,9 @@ export namespace immessage {
 
         /** RecallMsgReq exts */
         exts?: (immessage.IKvItem[]|null);
+
+        /** RecallMsgReq subChannel */
+        subChannel?: (string|null);
     }
 
     /** Represents a RecallMsgReq. */
@@ -3149,6 +3248,9 @@ export namespace immessage {
 
         /** RecallMsgReq exts. */
         public exts: immessage.IKvItem[];
+
+        /** RecallMsgReq subChannel. */
+        public subChannel: string;
 
         /**
          * Creates a new RecallMsgReq instance using the specified properties.
@@ -3242,6 +3344,9 @@ export namespace immessage {
 
         /** MarkReadReq indexScopes */
         indexScopes?: (immessage.IIndexScope[]|null);
+
+        /** MarkReadReq subChannel */
+        subChannel?: (string|null);
     }
 
     /** Represents a MarkReadReq. */
@@ -3264,6 +3369,9 @@ export namespace immessage {
 
         /** MarkReadReq indexScopes. */
         public indexScopes: immessage.IIndexScope[];
+
+        /** MarkReadReq subChannel. */
+        public subChannel: string;
 
         /**
          * Creates a new MarkReadReq instance using the specified properties.
@@ -3354,6 +3462,9 @@ export namespace immessage {
 
         /** MarkGrpMsgReadReq msgIds */
         msgIds?: (string[]|null);
+
+        /** MarkGrpMsgReadReq subChannel */
+        subChannel?: (string|null);
     }
 
     /** Represents a MarkGrpMsgReadReq. */
@@ -3373,6 +3484,9 @@ export namespace immessage {
 
         /** MarkGrpMsgReadReq msgIds. */
         public msgIds: string[];
+
+        /** MarkGrpMsgReadReq subChannel. */
+        public subChannel: string;
 
         /**
          * Creates a new MarkGrpMsgReadReq instance using the specified properties.
@@ -3472,6 +3586,9 @@ export namespace immessage {
 
         /** CleanHisMsgReq cleanTimeOffset */
         cleanTimeOffset?: (number|Long|null);
+
+        /** CleanHisMsgReq subChannel */
+        subChannel?: (string|null);
     }
 
     /** Represents a CleanHisMsgReq. */
@@ -3500,6 +3617,9 @@ export namespace immessage {
 
         /** CleanHisMsgReq cleanTimeOffset. */
         public cleanTimeOffset: (number|Long);
+
+        /** CleanHisMsgReq subChannel. */
+        public subChannel: string;
 
         /**
          * Creates a new CleanHisMsgReq instance using the specified properties.
@@ -3814,6 +3934,9 @@ export namespace immessage {
 
         /** ModifyMsgReq msgType */
         msgType?: (string|null);
+
+        /** ModifyMsgReq subChannel */
+        subChannel?: (string|null);
     }
 
     /** Represents a ModifyMsgReq. */
@@ -3845,6 +3968,9 @@ export namespace immessage {
 
         /** ModifyMsgReq msgType. */
         public msgType: string;
+
+        /** ModifyMsgReq subChannel. */
+        public subChannel: string;
 
         /**
          * Creates a new ModifyMsgReq instance using the specified properties.
@@ -4150,6 +4276,9 @@ export namespace immessage {
 
         /** MsgExt ext */
         ext?: (immessage.IMsgExtItem|null);
+
+        /** MsgExt subChannel */
+        subChannel?: (string|null);
     }
 
     /** Represents a MsgExt. */
@@ -4172,6 +4301,9 @@ export namespace immessage {
 
         /** MsgExt ext. */
         public ext?: (immessage.IMsgExtItem|null);
+
+        /** MsgExt subChannel. */
+        public subChannel: string;
 
         /**
          * Creates a new MsgExt instance using the specified properties.
@@ -4377,6 +4509,9 @@ export namespace immessage {
 
         /** QryMsgExtReq msgIds */
         msgIds?: (string[]|null);
+
+        /** QryMsgExtReq subChannel */
+        subChannel?: (string|null);
     }
 
     /** Represents a QryMsgExtReq. */
@@ -4396,6 +4531,9 @@ export namespace immessage {
 
         /** QryMsgExtReq msgIds. */
         public msgIds: string[];
+
+        /** QryMsgExtReq subChannel. */
+        public subChannel: string;
 
         /**
          * Creates a new QryMsgExtReq instance using the specified properties.
@@ -4786,6 +4924,9 @@ export namespace immessage {
 
         /** FavoriteMsgIdItem msgId */
         msgId?: (string|null);
+
+        /** FavoriteMsgIdItem subChannel */
+        subChannel?: (string|null);
     }
 
     /** Represents a FavoriteMsgIdItem. */
@@ -4808,6 +4949,9 @@ export namespace immessage {
 
         /** FavoriteMsgIdItem msgId. */
         public msgId: string;
+
+        /** FavoriteMsgIdItem subChannel. */
+        public subChannel: string;
 
         /**
          * Creates a new FavoriteMsgIdItem instance using the specified properties.
@@ -5207,6 +5351,9 @@ export namespace immessage {
 
         /** TopMsgReq msgId */
         msgId?: (string|null);
+
+        /** TopMsgReq subChannel */
+        subChannel?: (string|null);
     }
 
     /** Represents a TopMsgReq. */
@@ -5226,6 +5373,9 @@ export namespace immessage {
 
         /** TopMsgReq msgId. */
         public msgId: string;
+
+        /** TopMsgReq subChannel. */
+        public subChannel: string;
 
         /**
          * Creates a new TopMsgReq instance using the specified properties.
@@ -5313,6 +5463,9 @@ export namespace immessage {
 
         /** GetTopMsgReq channelType */
         channelType?: (immessage.ChannelType|null);
+
+        /** GetTopMsgReq subChannel */
+        subChannel?: (string|null);
     }
 
     /** Represents a GetTopMsgReq. */
@@ -5329,6 +5482,9 @@ export namespace immessage {
 
         /** GetTopMsgReq channelType. */
         public channelType: immessage.ChannelType;
+
+        /** GetTopMsgReq subChannel. */
+        public subChannel: string;
 
         /**
          * Creates a new GetTopMsgReq instance using the specified properties.
@@ -6088,6 +6244,9 @@ export namespace immessage {
 
         /** QryGlobalConversReq excludeUserIds */
         excludeUserIds?: (string[]|null);
+
+        /** QryGlobalConversReq subChannel */
+        subChannel?: (string|null);
     }
 
     /** Represents a QryGlobalConversReq. */
@@ -6116,6 +6275,9 @@ export namespace immessage {
 
         /** QryGlobalConversReq excludeUserIds. */
         public excludeUserIds: string[];
+
+        /** QryGlobalConversReq subChannel. */
+        public subChannel: string;
 
         /**
          * Creates a new QryGlobalConversReq instance using the specified properties.
@@ -6729,6 +6891,9 @@ export namespace immessage {
 
         /** Conversation converTags */
         converTags?: (immessage.IConverTag[]|null);
+
+        /** Conversation subChannel */
+        subChannel?: (string|null);
     }
 
     /** Represents a Conversation. */
@@ -6799,6 +6964,9 @@ export namespace immessage {
 
         /** Conversation converTags. */
         public converTags: immessage.IConverTag[];
+
+        /** Conversation subChannel. */
+        public subChannel: string;
 
         /**
          * Creates a new Conversation instance using the specified properties.
@@ -7467,6 +7635,9 @@ export namespace immessage {
 
         /** QryMentionMsgsReq targetIdAlias */
         targetIdAlias?: (string|null);
+
+        /** QryMentionMsgsReq subChannel */
+        subChannel?: (string|null);
     }
 
     /** Represents a QryMentionMsgsReq. */
@@ -7501,6 +7672,9 @@ export namespace immessage {
 
         /** QryMentionMsgsReq targetIdAlias. */
         public targetIdAlias: string;
+
+        /** QryMentionMsgsReq subChannel. */
+        public subChannel: string;
 
         /**
          * Creates a new QryMentionMsgsReq instance using the specified properties.
@@ -8409,6 +8583,9 @@ export namespace immessage {
 
         /** UndisturbConverItem undisturbType */
         undisturbType?: (number|null);
+
+        /** UndisturbConverItem subChannel */
+        subChannel?: (string|null);
     }
 
     /** Represents an UndisturbConverItem. */
@@ -8428,6 +8605,9 @@ export namespace immessage {
 
         /** UndisturbConverItem undisturbType. */
         public undisturbType: number;
+
+        /** UndisturbConverItem subChannel. */
+        public subChannel: string;
 
         /**
          * Creates a new UndisturbConverItem instance using the specified properties.
@@ -8730,6 +8910,9 @@ export namespace immessage {
 
         /** QryReadInfosReq msgIds */
         msgIds?: (string[]|null);
+
+        /** QryReadInfosReq subChannel */
+        subChannel?: (string|null);
     }
 
     /** Represents a QryReadInfosReq. */
@@ -8749,6 +8932,9 @@ export namespace immessage {
 
         /** QryReadInfosReq msgIds. */
         public msgIds: string[];
+
+        /** QryReadInfosReq subChannel. */
+        public subChannel: string;
 
         /**
          * Creates a new QryReadInfosReq instance using the specified properties.
@@ -9045,6 +9231,9 @@ export namespace immessage {
 
         /** QryReadDetailReq msgId */
         msgId?: (string|null);
+
+        /** QryReadDetailReq subChannel */
+        subChannel?: (string|null);
     }
 
     /** Represents a QryReadDetailReq. */
@@ -9064,6 +9253,9 @@ export namespace immessage {
 
         /** QryReadDetailReq msgId. */
         public msgId: string;
+
+        /** QryReadDetailReq subChannel. */
+        public subChannel: string;
 
         /**
          * Creates a new QryReadDetailReq instance using the specified properties.
@@ -9378,6 +9570,9 @@ export namespace immessage {
 
         /** QryConverReq targetIdAlias */
         targetIdAlias?: (string|null);
+
+        /** QryConverReq subChannel */
+        subChannel?: (string|null);
     }
 
     /** Represents a QryConverReq. */
@@ -9403,6 +9598,9 @@ export namespace immessage {
 
         /** QryConverReq targetIdAlias. */
         public targetIdAlias: string;
+
+        /** QryConverReq subChannel. */
+        public subChannel: string;
 
         /**
          * Creates a new QryConverReq instance using the specified properties.

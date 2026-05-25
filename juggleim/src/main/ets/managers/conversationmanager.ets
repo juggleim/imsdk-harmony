@@ -1,5 +1,5 @@
 import {JuggleIm} from '../juggleim'
-import { Conversation, ConversationInfo, ConversationTag } from "../entries/conversation"
+import { Conversation, ConversationInfo, ConversationTag, ConversationTagInfo } from "../entries/conversation"
 import {immessage} from  '../improto/immessage'
 import { ImClient } from '../imclients/imclient'
 import {CommonCallback} from '../interfaces/commoncallback'
@@ -15,6 +15,7 @@ import {
   ConversationCallback,
   ConversationDeleteListener,
   ConversationInsertCallback,
+  ConversationTagInfosCallback,
   ConversationTagsCallback,
   ConversationsCallback,
   ConversationUpdateListener,
@@ -31,6 +32,7 @@ export {
   ConversationCallback,
   ConversationDeleteListener,
   ConversationInsertCallback,
+  ConversationTagInfosCallback,
   ConversationTagsCallback,
   ConversationsCallback,
   ConversationUpdateListener,
@@ -122,19 +124,21 @@ export class ConversationManager implements IConversationManager{
   }
 
   getConversation(conver:Conversation,callback:ConversationCallback){
-    let req = immessage.QryConverReq.create({
-      "targetId":conver.conversationId,
-      "channelType":conver.conversationType
-    })
+    let req = this.buildQryConverReq(conver)
     let data = immessage.QryConverReq.encode(req).finish()
     this.imclient.query("qry_conver",JuggleIm.instance.userInfo.userId,data,(code,qryAck)=>{
       if(code==0){
         let data = qryAck.data as Uint8Array
         let resp = immessage.Conversation.decode(data)
+        let responseConver = new Conversation(
+          resp.targetId as string,
+          resp.channelType as number,
+          resp.subChannel != undefined ? resp.subChannel as string : conver.subChannel
+        )
         let converInfo = new ConversationInfo()
         converInfo.lastMessage = MsgHandler.downMsg2Message(resp.msg as immessage.DownMsg)
-        converInfo.conversation = conver
-        converInfo.lastMessage.conversation = conver
+        converInfo.conversation = responseConver
+        converInfo.lastMessage.conversation = responseConver
         converInfo.converTime = resp.sortTime as number
         converInfo.isTop = (resp.isTop as number)>0
         converInfo.topTime = JimUtil.toNumber(resp.topUpdatedTime as number)
@@ -153,7 +157,7 @@ export class ConversationManager implements IConversationManager{
     let converInfo = JimDbManager.instance.getConversationDao().setDraft(conver, draft)
     if(converInfo != undefined){
       if(this.isPlaceholderConversation(converInfo) && draft == ''){
-        JimDbManager.instance.getConversationDao().delConver(conver.conversationId, conver.conversationType)
+        JimDbManager.instance.getConversationDao().delConver(conver.conversationId, conver.conversationType, conver.subChannel)
         this.msgSyncMgr.notifyConversationDelete([converInfo])
         return
       }
@@ -179,10 +183,7 @@ export class ConversationManager implements IConversationManager{
   }
 
   insertConversation(conver:Conversation,callback:ConversationInsertCallback){
-    let req = immessage.Conversation.create({
-      "targetId":conver.conversationId,
-      "channelType":conver.conversationType
-    })
+    let req = this.buildProtoConversation(conver)
     let data = immessage.Conversation.encode(req).finish()
     this.imclient.query("add_conver",JuggleIm.instance.userInfo.userId,data,(code,qryAck)=>{
       if(code==0){
@@ -195,50 +196,183 @@ export class ConversationManager implements IConversationManager{
     })
   }
 
-  addConversationTag(conver:Conversation,tagId:string,callback:CommonCallback){
+  createConversationTag(tagId:string, tagName:string, callback:CommonCallback):void{
+    let normalizedTagId = tagId.trim()
+    let normalizedTagName = tagName.trim()
+    if(normalizedTagId == '' || normalizedTagName == ''){
+      callback(new JimErrorCode().InvalidParam)
+      return
+    }
+    let protoTag = immessage.ConverTag.create({})
+    protoTag.tag = normalizedTagId
+    protoTag.tagName = normalizedTagName
+    protoTag.tagType = immessage.ConverTagType.UserConverTag
+    let protoTags:immessage.IConverTag[] = [protoTag]
+    let req = immessage.UserConverTags.create({})
+    req.tags = protoTags
+    let data = immessage.UserConverTags.encode(req).finish()
+    this.imclient.query("create_user_conver_tags", JuggleIm.instance.userInfo.userId, data, (code, qryAck)=>{
+      if(code == 0){
+        let tagInfo = new ConversationTagInfo()
+        tagInfo.tagId = normalizedTagId
+        tagInfo.tagName = normalizedTagName
+        tagInfo.tagType = immessage.ConverTagType.UserConverTag
+        JimDbManager.instance.getConversationTagInfoDao().upsert(tagInfo)
+        this.recordCommandSyncTime(qryAck.timestamp != undefined && qryAck.timestamp != null ?
+          JimUtil.toNumber(qryAck.timestamp as number) : 0)
+      }
+      callback(code)
+    })
+  }
+
+  destroyConversationTag(tagId:string, callback:CommonCallback):void{
     let normalizedTagId = tagId.trim()
     if(normalizedTagId == ''){
       callback(new JimErrorCode().InvalidParam)
       return
     }
-    let converInfo = JimDbManager.instance.getConversationDao().getConver(conver)
-    if(converInfo == undefined){
+    let protoTag = immessage.ConverTag.create({})
+    protoTag.tag = normalizedTagId
+    let protoTags:immessage.IConverTag[] = [protoTag]
+    let req = immessage.UserConverTags.create({})
+    req.tags = protoTags
+    let data = immessage.UserConverTags.encode(req).finish()
+    this.imclient.query("del_user_conver_tags", JuggleIm.instance.userInfo.userId, data, (code, qryAck)=>{
+      if(code == 0){
+        JimDbManager.instance.getConversationTagInfoDao().remove(normalizedTagId)
+        this.recordCommandSyncTime(qryAck.timestamp != undefined && qryAck.timestamp != null ?
+          JimUtil.toNumber(qryAck.timestamp as number) : 0)
+      }
+      callback(code)
+    })
+  }
+
+  updateConversationTagName(tagId:string, tagName:string, callback:CommonCallback):void{
+    let normalizedTagId = tagId.trim()
+    let normalizedTagName = tagName.trim()
+    if(normalizedTagId == '' || normalizedTagName == ''){
       callback(new JimErrorCode().InvalidParam)
       return
     }
-    JimDbManager.instance.getConverTagDao().addTag(conver, normalizedTagId)
-    let updatedConver = JimDbManager.instance.getConversationDao().getConver(conver)
-    if(updatedConver != undefined){
-      this.msgSyncMgr.notifyConversationUpdate([updatedConver])
-    }
-    callback(0)
+    let protoTag = immessage.ConverTag.create({})
+    protoTag.tag = normalizedTagId
+    protoTag.tagName = normalizedTagName
+    protoTag.tagType = immessage.ConverTagType.UserConverTag
+    let protoTags:immessage.IConverTag[] = [protoTag]
+    let req = immessage.UserConverTags.create({})
+    req.tags = protoTags
+    let data = immessage.UserConverTags.encode(req).finish()
+    this.imclient.query("create_user_conver_tags", JuggleIm.instance.userInfo.userId, data, (code, qryAck)=>{
+      if(code == 0){
+        JimDbManager.instance.getConversationTagInfoDao().updateName(normalizedTagId, normalizedTagName)
+        this.recordCommandSyncTime(qryAck.timestamp != undefined && qryAck.timestamp != null ?
+          JimUtil.toNumber(qryAck.timestamp as number) : 0)
+      }
+      callback(code)
+    })
+  }
+
+  getCachedConversationTagList():ConversationTagInfo[]{
+    return JimDbManager.instance.getConversationTagInfoDao().queryAll()
+  }
+
+  getConversationTagList(callback:ConversationTagInfosCallback):void{
+    let req = immessage.Nil.create({})
+    let data = immessage.Nil.encode(req).finish()
+    this.imclient.query("qry_user_conver_tags", JuggleIm.instance.userInfo.userId, data, (code, qryAck)=>{
+      if(code != 0){
+        callback(code, this.getCachedConversationTagList())
+        return
+      }
+      try{
+        let resp = immessage.UserConverTags.decode(qryAck.data as Uint8Array)
+        let tagInfos:ConversationTagInfo[] = []
+        JimDbManager.instance.getConversationTagInfoDao().clearAll()
+        if(resp.tags != undefined && resp.tags != null){
+          resp.tags.forEach((protoTag)=>{
+            let tagInfo = this.toConversationTagInfo(protoTag)
+            if(tagInfo == null){
+              return
+            }
+            JimDbManager.instance.getConversationTagInfoDao().upsert(tagInfo)
+            tagInfos.push(tagInfo)
+          })
+        }
+        callback(0, tagInfos)
+      }catch (e) {
+        let err = e as Error
+        console.error(`jimsdk_conversation_tag_decode_fail: ${err.message}`)
+        callback(-1, this.getCachedConversationTagList())
+      }
+    })
+  }
+
+  getTagsForConversation(conver:Conversation):ConversationTagInfo[]{
+    return JimDbManager.instance.getConversationTagInfoDao().queryByConversation(conver)
+  }
+
+  addConversationsToTag(convers:Conversation[], tagId:string, callback:CommonCallback):void{
+    this.updateConversationsTag(convers, tagId, true, callback)
+  }
+
+  removeConversationsFromTag(convers:Conversation[], tagId:string, callback:CommonCallback):void{
+    this.updateConversationsTag(convers, tagId, false, callback)
+  }
+
+  addConversationTag(conver:Conversation,tagId:string,callback:CommonCallback){
+    this.addConversationsToTag([conver], tagId, callback)
   }
 
   removeConversationTag(conver:Conversation,tagId:string,callback:CommonCallback){
-    let normalizedTagId = tagId.trim()
-    if(normalizedTagId == ''){
-      callback(new JimErrorCode().InvalidParam)
-      return
-    }
-    JimDbManager.instance.getConverTagDao().removeTag(conver, normalizedTagId)
-    let updatedConver = JimDbManager.instance.getConversationDao().getConver(conver)
-    if(updatedConver != undefined){
-      this.msgSyncMgr.notifyConversationUpdate([updatedConver])
-    }
-    callback(0)
+    this.removeConversationsFromTag([conver], tagId, callback)
   }
 
   getConversationTags(conver:Conversation,callback:ConversationTagsCallback){
     callback(0, JimDbManager.instance.getConverTagDao().queryByConversation(conver))
   }
 
-  setUnread(conver:Conversation,callback:CommonCallback){
-    let req = immessage.ConversationsReq.create({
-      "conversations":[{
-        "targetId":conver.conversationId,
-        "channelType":conver.conversationType
-      }]
+  private updateConversationsTag(convers:Conversation[], tagId:string, isAdd:boolean, callback:CommonCallback):void{
+    let normalizedTagId = tagId.trim()
+    let normalizedConvers = this.normalizeConversations(convers)
+    if(normalizedTagId == '' || normalizedConvers.length == 0){
+      callback(new JimErrorCode().InvalidParam)
+      return
+    }
+    let simpleConvers:immessage.ISimpleConversation[] = []
+    normalizedConvers.forEach((conver)=>{
+      let simpleConver = immessage.SimpleConversation.create({})
+      simpleConver.targetId = conver.conversationId
+      simpleConver.channelType = conver.conversationType
+      simpleConver.msgTime = 0
+      simpleConver.msgSeq = 0
+      simpleConver.subChannel = Conversation.normalizeSubChannel(conver.subChannel)
+      simpleConvers.push(simpleConver)
     })
+    let req = immessage.TagConvers.create({})
+    req.tag = normalizedTagId
+    req.convers = simpleConvers
+    let data = immessage.TagConvers.encode(req).finish()
+    let topic = isAdd ? "tag_add_convers" : "tag_del_convers"
+    this.imclient.query(topic, JuggleIm.instance.userInfo.userId, data, (code, qryAck)=>{
+      if(code == 0){
+        normalizedConvers.forEach((conver)=>{
+          if(isAdd){
+            JimDbManager.instance.getConverTagDao().addTag(conver, normalizedTagId)
+          }else{
+            JimDbManager.instance.getConverTagDao().removeTag(conver, normalizedTagId)
+          }
+        })
+        this.recordCommandSyncTime(qryAck.timestamp != undefined && qryAck.timestamp != null ?
+          JimUtil.toNumber(qryAck.timestamp as number) : 0)
+        this.notifyConversationTagUpdate(normalizedConvers)
+      }
+      callback(code)
+    })
+  }
+
+  setUnread(conver:Conversation,callback:CommonCallback){
+    let req = immessage.ConversationsReq.create({})
+    req.conversations = [this.buildProtoConversation(conver)]
     let data = immessage.ConversationsReq.encode(req).finish()
     this.imclient.query("mark_unread",JuggleIm.instance.userInfo.userId,data,(code,qryAck)=>{
       callback(code)
@@ -246,12 +380,8 @@ export class ConversationManager implements IConversationManager{
   }
 
   delConversation(conver:Conversation,callback:CommonCallback){
-    let req = immessage.ConversationsReq.create({
-      "conversations":[{
-        "targetId":conver.conversationId,
-        "channelType":conver.conversationType
-      }]
-    })
+    let req = immessage.ConversationsReq.create({})
+    req.conversations = [this.buildProtoConversation(conver)]
     let data = immessage.ConversationsReq.encode(req).finish()
     this.imclient.query("del_convers",JuggleIm.instance.userInfo.userId,data,(code)=>{
       callback(code)
@@ -260,13 +390,10 @@ export class ConversationManager implements IConversationManager{
 
   setTop(conver:Conversation,isTop:boolean,callback:CommonCallback){
     console.log(`${TOP_TRACE_TAG} conversation_set_top_request: converId=${conver.conversationId}, converType=${conver.conversationType}, isTop=${isTop}, userId=${JuggleIm.instance.userInfo.userId}`)
-    let req = immessage.ConversationsReq.create({
-      "conversations":[{
-        "targetId":conver.conversationId,
-        "channelType":conver.conversationType,
-        "isTop":isTop?1:0
-      }]
-    })
+    let protoConver = this.buildProtoConversation(conver)
+    protoConver.isTop = isTop ? 1 : 0
+    let req = immessage.ConversationsReq.create({})
+    req.conversations = [protoConver]
     let data = immessage.ConversationsReq.encode(req).finish()
     this.imclient.query("top_convers",JuggleIm.instance.userInfo.userId,data,(code, qryAck)=>{
       let timestamp = qryAck.timestamp != undefined && qryAck.timestamp != null ?
@@ -279,7 +406,7 @@ export class ConversationManager implements IConversationManager{
           let topTime = timestamp > 0 ? timestamp : new Date().getTime()
           localConver.topTime = isTop ? topTime : 0
           JimDbManager.instance.getConversationDao().upsert(localConver)
-          this.msgSyncMgr.recordLatestSendboxMsgTime(topTime, MsgFlagTool.toFlag({ isCmd:true }))
+          this.msgSyncMgr.recordLatestSendboxMsgTime(topTime, MsgFlagTool.toFlag(MsgFlagTool.commandFlag()))
           console.log(`${TOP_TRACE_TAG} conversation_set_top_local_update: converId=${conver.conversationId}, converType=${conver.conversationType}, localIsTop=${localConver.isTop}, localTopTime=${localConver.topTime}`)
           this.msgSyncMgr.notifyConversationUpdate([localConver])
         }else{
@@ -300,11 +427,10 @@ export class ConversationManager implements IConversationManager{
       st = immessage.TopConverSortType.BySortTime
     }
 
-    let req = immessage.QryTopConversReq.create({
-      "startTime":start,
-      "order":order,
-      "sortType":st
-    })
+    let req = immessage.QryTopConversReq.create({})
+    req.startTime = start
+    req.order = order
+    req.sortType = st
 
     let data = immessage.QryConversationsReq.encode(req).finish()
     this.imclient.query("qry_top_convers",JuggleIm.instance.userInfo.userId,data,(code,qryAck)=>{
@@ -332,13 +458,13 @@ export class ConversationManager implements IConversationManager{
 
   setMute(conver:Conversation,isMute:boolean,callback:CommonCallback){
     console.log(`${TOP_TRACE_TAG} conversation_set_mute_request: converId=${conver.conversationId}, converType=${conver.conversationType}, isMute=${isMute}, userId=${JuggleIm.instance.userInfo.userId}`)
-    let req = immessage.UndisturbConversReq.create({
-      "items":[{
-        "targetId":conver.conversationId,
-        "channelType":conver.conversationType,
-        "undisturbType":isMute ? 1 : 0
-      }]
-    })
+    let item = immessage.UndisturbConverItem.create({})
+    item.targetId = conver.conversationId
+    item.channelType = conver.conversationType
+    item.undisturbType = isMute ? 1 : 0
+    item.subChannel = Conversation.normalizeSubChannel(conver.subChannel)
+    let req = immessage.UndisturbConversReq.create({})
+    req.items = [item]
     let data = immessage.UndisturbConversReq.encode(req).finish()
     this.imclient.query("undisturb_convers",JuggleIm.instance.userInfo.userId,data,(code, qryAck)=>{
       let timestamp = qryAck.timestamp != undefined && qryAck.timestamp != null ?
@@ -350,7 +476,7 @@ export class ConversationManager implements IConversationManager{
           localConver.isMute = isMute
           JimDbManager.instance.getConversationDao().upsert(localConver)
           if(timestamp > 0){
-            this.msgSyncMgr.recordLatestSendboxMsgTime(timestamp, MsgFlagTool.toFlag({ isCmd:true }))
+            this.msgSyncMgr.recordLatestSendboxMsgTime(timestamp, MsgFlagTool.toFlag(MsgFlagTool.commandFlag()))
           }
           console.log(`${TOP_TRACE_TAG} conversation_set_mute_local_update: converId=${conver.conversationId}, converType=${conver.conversationType}, localIsMute=${localConver.isMute}`)
           this.msgSyncMgr.notifyConversationUpdate([localConver])
@@ -363,9 +489,8 @@ export class ConversationManager implements IConversationManager{
   }
 
   getTotalUnreadCount(callback:TotalUnreadCountCallback){
-    let req = immessage.QryTotalUnreadCountReq.create({
-      "time":0
-    })
+    let req = immessage.QryTotalUnreadCountReq.create({})
+    req.time = 0
     let data = immessage.QryTotalUnreadCountReq.encode(req).finish()
     this.imclient.query("qry_total_unread_count",JuggleIm.instance.userId,data,(code,qryAck)=>{
       if(code==0){
@@ -388,9 +513,8 @@ export class ConversationManager implements IConversationManager{
   }
 
   clearTotalUnreadCount(callback:CommonCallback){
-    let req = immessage.QryTotalUnreadCountReq.create({
-      "time":0
-    })
+    let req = immessage.QryTotalUnreadCountReq.create({})
+    req.time = 0
     let data = immessage.QryTotalUnreadCountReq.encode(req).finish()
     this.imclient.query("clear_total_unread",JuggleIm.instance.userId,data,(code)=>{
       callback(code)
@@ -409,15 +533,12 @@ export class ConversationManager implements IConversationManager{
       latestReadMsgId = localConver.lastMessage.messageId
       latestReadMsgTime = localConver.lastMessage.sentTime
     }
-    let req = immessage.ClearUnreadReq.create({
-      "conversations":[{
-        "targetId":conver.conversationId,
-        "channelType":conver.conversationType,
-        "latestReadIndex":latestReadIndex,
-        "latestReadMsgId":latestReadMsgId,
-        "latestReadMsgTime":latestReadMsgTime
-      }]
-    })
+    let protoConver = this.buildProtoConversation(conver)
+    protoConver.latestReadIndex = latestReadIndex
+    protoConver.latestReadMsgId = latestReadMsgId
+    protoConver.latestReadMsgTime = latestReadMsgTime
+    let req = immessage.ClearUnreadReq.create({})
+    req.conversations = [protoConver]
     let data = immessage.ClearUnreadReq.encode(req).finish()
     this.imclient.query("clear_unread",JuggleIm.instance.userId,data,(code)=>{
       if(code == 0 && localConver != undefined){
@@ -439,11 +560,80 @@ export class ConversationManager implements IConversationManager{
       if(tagId == ''){
         return
       }
+      let tagInfo = new ConversationTagInfo()
+      tagInfo.tagId = tagId
+      tagInfo.tagName = protoTag.tagName != undefined ? protoTag.tagName as string : ''
+      tagInfo.tagType = JimUtil.toNumber(protoTag.tagType as number)
+      JimDbManager.instance.getConversationTagInfoDao().upsert(tagInfo)
       let tag = new ConversationTag()
       tag.conversation = conver
       tag.tagId = tagId
       tags.push(tag)
     })
     return tags
+  }
+
+  private toConversationTagInfo(protoTag:immessage.IConverTag):ConversationTagInfo | null{
+    let tagId = (protoTag.tag as string || '').trim()
+    if(tagId == ''){
+      return null
+    }
+    let tagInfo = new ConversationTagInfo()
+    tagInfo.tagId = tagId
+    tagInfo.tagName = protoTag.tagName != undefined ? protoTag.tagName as string : ''
+    tagInfo.tagType = JimUtil.toNumber(protoTag.tagType as number)
+    return tagInfo
+  }
+
+  private normalizeConversations(convers:Conversation[]):Conversation[]{
+    let normalizedConvers:Conversation[] = []
+    let keys:Map<string, boolean> = new Map()
+    convers.forEach((conver)=>{
+      if(conver.conversationId == ''){
+        return
+      }
+      let key = conver.getKey()
+      if(keys.has(key)){
+        return
+      }
+      keys.set(key, true)
+      normalizedConvers.push(conver.clone())
+    })
+    return normalizedConvers
+  }
+
+  private buildProtoConversation(conver:Conversation):immessage.Conversation{
+    let protoConver = immessage.Conversation.create({})
+    protoConver.targetId = conver.conversationId
+    protoConver.channelType = conver.conversationType
+    protoConver.subChannel = Conversation.normalizeSubChannel(conver.subChannel)
+    return protoConver
+  }
+
+  private buildQryConverReq(conver:Conversation):immessage.QryConverReq{
+    let req = immessage.QryConverReq.create({})
+    req.targetId = conver.conversationId
+    req.channelType = conver.conversationType
+    req.subChannel = Conversation.normalizeSubChannel(conver.subChannel)
+    return req
+  }
+
+  private notifyConversationTagUpdate(convers:Conversation[]):void{
+    let updatedConvers:ConversationInfo[] = []
+    convers.forEach((conver)=>{
+      let converInfo = JimDbManager.instance.getConversationDao().getConver(conver)
+      if(converInfo != undefined){
+        updatedConvers.push(converInfo)
+      }
+    })
+    if(updatedConvers.length > 0){
+      this.msgSyncMgr.notifyConversationUpdate(updatedConvers)
+    }
+  }
+
+  private recordCommandSyncTime(timestamp:number):void{
+    if(timestamp > 0){
+      this.msgSyncMgr.recordLatestSendboxMsgTime(timestamp, MsgFlagTool.toFlag(MsgFlagTool.commandFlag()))
+    }
   }
 }

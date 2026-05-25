@@ -31,6 +31,7 @@ export {
   ConversationCallback,
   ConversationDeleteListener,
   ConversationInsertCallback,
+  ConversationTagInfosCallback,
   ConversationTagsCallback,
   ConversationsCallback,
   ConversationUpdateListener,
@@ -57,6 +58,7 @@ export {
   MuteStatusCallback,
   MsgCleanedListener,
   MsgDeletedListener,
+  MsgDestroyTimeUpdateListener,
   MsgGroupReadReceiptListener,
   MsgModifiedListener,
   MsgReadReceiptListener,
@@ -80,7 +82,7 @@ export { UserInfoCallback } from './src/main/ets/interfaces/userinfotypes'
 
 export { ConnStatus } from './src/main/ets/imclients/imclient'
 export { PushChannel } from './src/main/ets/entries/push'
-export { Conversation, ConversationInfo, ConversationTag } from './src/main/ets/entries/conversation'
+export { Conversation, ConversationInfo, ConversationTag, ConversationTagInfo } from './src/main/ets/entries/conversation'
 export {
   Message,
   MessageContent,

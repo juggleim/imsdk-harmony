@@ -43870,4 +43870,343 @@ export const immessage = $root.immessage = (() => {
     return immessage;
 })();
 
+function patchStringFieldEncoder(type, fieldName, fieldNumber) {
+    let originalEncode = type.encode;
+    type.encode = function encode(message, writer) {
+        writer = originalEncode.call(this, message, writer);
+        if (message != null && Object.hasOwnProperty.call(message, fieldName)) {
+            let value = message[fieldName];
+            if (typeof value === "string" && value !== "") {
+                writer.uint32((fieldNumber << 3) | 2).string(value);
+            }
+        }
+        return writer;
+    };
+    type.encodeDelimited = function encodeDelimited(message, writer) {
+        return this.encode(message, writer).ldelim();
+    };
+}
+
+function patchInt64FieldEncoder(type, fieldName, fieldNumber) {
+    let originalEncode = type.encode;
+    type.encode = function encode(message, writer) {
+        writer = originalEncode.call(this, message, writer);
+        if (message != null && Object.hasOwnProperty.call(message, fieldName)) {
+            let value = message[fieldName];
+            if (value != null && value !== 0) {
+                writer.uint32(fieldNumber << 3).int64(value);
+            }
+        }
+        return writer;
+    };
+    type.encodeDelimited = function encodeDelimited(message, writer) {
+        return this.encode(message, writer).ldelim();
+    };
+}
+
+function patchDownMsgRuntime() {
+    let DownMsg = immessage.DownMsg;
+    DownMsg.prototype.destroyTime = $util.Long ? $util.Long.fromBits(0, 0, false) : 0;
+    DownMsg.prototype.lifeTimeAfterRead = $util.Long ? $util.Long.fromBits(0, 0, false) : 0;
+    DownMsg.prototype.isDelete = false;
+    DownMsg.prototype.subChannel = "";
+    DownMsg.prototype.toUserIds = $util.emptyArray;
+    DownMsg.prototype.readTime = $util.Long ? $util.Long.fromBits(0, 0, false) : 0;
+    DownMsg.prototype.senderInfo = null;
+
+    DownMsg.decode = function decode(reader, length) {
+        if (!(reader instanceof $Reader)) {
+            reader = $Reader.create(reader);
+        }
+        let end = length === undefined ? reader.len : reader.pos + length;
+        let message = new $root.immessage.DownMsg();
+        while (reader.pos < end) {
+            let tag = reader.uint32();
+            switch (tag >>> 3) {
+                case 1:
+                    message.targetId = reader.string();
+                    break;
+                case 2:
+                    message.channelType = reader.int32();
+                    break;
+                case 3:
+                    message.msgType = reader.string();
+                    break;
+                case 4:
+                    message.senderId = reader.string();
+                    break;
+                case 5:
+                    message.msgId = reader.string();
+                    break;
+                case 6:
+                    message.msgSeqNo = reader.int64();
+                    break;
+                case 7:
+                    message.msgContent = reader.bytes();
+                    break;
+                case 8:
+                    message.msgTime = reader.int64();
+                    break;
+                case 9:
+                    message.flags = reader.int32();
+                    break;
+                case 10:
+                    message.isSend = reader.bool();
+                    break;
+                case 11:
+                    message.platform = reader.string();
+                    break;
+                case 12:
+                    message.clientUid = reader.string();
+                    break;
+                case 13:
+                    message.pushData = $root.immessage.PushData.decode(reader, reader.uint32());
+                    break;
+                case 14:
+                    message.mentionInfo = $root.immessage.MentionInfo.decode(reader, reader.uint32());
+                    break;
+                case 15:
+                    message.isRead = reader.bool();
+                    break;
+                case 16:
+                    message.referMsg = $root.immessage.DownMsg.decode(reader, reader.uint32());
+                    break;
+                case 17:
+                    message.targetUserInfo = $root.immessage.UserInfo.decode(reader, reader.uint32());
+                    break;
+                case 18:
+                    message.groupInfo = $root.immessage.GroupInfo.decode(reader, reader.uint32());
+                    break;
+                case 19:
+                    message.mergedMsgs = $root.immessage.MergedMsgs.decode(reader, reader.uint32());
+                    break;
+                case 20:
+                    message.undisturbType = reader.int32();
+                    break;
+                case 21:
+                    message.memberCount = reader.int32();
+                    break;
+                case 22:
+                    message.readCount = reader.int32();
+                    break;
+                case 23:
+                    message.unreadIndex = reader.int64();
+                    break;
+                case 24:
+                    if (!(message.streamMsgParts && message.streamMsgParts.length)) {
+                        message.streamMsgParts = [];
+                    }
+                    message.streamMsgParts.push($root.immessage.StreamMsgItem.decode(reader, reader.uint32()));
+                    break;
+                case 25:
+                    if (!(message.msgExSet && message.msgExSet.length)) {
+                        message.msgExSet = [];
+                    }
+                    message.msgExSet.push($root.immessage.MsgExtItem.decode(reader, reader.uint32()));
+                    break;
+                case 26:
+                    if (!(message.msgExts && message.msgExts.length)) {
+                        message.msgExts = [];
+                    }
+                    message.msgExts.push($root.immessage.MsgExtItem.decode(reader, reader.uint32()));
+                    break;
+                case 27:
+                    if (!(message.converTags && message.converTags.length)) {
+                        message.converTags = [];
+                    }
+                    message.converTags.push($root.immessage.ConverTag.decode(reader, reader.uint32()));
+                    break;
+                case 28:
+                    if (message.transMsgMap === $util.emptyObject) {
+                        message.transMsgMap = {};
+                    }
+                    let end2 = reader.uint32() + reader.pos;
+                    let key = "";
+                    let value = null;
+                    while (reader.pos < end2) {
+                        let tag2 = reader.uint32();
+                        switch (tag2 >>> 3) {
+                            case 1:
+                                key = reader.string();
+                                break;
+                            case 2:
+                                value = $root.immessage.TransMsgContent.decode(reader, reader.uint32());
+                                break;
+                            default:
+                                reader.skipType(tag2 & 7);
+                                break;
+                        }
+                    }
+                    message.transMsgMap[key] = value;
+                    break;
+                case 29:
+                    message.SearchText = reader.string();
+                    break;
+                case 30:
+                    message.grpMemberInfo = $root.immessage.GrpMemberInfo.decode(reader, reader.uint32());
+                    break;
+                case 31:
+                    message.destroyTime = reader.int64();
+                    break;
+                case 32:
+                    message.lifeTimeAfterRead = reader.int64();
+                    break;
+                case 33:
+                    message.isDelete = reader.bool();
+                    break;
+                case 34:
+                    message.subChannel = reader.string();
+                    break;
+                case 35:
+                    if (!(message.toUserIds && message.toUserIds.length)) {
+                        message.toUserIds = [];
+                    }
+                    message.toUserIds.push(reader.string());
+                    break;
+                case 36:
+                    message.readTime = reader.int64();
+                    break;
+                case 38:
+                    message.senderInfo = $root.immessage.UserInfo.decode(reader, reader.uint32());
+                    break;
+                default:
+                    reader.skipType(tag & 7);
+                    break;
+            }
+        }
+        return message;
+    };
+    DownMsg.decodeDelimited = function decodeDelimited(reader) {
+        if (!(reader instanceof $Reader)) {
+            reader = new $Reader(reader);
+        }
+        return this.decode(reader, reader.uint32());
+    };
+}
+
+function patchConversationRuntime() {
+    let Conversation = immessage.Conversation;
+    Conversation.prototype.subChannel = "";
+
+    Conversation.decode = function decode(reader, length) {
+        if (!(reader instanceof $Reader)) {
+            reader = $Reader.create(reader);
+        }
+        let end = length === undefined ? reader.len : reader.pos + length;
+        let message = new $root.immessage.Conversation();
+        while (reader.pos < end) {
+            let tag = reader.uint32();
+            switch (tag >>> 3) {
+                case 1:
+                    message.userId = reader.string();
+                    break;
+                case 2:
+                    message.targetId = reader.string();
+                    break;
+                case 3:
+                    message.channelType = reader.int32();
+                    break;
+                case 4:
+                    message.sortTime = reader.int64();
+                    break;
+                case 5:
+                    message.unreadCount = reader.int64();
+                    break;
+                case 6:
+                    message.msg = $root.immessage.DownMsg.decode(reader, reader.uint32());
+                    break;
+                case 7:
+                    message.latestReadIndex = reader.int64();
+                    break;
+                case 8:
+                    message.mentions = $root.immessage.Mentions.decode(reader, reader.uint32());
+                    break;
+                case 9:
+                    message.isTop = reader.int32();
+                    break;
+                case 10:
+                    message.topUpdatedTime = reader.int64();
+                    break;
+                case 11:
+                    message.undisturbType = reader.int32();
+                    break;
+                case 12:
+                    message.targetUserInfo = $root.immessage.UserInfo.decode(reader, reader.uint32());
+                    break;
+                case 13:
+                    message.groupInfo = $root.immessage.GroupInfo.decode(reader, reader.uint32());
+                    break;
+                case 14:
+                    message.syncTime = reader.int64();
+                    break;
+                case 15:
+                    message.isDelete = reader.int32();
+                    break;
+                case 16:
+                    message.latestUnreadIndex = reader.int64();
+                    break;
+                case 17:
+                    message.unreadTag = reader.int32();
+                    break;
+                case 18:
+                    message.latestReadMsgId = reader.string();
+                    break;
+                case 19:
+                    message.latestReadMsgTime = reader.int64();
+                    break;
+                case 20:
+                    if (!(message.converTags && message.converTags.length)) {
+                        message.converTags = [];
+                    }
+                    message.converTags.push($root.immessage.ConverTag.decode(reader, reader.uint32()));
+                    break;
+                case 21:
+                    message.subChannel = reader.string();
+                    break;
+                default:
+                    reader.skipType(tag & 7);
+                    break;
+            }
+        }
+        return message;
+    };
+    Conversation.decodeDelimited = function decodeDelimited(reader) {
+        if (!(reader instanceof $Reader)) {
+            reader = new $Reader(reader);
+        }
+        return this.decode(reader, reader.uint32());
+    };
+}
+
+patchInt64FieldEncoder(immessage.UpMsg, "lifeTime", 11);
+patchInt64FieldEncoder(immessage.UpMsg, "lifeTimeAfterRead", 12);
+patchStringFieldEncoder(immessage.UpMsg, "subChannel", 13);
+patchStringFieldEncoder(immessage.MergedMsgs, "subChannel", 5);
+patchStringFieldEncoder(immessage.DownMsg, "subChannel", 34);
+patchStringFieldEncoder(immessage.SimpleConversation, "subChannel", 5);
+patchStringFieldEncoder(immessage.DelHisMsgsReq, "subChannel", 6);
+patchStringFieldEncoder(immessage.QryLatestMsgReq, "subChannel", 3);
+patchStringFieldEncoder(immessage.QryHisMsgsReq, "subChannel", 7);
+patchStringFieldEncoder(immessage.QryFirstUnreadMsgReq, "subChannel", 3);
+patchStringFieldEncoder(immessage.QryHisMsgByIdsReq, "subChannel", 4);
+patchStringFieldEncoder(immessage.RecallMsgReq, "subChannel", 6);
+patchStringFieldEncoder(immessage.MarkReadReq, "subChannel", 5);
+patchStringFieldEncoder(immessage.MarkGrpMsgReadReq, "subChannel", 4);
+patchStringFieldEncoder(immessage.CleanHisMsgReq, "subChannel", 7);
+patchStringFieldEncoder(immessage.ModifyMsgReq, "subChannel", 8);
+patchStringFieldEncoder(immessage.MsgExt, "subChannel", 5);
+patchStringFieldEncoder(immessage.QryMsgExtReq, "subChannel", 4);
+patchStringFieldEncoder(immessage.FavoriteMsgIdItem, "subChannel", 5);
+patchStringFieldEncoder(immessage.TopMsgReq, "subChannel", 4);
+patchStringFieldEncoder(immessage.GetTopMsgReq, "subChannel", 3);
+patchStringFieldEncoder(immessage.QryGlobalConversReq, "subChannel", 7);
+patchStringFieldEncoder(immessage.Conversation, "subChannel", 21);
+patchStringFieldEncoder(immessage.QryMentionMsgsReq, "subChannel", 7);
+patchStringFieldEncoder(immessage.UndisturbConverItem, "subChannel", 4);
+patchStringFieldEncoder(immessage.QryReadInfosReq, "subChannel", 4);
+patchStringFieldEncoder(immessage.QryReadDetailReq, "subChannel", 4);
+patchStringFieldEncoder(immessage.QryConverReq, "subChannel", 5);
+patchDownMsgRuntime();
+patchConversationRuntime();
+
 export { $root as default };

@@ -10,11 +10,12 @@ export class ConverTagDao{
   }
 
   upsert(converTag:ConversationTag):number{
-    let sql = `INSERT OR REPLACE INTO ${this.tableName} (tag_id,conver_type,conver_id) VALUES (?,?,?)`
+    let sql = `INSERT OR REPLACE INTO ${this.tableName} (tag_id,conver_type,conver_id,subchannel) VALUES (?,?,?,?)`
     let args:Array<relationalStore.ValueType> = [
       converTag.tagId,
       converTag.conversation.conversationType,
-      converTag.conversation.conversationId
+      converTag.conversation.conversationId,
+      Conversation.normalizeSubChannel(converTag.conversation.subChannel)
     ]
     try{
       let row = JimDbManager.instance.getDb()?.executeSync(sql,args)
@@ -35,6 +36,7 @@ export class ConverTagDao{
     let pred = new relationalStore.RdbPredicates(this.tableName)
     pred.equalTo('conver_id',conver.conversationId)
     pred.equalTo('conver_type',conver.conversationType)
+    pred.equalTo('subchannel', Conversation.normalizeSubChannel(conver.subChannel))
     pred.equalTo('tag_id',tagId)
     try{
       let row = JimDbManager.instance.getDb()?.deleteSync(pred)
@@ -50,6 +52,7 @@ export class ConverTagDao{
     let pred = new relationalStore.RdbPredicates(this.tableName)
     pred.equalTo('conver_id',conver.conversationId)
     pred.equalTo('conver_type',conver.conversationType)
+    pred.equalTo('subchannel', Conversation.normalizeSubChannel(conver.subChannel))
     try{
       let row = JimDbManager.instance.getDb()?.deleteSync(pred)
       if(row != undefined){
@@ -71,8 +74,8 @@ export class ConverTagDao{
   }
 
   queryByConversation(conver:Conversation):ConversationTag[]{
-    let sql = `SELECT * FROM ${this.tableName} WHERE conver_type=? AND conver_id=? ORDER BY id ASC`
-    let args:Array<relationalStore.ValueType> = [conver.conversationType, conver.conversationId]
+    let sql = `SELECT * FROM ${this.tableName} WHERE conver_type=? AND conver_id=? AND subchannel=? ORDER BY id ASC`
+    let args:Array<relationalStore.ValueType> = [conver.conversationType, conver.conversationId, Conversation.normalizeSubChannel(conver.subChannel)]
     let resultSet:relationalStore.ResultSet|undefined
     let tags:ConversationTag[] = []
     try{
@@ -91,7 +94,8 @@ export class ConverTagDao{
     let converTag = new ConversationTag()
     let converId = JimDbUtil.toString(resultSet,"conver_id")
     let converType = JimDbUtil.toNumber(resultSet,"conver_type")
-    converTag.conversation = new Conversation(converId,converType)
+    let subChannel = JimDbUtil.toString(resultSet,"subchannel")
+    converTag.conversation = new Conversation(converId,converType, subChannel)
     converTag.tagId = JimDbUtil.toString(resultSet,"tag_id")
     return converTag
   }

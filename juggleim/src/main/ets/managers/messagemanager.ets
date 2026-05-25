@@ -57,6 +57,7 @@ import {
   MuteStatusCallback,
   MsgCleanedListener,
   MsgDeletedListener,
+  MsgDestroyTimeUpdateListener,
   MsgGroupReadReceiptListener,
   MsgModifiedListener,
   MsgReadReceiptListener,
@@ -87,6 +88,7 @@ export {
   MuteStatusCallback,
   MsgCleanedListener,
   MsgDeletedListener,
+  MsgDestroyTimeUpdateListener,
   MsgGroupReadReceiptListener,
   MsgModifiedListener,
   MsgReadReceiptListener,
@@ -184,6 +186,14 @@ export class MessageManager implements IMessageManager{
     this.msgSyncMgr.removeMsgTopChangedListener(listener)
   }
 
+  addMsgDestroyTimeUpdateListener(listener:MsgDestroyTimeUpdateListener){
+    this.msgSyncMgr.addMsgDestroyTimeUpdateListener(listener)
+  }
+
+  removeMsgDestroyTimeUpdateListener(listener:MsgDestroyTimeUpdateListener){
+    this.msgSyncMgr.removeMsgDestroyTimeUpdateListener(listener)
+  }
+
   public registerMessage(msgType:string, constructor:Function){
     MsgHandler.registerMessage(msgType, constructor)
   }
@@ -216,11 +226,11 @@ export class MessageManager implements IMessageManager{
       callback(0, cachedResults)
       return
     }
-    let req = immessage.QryMsgExtReq.create({
-      targetId: targetConversation.conversationId,
-      channelType: targetConversation.conversationType,
-      msgIds: normalizedIds
-    })
+    let req = immessage.QryMsgExtReq.create({})
+    req.targetId = targetConversation.conversationId
+    req.channelType = targetConversation.conversationType
+    req.msgIds = normalizedIds
+    req.subChannel = Conversation.normalizeSubChannel(targetConversation.subChannel)
     let data = immessage.QryMsgExtReq.encode(req).finish()
     this.imclient.query('qry_msg_exset', targetConversation.conversationId, data, (code, qryAck)=>{
       if(code != 0){
@@ -249,10 +259,9 @@ export class MessageManager implements IMessageManager{
       callback(new JimErrorCode().InvalidParam, [], '')
       return
     }
-    let req = immessage.QryFavoriteMsgsReq.create({
-      limit: normalizedCount,
-      offset: option.offset != undefined ? option.offset : ''
-    })
+    let req = immessage.QryFavoriteMsgsReq.create({})
+    req.limit = normalizedCount
+    req.offset = option.offset != undefined ? option.offset : ''
     let data = immessage.QryFavoriteMsgsReq.encode(req).finish()
     this.imclient.query('qry_favorite_msgs', JuggleIm.instance.userId, data, (code, qryAck)=>{
       if(code != 0){
@@ -296,7 +305,7 @@ export class MessageManager implements IMessageManager{
       callback.onComplete()
       return
     }
-    console.log(`${TOP_TRACE_TAG} broadcast_message_start: count=${targetConvers.length}, msgType=${msg.getMsgType()}, targets=${JSON.stringify(targetConvers.map((conver)=>`${conver.conversationType}_${conver.conversationId}`))}`)
+    console.log(`${TOP_TRACE_TAG} broadcast_message_start: count=${targetConvers.length}, msgType=${msg.getMsgType()}, targets=${JSON.stringify(targetConvers.map((conver)=>conver.getKey()))}`)
     this.loopBroadcastMessage(msg, targetConvers, 0, targetConvers.length, callback)
   }
 
@@ -304,23 +313,24 @@ export class MessageManager implements IMessageManager{
     let normalizedPeriods = this.normalizeTimePeriods(periods)
     let timezone = this.resolveLocalTimezone()
     console.log(`${TOP_TRACE_TAG} global_mute_set_request: isMute=${isMute}, timezone=${timezone}, periods=${JSON.stringify(normalizedPeriods)}, userId=${JuggleIm.instance.userId}`)
-    let req = immessage.UserUndisturb.create({
-      "switch": isMute,
-      timezone: timezone,
-      rules: normalizedPeriods.map((period)=>{
-        return immessage.UserUndisturbItem.create({
-          start: period.startTime,
-          end: period.endTime
-        })
-      })
+    let rules:immessage.UserUndisturbItem[] = []
+    normalizedPeriods.forEach((period)=>{
+      let item = immessage.UserUndisturbItem.create({})
+      item.start = period.startTime
+      item.end = period.endTime
+      rules.push(item)
     })
+    let req = immessage.UserUndisturb.create({})
+    req.switch = isMute
+    req.timezone = timezone
+    req.rules = rules
     let data = immessage.UserUndisturb.encode(req).finish()
     this.imclient.query('set_user_undisturb', JuggleIm.instance.userId, data, (code, qryAck)=>{
       let timestamp = qryAck.timestamp != undefined && qryAck.timestamp != null ?
         JimUtil.toNumber(qryAck.timestamp as number) : 0
       console.log(`${TOP_TRACE_TAG} global_mute_set_ack: isMute=${isMute}, timezone=${timezone}, periods=${JSON.stringify(normalizedPeriods)}, code=${code}, timestamp=${timestamp}`)
       if(code == 0 && timestamp > 0){
-        this.msgSyncMgr.recordLatestSendboxMsgTime(timestamp, MsgFlagTool.toFlag({ isCmd:true }))
+        this.msgSyncMgr.recordLatestSendboxMsgTime(timestamp, MsgFlagTool.toFlag(MsgFlagTool.commandFlag()))
       }
       callback(code)
     })
@@ -340,7 +350,7 @@ export class MessageManager implements IMessageManager{
         let resp = immessage.UserUndisturb.decode(qryAck.data as Uint8Array)
         let periods = this.buildTimePeriodsFromProto(resp.rules)
         let timezone = resp.timezone != undefined ? resp.timezone as string : ''
-        let isMute = resp['switch'] != undefined ? resp['switch'] as boolean : false
+        let isMute = resp.switch != undefined ? resp.switch as boolean : false
         console.log(`${TOP_TRACE_TAG} global_mute_get_ack: code=${code}, isMute=${isMute}, timezone=${timezone}, periods=${JSON.stringify(periods)}`)
         callback(0, isMute, timezone, periods)
       }catch (error) {
@@ -357,11 +367,11 @@ export class MessageManager implements IMessageManager{
       callback(new JimErrorCode().InvalidParam)
       return
     }
-    let req = immessage.TopMsgReq.create({
-      targetId: conver.conversationId,
-      channelType: conver.conversationType,
-      msgId: normalizedMessageId
-    })
+    let req = immessage.TopMsgReq.create({})
+    req.targetId = conver.conversationId
+    req.channelType = conver.conversationType
+    req.msgId = normalizedMessageId
+    req.subChannel = Conversation.normalizeSubChannel(conver.subChannel)
     let data = immessage.TopMsgReq.encode(req).finish()
     let topic = isTop ? 'set_top_msg' : 'del_top_msg'
     this.imclient.query(topic, conver.conversationId, data, (code, qryAck)=>{
@@ -371,7 +381,7 @@ export class MessageManager implements IMessageManager{
       }
       let createdTime = qryAck.timestamp != undefined && qryAck.timestamp != null ?
         JimUtil.toNumber(qryAck.timestamp as number) : new Date().getTime()
-      this.msgSyncMgr.recordLatestSendboxMsgTime(createdTime, MsgFlagTool.toFlag({ isCmd:true }))
+      this.msgSyncMgr.recordLatestSendboxMsgTime(createdTime, MsgFlagTool.toFlag(MsgFlagTool.commandFlag()))
       this.resolveTopMessageById(conver, normalizedMessageId, (message)=>{
         this.msgSyncMgr.notifyTopMessageChanged(conver, message, this.getCurrentOperator(), isTop, createdTime)
       })
@@ -384,10 +394,10 @@ export class MessageManager implements IMessageManager{
       callback(new JimErrorCode().InvalidParam, null, null, 0)
       return
     }
-    let req = immessage.GetTopMsgReq.create({
-      targetId: conver.conversationId,
-      channelType: conver.conversationType
-    })
+    let req = immessage.GetTopMsgReq.create({})
+    req.targetId = conver.conversationId
+    req.channelType = conver.conversationType
+    req.subChannel = Conversation.normalizeSubChannel(conver.subChannel)
     let data = immessage.GetTopMsgReq.encode(req).finish()
     this.imclient.query('get_top_msg', conver.conversationId, data, (code, qryAck)=>{
       if(code != 0){
@@ -487,12 +497,12 @@ export class MessageManager implements IMessageManager{
       if(conver.conversationId == ''){
         return
       }
-      let key = `${conver.conversationType}_${conver.conversationId}`
+      let key = conver.getKey()
       if(seenKeys.has(key)){
         return
       }
       seenKeys.set(key, true)
-      normalizedConvers.push(new Conversation(conver.conversationId, conver.conversationType))
+      normalizedConvers.push(conver.clone())
     })
     return normalizedConvers
   }
@@ -505,6 +515,91 @@ export class MessageManager implements IMessageManager{
       return
     }
     this.sendMessageInternal(msg, conver, context.options, false, context.callback)
+  }
+
+  resendMessage(message:Message, callback:MessageCallback):Message{
+    let resendMessage = this.resolveResendMessage(message)
+    if(!this.canResendMessage(resendMessage)){
+      callback(new JimErrorCode().InvalidParam, resendMessage)
+      return resendMessage
+    }
+    if(resendMessage.state == MessageSentState.success){
+      callback(0, resendMessage)
+      return resendMessage
+    }
+    let msgDbId = JimDbManager.instance.getMessageDao().getMessageDbIdByClientMsgNo(resendMessage.clientMsgNo)
+    if(msgDbId <= 0){
+      callback(new JimErrorCode().MessageNotExist, resendMessage)
+      return resendMessage
+    }
+    resendMessage.state = MessageSentState.sending
+    this.setMessageState(resendMessage.clientMsgNo, resendMessage.state)
+    let referMsg = this.resolveReferencedMessage(resendMessage)
+    this.publishOutgoingMessage(resendMessage, msgDbId, referMsg, callback)
+    return resendMessage
+  }
+
+  resendMediaMessage(message:Message, callback:MessageCallback):Message{
+    let resendMessage = this.resolveResendMessage(message)
+    if(!this.canResendMediaMessage(resendMessage)){
+      callback(new JimErrorCode().InvalidParam, resendMessage)
+      return resendMessage
+    }
+    if(resendMessage.state == MessageSentState.success){
+      callback(0, resendMessage)
+      return resendMessage
+    }
+    let msgDbId = JimDbManager.instance.getMessageDao().getMessageDbIdByClientMsgNo(resendMessage.clientMsgNo)
+    if(msgDbId <= 0){
+      callback(new JimErrorCode().MessageNotExist, resendMessage)
+      return resendMessage
+    }
+    let mediaMsg = resendMessage.msgContent as MediaMessageContent
+    if(mediaMsg.url != ''){
+      resendMessage.state = MessageSentState.sending
+      this.setMessageState(resendMessage.clientMsgNo, resendMessage.state)
+      this.publishOutgoingMessage(resendMessage, msgDbId, this.resolveReferencedMessage(resendMessage), callback)
+      return resendMessage
+    }
+    if(this.messageUploadProvider == null){
+      mediaMsg.setUploadState(MediaMessageUploadState.failed)
+      resendMessage.state = MessageSentState.failed
+      this.updateLocalMediaMessage(msgDbId, resendMessage)
+      callback(-1, resendMessage)
+      return resendMessage
+    }
+    mediaMsg.setUploadState(MediaMessageUploadState.uploading, 0)
+    resendMessage.state = MessageSentState.uploading
+    this.updateLocalMediaMessage(msgDbId, resendMessage)
+    this.messageUploadProvider.uploadMediaMessage(
+      mediaMsg,
+      (progress)=>{
+        mediaMsg.setUploadState(MediaMessageUploadState.uploading, progress)
+        resendMessage.state = MessageSentState.uploading
+        this.updateLocalMediaMessage(msgDbId, resendMessage)
+      },
+      (result)=>{
+        this.applyMediaUploadResult(mediaMsg, result)
+        mediaMsg.setUploadState(MediaMessageUploadState.success, 100)
+        resendMessage.state = MessageSentState.sending
+        this.updateLocalMediaMessage(msgDbId, resendMessage)
+        this.publishOutgoingMessage(resendMessage, msgDbId, this.resolveReferencedMessage(resendMessage), callback)
+      },
+      (code, uploadMessage)=>{
+        console.error(`jimsdk_media_resend_upload_fail. code:${code}, message:${uploadMessage}`)
+        mediaMsg.setUploadState(MediaMessageUploadState.failed)
+        resendMessage.state = MessageSentState.failed
+        this.updateLocalMediaMessage(msgDbId, resendMessage)
+        callback(code == 0 ? -1 : code, resendMessage)
+      },
+      ()=>{
+        mediaMsg.setUploadState(MediaMessageUploadState.canceled)
+        resendMessage.state = MessageSentState.failed
+        this.updateLocalMediaMessage(msgDbId, resendMessage)
+        callback(-2, resendMessage)
+      }
+    )
+    return resendMessage
   }
 
   private resolveSendContext(arg3:MessageCallback|MessageOptions,arg4?:MessageCallback):MessageSendContext|null{
@@ -521,6 +616,43 @@ export class MessageManager implements IMessageManager{
     return context
   }
 
+  private resolveResendMessage(message:Message):Message{
+    if(message.clientMsgNo <= 0){
+      return message
+    }
+    let messages = JimDbManager.instance.getMessageDao().getMessagesByClientMsgNos([message.clientMsgNo])
+    if(messages.length > 0){
+      return messages[0]
+    }
+    return message
+  }
+
+  private canResendMessage(message:Message):boolean{
+    return message.clientMsgNo > 0 &&
+      message.messageId == '' &&
+      message.msgContent != undefined &&
+      message.conversation != undefined &&
+      message.conversation.conversationId != ''
+  }
+
+  private canResendMediaMessage(message:Message):boolean{
+    return this.canResendMessage(message) && message.msgContent instanceof MediaMessageContent
+  }
+
+  private resolveReferencedMessage(message:Message):Message|undefined{
+    if(message.referredMessage != null){
+      return message.referredMessage
+    }
+    if(message.referMsgId == ''){
+      return undefined
+    }
+    let referMsg = JimDbManager.instance.getMessageDao().getMessage(message.referMsgId)
+    if(referMsg == null){
+      return undefined
+    }
+    return referMsg
+  }
+
   private updateMessageReaction(messageId:string, reactionId:string, isAdd:boolean, callback:CommonCallback):void{
     let normalizedMessageId = messageId.trim()
     let normalizedReactionId = reactionId.trim()
@@ -535,16 +667,15 @@ export class MessageManager implements IMessageManager{
       return
     }
     let targetMessage:Message = message
-    let extItem = immessage.MsgExtItem.create({
-      key: normalizedReactionId,
-      value: JuggleIm.instance.userId
-    })
-    let req = immessage.MsgExt.create({
-      targetId: targetMessage.conversation.conversationId,
-      channelType: targetMessage.conversation.conversationType,
-      msgId: targetMessage.messageId,
-      ext: extItem
-    })
+    let extItem = immessage.MsgExtItem.create({})
+    extItem.key = normalizedReactionId
+    extItem.value = JuggleIm.instance.userId
+    let req = immessage.MsgExt.create({})
+    req.targetId = targetMessage.conversation.conversationId
+    req.channelType = targetMessage.conversation.conversationType
+    req.msgId = targetMessage.messageId
+    req.ext = extItem
+    req.subChannel = Conversation.normalizeSubChannel(targetMessage.conversation.subChannel)
     let data = immessage.MsgExt.encode(req).finish()
     let topic = isAdd ? 'msg_exset' : 'del_msg_exset'
     this.imclient.query(topic, normalizedMessageId, data, (code, _qryAck)=>{
@@ -576,9 +707,8 @@ export class MessageManager implements IMessageManager{
       callback(new JimErrorCode().MessageNotExist)
       return
     }
-    let req = immessage.FavoriteMsgIds.create({
-      items: items
-    })
+    let req = immessage.FavoriteMsgIds.create({})
+    req.items = items
     let data = immessage.FavoriteMsgIds.encode(req).finish()
     let topic = isAdd ? 'add_favorite_msgs' : 'del_favorite_msgs'
     this.imclient.query(topic, JuggleIm.instance.userId, data, (code, _qryAck)=>{
@@ -586,9 +716,9 @@ export class MessageManager implements IMessageManager{
     })
   }
 
-  private buildFavoriteMsgIdItems(messages:Message[]):immessage.IFavoriteMsgIdItem[]{
+  private buildFavoriteMsgIdItems(messages:Message[]):immessage.FavoriteMsgIdItem[]{
     let currentUserId = JuggleIm.instance.userId
-    let items:immessage.IFavoriteMsgIdItem[] = []
+    let items:immessage.FavoriteMsgIdItem[] = []
     messages.forEach((message)=>{
       if(message.messageId == ''){
         return
@@ -597,12 +727,13 @@ export class MessageManager implements IMessageManager{
       if(message.conversation.conversationType == immessage.ChannelType.Private && message.direction == 1){
         receiverId = currentUserId
       }
-      items.push(immessage.FavoriteMsgIdItem.create({
-        senderId: message.senderId,
-        receiverId: receiverId,
-        channelType: message.conversation.conversationType,
-        msgId: message.messageId
-      }))
+      let item = immessage.FavoriteMsgIdItem.create({})
+      item.senderId = message.senderId
+      item.receiverId = receiverId
+      item.channelType = message.conversation.conversationType
+      item.msgId = message.messageId
+      item.subChannel = Conversation.normalizeSubChannel(message.conversation.subChannel)
+      items.push(item)
     })
     return items
   }
@@ -863,14 +994,16 @@ export class MessageManager implements IMessageManager{
 
   private buildOutgoingMessage(msg:MessageContent, conver:Conversation, isBroadcast:boolean = false):Message{
     let message = new Message()
+    message.clientMsgNo = JimUtil.getClientMsgNo()
     message.conversation = conver
     message.msgContent = msg
     message.clientId = JimUtil.getUuid()
     message.senderId = JuggleIm.instance.userId
+    message.direction = 0
     message.sentTime = new Date().getTime()
     message.flags = msg.getFlagNumber()
     if(isBroadcast){
-      message.flags |= MsgFlagTool.toFlag({ isBroadcast:true })
+      message.flags |= MsgFlagTool.toFlag(MsgFlagTool.broadcastFlag())
     }
     message.searchContent = this.buildSearchContent(msg)
     message.state = MessageSentState.sending
@@ -883,16 +1016,55 @@ export class MessageManager implements IMessageManager{
     return message
   }
 
+  saveMessage(msg:MessageContent,conver:Conversation):Message
+  saveMessage(msg:MessageContent,conver:Conversation,options:MessageOptions):Message
+  saveMessage(msg:MessageContent,conver:Conversation,options?:MessageOptions):Message{
+    let message = this.buildOutgoingMessage(msg, conver)
+    message.state = MessageSentState.none
+    this.applyMessageOptions(message, options)
+    JimDbManager.instance.getMessageDao().insert(message)
+    this.msgSyncMgr.updConver(message)
+    this.msgSyncMgr.notifyMessageModified(message)
+    return message
+  }
+
+  getMessagesByClientMsgNos(clientMsgNos:number[]):Message[]{
+    return JimDbManager.instance.getMessageDao().getMessagesByClientMsgNos(clientMsgNos)
+  }
+
+  setMessageState(clientMsgNo:number, state:number):void{
+    if(clientMsgNo <= 0){
+      return
+    }
+    let msgDao = JimDbManager.instance.getMessageDao()
+    msgDao.updateMsgStateByClientMsgNo(clientMsgNo, state)
+    let messages = msgDao.getMessagesByClientMsgNos([clientMsgNo])
+    if(messages.length == 0){
+      return
+    }
+    let message = messages[0]
+    if(message.conversation.conversationType == immessage.ChannelType.Chatroom){
+      return
+    }
+    message.state = state
+    this.msgSyncMgr.notifyMessageModified(message)
+  }
+
   private buildUpMsg(message:Message, referMsg?:Message):immessage.UpMsg{
-    return immessage.UpMsg.create({
-      msgType:message.msgContent.getMsgType(),
-      msgContent:message.msgContent.encode(),
-      flags: message.flags > 0 ? message.flags : MsgFlagTool.toFlag(message.msgContent.getFlag()),
-      clientUid:message.clientId,
-      pushData: MessageOptionUtil.toProtoPushData(message.pushData),
-      mentionInfo: MessageOptionUtil.toProtoMentionInfo(message.mentionInfo),
-      referMsg: referMsg != undefined ? MessageOptionUtil.toProtoDownMsg(referMsg) : undefined
-    })
+    let upMsg = immessage.UpMsg.create({})
+    upMsg.msgType = message.msgContent.getMsgType()
+    upMsg.msgContent = message.msgContent.encode()
+    upMsg.flags = message.flags > 0 ? message.flags : MsgFlagTool.toFlag(message.msgContent.getFlag())
+    upMsg.clientUid = message.clientId
+    upMsg.pushData = MessageOptionUtil.toProtoPushData(message.pushData)
+    upMsg.mentionInfo = MessageOptionUtil.toProtoMentionInfo(message.mentionInfo)
+    if(referMsg != undefined){
+      upMsg.referMsg = MessageOptionUtil.toProtoDownMsg(referMsg)
+    }
+    upMsg.lifeTime = message.lifeTime
+    upMsg.lifeTimeAfterRead = message.lifeTimeAfterRead
+    upMsg.subChannel = Conversation.normalizeSubChannel(message.conversation.subChannel)
+    return upMsg
   }
 
   private resolvePublishMethod(conver:Conversation):string{
@@ -947,7 +1119,8 @@ export class MessageManager implements IMessageManager{
           message.messageId,
           message.sentTime,
           message.msgSeqNo,
-          message.conversation.conversationType == 2 ? message.memberCount : undefined
+          message.conversation.conversationType == 2 ? message.memberCount : undefined,
+          message.destroyTime > 0 ? message.destroyTime : undefined
         )
         this.msgSyncMgr.notifyMessageModified(message)
         callback(code,message)
@@ -1471,8 +1644,7 @@ export class MessageManager implements IMessageManager{
       normalizedOptions.time = new Date().getTime()
     }
     let msgs = dao.queryMessages(
-      conver.conversationId,
-      conver.conversationType,
+      conver,
       normalizedOptions.time,
       normalizedOptions.count,
       normalizedOptions.direction == GetMessageDirection.Forward,
@@ -1491,14 +1663,14 @@ export class MessageManager implements IMessageManager{
     if(normalizedOptions.direction == GetMessageDirection.Forward){
       order = 1
     }
-    let req = immessage.QryHisMsgsReq.create({
-      "targetId":conver.conversationId,
-      'channelType':conver.conversationType,
-      'startTime':normalizedOptions.time,
-      'count':normalizedOptions.count,
-      'order':order,
-      'msgTypes':normalizedOptions.contentTypes
-    })
+    let req = immessage.QryHisMsgsReq.create({})
+    req.targetId = conver.conversationId
+    req.channelType = conver.conversationType
+    req.startTime = normalizedOptions.time
+    req.count = normalizedOptions.count
+    req.order = order
+    req.msgTypes = normalizedOptions.contentTypes
+    req.subChannel = Conversation.normalizeSubChannel(conver.subChannel)
     let data = immessage.QryHisMsgsReq.encode(req).finish()
     this.imclient.query("qry_hismsgs",conver.conversationId,data,(code,qryAck)=>{
       let msgs:Message[] = new Array()
@@ -1629,14 +1801,14 @@ export class MessageManager implements IMessageManager{
     if(localConver != undefined){
       latestReadIndex = localConver.lastReadMsgIndex
     }
-    let req = immessage.QryMentionMsgsReq.create({
-      "targetId": conver.conversationId,
-      "channelType": conver.conversationType,
-      "startTime": queryTime,
-      "count": queryCount,
-      "order": order,
-      "latestReadIndex": latestReadIndex
-    })
+    let req = immessage.QryMentionMsgsReq.create({})
+    req.targetId = conver.conversationId
+    req.channelType = conver.conversationType
+    req.startTime = queryTime
+    req.count = queryCount
+    req.order = order
+    req.latestReadIndex = latestReadIndex
+    req.subChannel = Conversation.normalizeSubChannel(conver.subChannel)
     let data = immessage.QryMentionMsgsReq.encode(req).finish()
     this.imclient.query("qry_mention_msgs", conver.conversationId, data, (code, qryAck)=>{
       let msgs:Message[] = []
@@ -1668,14 +1840,14 @@ export class MessageManager implements IMessageManager{
 
   clearMessages(conver:Conversation,options:ClearMsgOptions,callback:CommonCallback){
     console.log(`TOPTRACE conversation_clear_messages_request: converId=${conver.conversationId}, converType=${conver.conversationType}, cleanTime=${options.cleanTime}, cleanScope=${options.cleanScope}, senderId=${options.senderId}, cleanTimeOffset=${options.cleanTimeOffset}`)
-    let req = immessage.CleanHisMsgReq.create({
-      "targetId":conver.conversationId,
-      "channelType":conver.conversationType,
-      "cleanMsgTime":options.cleanTime,
-      "cleanScope":options.cleanScope,
-      "senderId":options.senderId,
-      "cleanTimeOffset":options.cleanTimeOffset
-    })
+    let req = immessage.CleanHisMsgReq.create({})
+    req.targetId = conver.conversationId
+    req.channelType = conver.conversationType
+    req.cleanMsgTime = options.cleanTime
+    req.cleanScope = options.cleanScope
+    req.senderId = options.senderId
+    req.cleanTimeOffset = options.cleanTimeOffset
+    req.subChannel = Conversation.normalizeSubChannel(conver.subChannel)
     let data = immessage.CleanHisMsgReq.encode(req).finish()
     this.imclient.query("clean_hismsg",conver.conversationId,data,(code,qryAck)=>{
       let timestamp = qryAck.timestamp != undefined && qryAck.timestamp != null ?
@@ -1683,9 +1855,9 @@ export class MessageManager implements IMessageManager{
       console.log(`TOPTRACE conversation_clear_messages_ack: converId=${conver.conversationId}, converType=${conver.conversationType}, code=${code}, timestamp=${timestamp}`)
       if(code == 0){
         JimDbManager.instance.getMessageDao().clearConversationMessages(conver, options.cleanTime, options.senderId)
-        let localConver = JimDbManager.instance.getConversationDao().clearLastMessage(conver)
+        let localConver = this.refreshConversationAfterLocalMessageRemoval(conver)
         if(timestamp > 0){
-          this.msgSyncMgr.recordLatestSendboxMsgTime(timestamp, MsgFlagTool.toFlag({ isCmd:true }))
+          this.msgSyncMgr.recordLatestSendboxMsgTime(timestamp, MsgFlagTool.toFlag(MsgFlagTool.commandFlag()))
         }
         if(localConver != undefined){
           console.log(`TOPTRACE conversation_clear_messages_local_update: converId=${conver.conversationId}, converType=${conver.conversationType}, converTime=${localConver.converTime}, lastMsgId=${localConver.lastMessage.messageId}`)
@@ -1693,26 +1865,40 @@ export class MessageManager implements IMessageManager{
         }else{
           console.log(`TOPTRACE conversation_clear_messages_local_missing: converId=${conver.conversationId}, converType=${conver.conversationType}`)
         }
+        this.msgSyncMgr.notifyMessageCleaned(conver, options.cleanTime, options.senderId)
       }
       callback(code)
     })
   }
 
   delMessages(conver:Conversation,msgIds:string[],delScope:number,callback:CommonCallback){
+    let normalizedMsgIds = this.normalizeMessageIds(msgIds)
+    if(normalizedMsgIds.length == 0){
+      callback(new JimErrorCode().InvalidParam)
+      return
+    }
     let msgs:immessage.SimpleMsg[] = []
-    msgIds.forEach((msgId)=>{
-      msgs.push(immessage.SimpleMsg.create({
-        "msgId":msgId
-      }))
+    normalizedMsgIds.forEach((msgId)=>{
+      let simpleMsg = immessage.SimpleMsg.create({})
+      simpleMsg.msgId = msgId
+      msgs.push(simpleMsg)
     })
-    let req = immessage.DelHisMsgsReq.create({
-      "targetId":conver.conversationId,
-      "channelType":conver.conversationType,
-      "msgs":msgs,
-      "delScope":delScope
-    })
+    let req = immessage.DelHisMsgsReq.create({})
+    req.targetId = conver.conversationId
+    req.channelType = conver.conversationType
+    req.msgs = msgs
+    req.delScope = delScope
+    req.subChannel = Conversation.normalizeSubChannel(conver.subChannel)
     let data = immessage.DelHisMsgsReq.encode(req).finish()
     this.imclient.query("del_hismsg",conver.conversationId,data,(code)=>{
+      if(code == 0){
+        JimDbManager.instance.getMessageDao().markMessagesDeleted(normalizedMsgIds)
+        let localConver = this.refreshConversationAfterLocalMessageRemoval(conver)
+        if(localConver != undefined){
+          this.msgSyncMgr.notifyConversationUpdate([localConver])
+        }
+        this.msgSyncMgr.notifyMessageDeleted(conver, normalizedMsgIds)
+      }
       callback(code)
     })
   }
@@ -1773,12 +1959,27 @@ export class MessageManager implements IMessageManager{
     )
   }
 
+  private refreshConversationAfterLocalMessageRemoval(conver:Conversation):ConversationInfo | undefined{
+    let localConver = JimDbManager.instance.getConversationDao().getConver(conver)
+    if(localConver == undefined){
+      return undefined
+    }
+    let lastMessage = JimDbManager.instance.getMessageDao().getLastVisibleMessage(conver)
+    if(lastMessage == null){
+      return JimDbManager.instance.getConversationDao().clearLastMessage(conver)
+    }
+    localConver.lastMessage = lastMessage
+    localConver.converTime = lastMessage.sentTime
+    JimDbManager.instance.getConversationDao().upsert(localConver)
+    return JimDbManager.instance.getConversationDao().getConver(conver)
+  }
+
   private queryRemoteMessagesByIds(conver:Conversation,msgIds:string[],callback:QryMessagesCallback):void{
-    let req = immessage.QryHisMsgByIdsReq.create({
-      "targetId":conver.conversationId,
-      "channelType":conver.conversationType,
-      "msgIds":msgIds
-    })
+    let req = immessage.QryHisMsgByIdsReq.create({})
+    req.targetId = conver.conversationId
+    req.channelType = conver.conversationType
+    req.msgIds = msgIds
+    req.subChannel = Conversation.normalizeSubChannel(conver.subChannel)
     let data = immessage.QryHisMsgByIdsReq.encode(req).finish()
     this.imclient.query("qry_hismsg_by_ids",conver.conversationId,data,(code,qryAck)=>{
       let msgs:Message[] = []
@@ -1847,15 +2048,15 @@ export class MessageManager implements IMessageManager{
       return
     }
     let localMessage = localMessages[0]
-    let req = immessage.ModifyMsgReq.create({
-      "targetId":conver.conversationId,
-      "channelType":conver.conversationType,
-      "msgId":msgId,
-      "msgTime":localMessage.sentTime,
-      "msgSeqNo":localMessage.msgSeqNo,
-      "msgContent":msg.encode(),
-      "msgType":msg.getMsgType()
-    })
+    let req = immessage.ModifyMsgReq.create({})
+    req.targetId = conver.conversationId
+    req.channelType = conver.conversationType
+    req.msgId = msgId
+    req.msgTime = localMessage.sentTime
+    req.msgSeqNo = localMessage.msgSeqNo
+    req.msgContent = msg.encode()
+    req.msgType = msg.getMsgType()
+    req.subChannel = Conversation.normalizeSubChannel(conver.subChannel)
     let data = immessage.ModifyMsgReq.encode(req).finish()
     this.imclient.query("modify_msg", conver.conversationId, data, (code, qryAck)=>{
       if(code != 0){
@@ -1907,22 +2108,22 @@ export class MessageManager implements IMessageManager{
         msgReadIndex = localMessage.msgUnreadIndex
       }
       if(messageId != ''){
-        simpleMsgs.push(immessage.SimpleMsg.create({
-          "msgId":messageId,
-          "msgTime":msgTime,
-          "msgReadIndex":msgReadIndex
-        }))
+        let simpleMsg = immessage.SimpleMsg.create({})
+        simpleMsg.msgId = messageId
+        simpleMsg.msgTime = msgTime
+        simpleMsg.msgReadIndex = msgReadIndex
+        simpleMsgs.push(simpleMsg)
       }
     })
     if(simpleMsgs.length == 0){
       callback(0)
       return
     }
-    let req = immessage.MarkReadReq.create({
-      "targetId":conver.conversationId,
-      "channelType":conver.conversationType,
-      "msgs":simpleMsgs
-    })
+    let req = immessage.MarkReadReq.create({})
+    req.targetId = conver.conversationId
+    req.channelType = conver.conversationType
+    req.msgs = simpleMsgs
+    req.subChannel = Conversation.normalizeSubChannel(conver.subChannel)
     let data = immessage.MarkReadReq.encode(req).finish()
     this.imclient.query("mark_read", conver.conversationId, data, (code, qryAck)=>{
       if(code != 0){
@@ -1930,7 +2131,7 @@ export class MessageManager implements IMessageManager{
         return
       }
       if(qryAck.timestamp != undefined && qryAck.timestamp != null){
-        this.msgSyncMgr.recordLatestSendboxMsgTime(JimUtil.toNumber(qryAck.timestamp as number), MsgFlagTool.toFlag({ isCmd:true }))
+        this.msgSyncMgr.recordLatestSendboxMsgTime(JimUtil.toNumber(qryAck.timestamp as number), MsgFlagTool.toFlag(MsgFlagTool.commandFlag()))
       }
       let msgDao = JimDbManager.instance.getMessageDao()
       let actualMessageIds:string[] = []
@@ -1939,11 +2140,15 @@ export class MessageManager implements IMessageManager{
           actualMessageIds.push(simpleMsg.msgId as string)
         }
       })
-      msgDao.updateMessagesRead(actualMessageIds)
+      let readTime = qryAck.timestamp != undefined && qryAck.timestamp != null ?
+        JimUtil.toNumber(qryAck.timestamp as number) : new Date().getTime()
+      msgDao.updateMessagesRead(actualMessageIds, readTime)
       let readMessages = msgDao.getMessagesByMessageIds(actualMessageIds)
       readMessages.forEach((message)=>{
         message.hasRead = true
+        message.readTime = readTime
         this.msgSyncMgr.notifyMessageModified(message)
+        this.msgSyncMgr.checkAndNotifyDestroyTime(message, readTime)
       })
       callback(0)
     })
@@ -1972,11 +2177,11 @@ export class MessageManager implements IMessageManager{
       callback(-1, null)
       return
     }
-    let req = immessage.QryReadDetailReq.create({
-      "targetId":conver.conversationId,
-      "channelType":conver.conversationType,
-      "msgId":msgId
-    })
+    let req = immessage.QryReadDetailReq.create({})
+    req.targetId = conver.conversationId
+    req.channelType = conver.conversationType
+    req.msgId = msgId
+    req.subChannel = Conversation.normalizeSubChannel(conver.subChannel)
     let data = immessage.QryReadDetailReq.encode(req).finish()
     this.imclient.query("qry_read_detail", conver.conversationId, data, (code, qryAck)=>{
       if(code != 0){
@@ -2009,17 +2214,17 @@ export class MessageManager implements IMessageManager{
   recallMessage(conver:Conversation,msgId:string,extras:HashMap<string,string>,callback:MessageCallback){
     let exts:immessage.KvItem[] = []
     extras.forEach((k,v)=>{
-      exts.push(immessage.KvItem.create({
-        "key":k,
-        "value":v
-      }))
+      let ext = immessage.KvItem.create({})
+      ext.key = k != undefined ? k : ''
+      ext.value = v != undefined ? v : ''
+      exts.push(ext)
     })
-    let req = immessage.RecallMsgReq.create({
-      "targetId":conver.conversationId,
-      "channelType":conver.conversationType,
-      "msgId":msgId,
-      "exts":exts
-    })
+    let req = immessage.RecallMsgReq.create({})
+    req.targetId = conver.conversationId
+    req.channelType = conver.conversationType
+    req.msgId = msgId
+    req.exts = exts
+    req.subChannel = Conversation.normalizeSubChannel(conver.subChannel)
     let data = immessage.RecallMsgReq.encode(req).finish()
     this.imclient.query("recall_msg",conver.conversationId,data,(code)=>{
       let msg = new Message()

@@ -1,6 +1,6 @@
 import { JimUtil } from "../commons/jimutil";
 import { JimDbManager } from "../dbs/dbmanager";
-import { Conversation, ConversationInfo, ConversationTag } from "../entries/conversation";
+import { Conversation, ConversationInfo, ConversationTag, ConversationTagInfo } from "../entries/conversation";
 import { GroupInfo, GroupMessageReadInfo } from "../entries/group";
 import { Message, MessageReaction, RecallInfoMessage } from "../entries/message";
 import { MsgHandler } from "../entries/msghandler";
@@ -15,6 +15,7 @@ import { ChatroomManager } from "./chatroommanager";
 import {
   MsgCleanedListener,
   MsgDeletedListener,
+  MsgDestroyTimeUpdateListener,
   MsgGroupReadReceiptListener,
   MsgModifiedListener,
   MsgReadReceiptListener,
@@ -86,6 +87,7 @@ export class MsgSyncManager{
   private msgDeletedListeners:MsgDeletedListener[] = new Array()
   private msgCleanedListeners:MsgCleanedListener[] = new Array()
   private msgTopChangedListeners:MsgTopChangedListener[] = new Array()
+  private msgDestroyTimeUpdateListeners:MsgDestroyTimeUpdateListener[] = new Array()
 
   constructor(imclient:ImClient) {
     this.imclient = imclient
@@ -314,6 +316,19 @@ export class MsgSyncManager{
     }
   }
 
+  addMsgDestroyTimeUpdateListener(listener:MsgDestroyTimeUpdateListener){
+    this.msgDestroyTimeUpdateListeners.push(listener)
+  }
+
+  removeMsgDestroyTimeUpdateListener(listener:MsgDestroyTimeUpdateListener){
+    for(let i=0;i<this.msgDestroyTimeUpdateListeners.length;i++){
+      if(this.msgDestroyTimeUpdateListeners[i]===listener){
+        this.msgDestroyTimeUpdateListeners.splice(i,1)
+        break
+      }
+    }
+  }
+
   public notifyTopMessageChanged(
     conver:Conversation,
     message:Message | null,
@@ -323,6 +338,36 @@ export class MsgSyncManager{
   ):void{
     this.msgTopChangedListeners.forEach((listener)=>{
       listener(conver, message, operator, isTop, createdTime)
+    })
+  }
+
+  public checkAndNotifyDestroyTime(readMessage:Message, timestamp:number):void{
+    if(readMessage.messageId == '' || readMessage.lifeTimeAfterRead <= 0 || readMessage.isDeleted){
+      return
+    }
+    let destroyTime = timestamp + readMessage.lifeTimeAfterRead
+    if(readMessage.destroyTime > 0 && destroyTime >= readMessage.destroyTime){
+      return
+    }
+    readMessage.destroyTime = destroyTime
+    if(readMessage.readTime <= 0){
+      readMessage.readTime = timestamp
+    }
+    JimDbManager.instance.getMessageDao().updateDestroyTime(readMessage.messageId, destroyTime)
+    this.msgDestroyTimeUpdateListeners.forEach((listener)=>{
+      listener(readMessage.messageId, readMessage.conversation, destroyTime)
+    })
+  }
+
+  public notifyMessageDeleted(conver:Conversation, msgIds:string[]):void{
+    this.msgDeletedListeners.forEach((listener)=>{
+      listener(conver, msgIds)
+    })
+  }
+
+  public notifyMessageCleaned(conver:Conversation, cleanTime:number, senderId:string):void{
+    this.msgCleanedListeners.forEach((listener)=>{
+      listener(conver, cleanTime, senderId)
     })
   }
 
@@ -477,7 +522,7 @@ export class MsgSyncManager{
           let aff = msgDao.insert(msg)
           if(!isChatroom && aff>0 && msg.sentTime>this.getLatestConverSyncTime()) {
             //check conver exist
-            let dbConver = JimDbManager.instance.getConversationDao().getConver(new Conversation(msg.conversation.conversationId,msg.conversation.conversationType))
+            let dbConver = JimDbManager.instance.getConversationDao().getConver(msg.conversation.clone())
             let newConverInfo = this.msg2Conver(msg)
             let isAdd:boolean = true
             let isSenderBroadcast = this.isSenderBroadcastMessage(msg)
@@ -521,7 +566,7 @@ export class MsgSyncManager{
 
   private msg2Conver(msg:Message):ConversationInfo{
     let converInfo = new ConversationInfo()
-    converInfo.conversation = new Conversation(msg.conversation.conversationId,msg.conversation.conversationType)
+    converInfo.conversation = msg.conversation.clone()
     converInfo.lastMessage = msg
     converInfo.converTime = this.isSenderBroadcastMessage(msg) ? 0 : msg.sentTime
     console.log("jimsdk_syncmsg_conver:",JSON.stringify(converInfo))
@@ -566,12 +611,20 @@ export class MsgSyncManager{
           if (conver.isDelete != null && conver.isDelete != undefined) {
             if (conver.isDelete == 1) {
               let converInfo = new ConversationInfo()
-              converInfo.conversation = new Conversation(conver.targetId as string, conver.channelType as number)
+              converInfo.conversation = new Conversation(
+                conver.targetId as string,
+                conver.channelType as number,
+                conver.subChannel != undefined ? conver.subChannel as string : ''
+              )
               delConvers.push(converInfo)
-              JimDbManager.instance.getConversationDao().delConver(conver.targetId as string, conver.channelType as number)
+              JimDbManager.instance.getConversationDao().delConver(
+                conver.targetId as string,
+                conver.channelType as number,
+                conver.subChannel != undefined ? conver.subChannel as string : ''
+              )
             } else {
               let converInfo = this.toConversationInfo(conver)
-              let dbConver = JimDbManager.instance.getConversationDao().getConver(new Conversation(conver.targetId as string,conver.channelType as number))
+              let dbConver = JimDbManager.instance.getConversationDao().getConver(converInfo.conversation)
               if(dbConver===undefined){//add
                 addConvers.push(converInfo)
               }else{//update
@@ -717,7 +770,11 @@ export class MsgSyncManager{
 
   private toConversationInfo(conver:immessage.IConversation):ConversationInfo{
     let converInfo = new ConversationInfo()
-    converInfo.conversation = new Conversation(conver.targetId as string, conver.channelType as number)
+    converInfo.conversation = new Conversation(
+      conver.targetId as string,
+      conver.channelType as number,
+      conver.subChannel != undefined ? conver.subChannel as string : ''
+    )
     converInfo.unreadCount = JimUtil.toNumber(conver.unreadCount as Long)
     converInfo.converTime = JimUtil.toNumber(conver.sortTime as number)
     converInfo.isTop = (conver.isTop as number) > 0
@@ -729,8 +786,7 @@ export class MsgSyncManager{
     converInfo.tags = this.toConversationTags(conver.converTags, converInfo.conversation)
     if (conver.msg != undefined && conver.msg != null) {
       converInfo.lastMessage = new Message()
-      converInfo.lastMessage.conversation =
-        new Conversation(conver.targetId as string, conver.channelType as number)
+      converInfo.lastMessage.conversation = converInfo.conversation.clone()
       converInfo.lastMessage.clientId = conver.msg.clientUid as string
       converInfo.lastMessage.messageId = conver.msg.msgId as string
       let msgType = conver.msg.msgType as string
@@ -787,6 +843,11 @@ export class MsgSyncManager{
       if(tagId == ''){
         return
       }
+      let tagInfo = new ConversationTagInfo()
+      tagInfo.tagId = tagId
+      tagInfo.tagName = protoTag.tagName != undefined ? protoTag.tagName as string : ''
+      tagInfo.tagType = JimUtil.toNumber(protoTag.tagType as number)
+      JimDbManager.instance.getConversationTagInfoDao().upsert(tagInfo)
       let tag = new ConversationTag()
       tag.conversation = conver
       tag.tagId = tagId
@@ -861,11 +922,13 @@ export class MsgSyncManager{
       return
     }
     let msgDao = JimDbManager.instance.getMessageDao()
-    msgDao.updateMessagesRead(readMessageIds)
+    msgDao.updateMessagesRead(readMessageIds, msg.sentTime)
     let readMessages = msgDao.getMessagesByMessageIds(readMessageIds)
     readMessages.forEach((readMessage)=>{
       readMessage.hasRead = true
+      readMessage.readTime = msg.sentTime
       this.notifyMessageModified(readMessage)
+      this.checkAndNotifyDestroyTime(readMessage, msg.sentTime)
     })
     this.triggerReadReceipt(msg.conversation, readMessageIds)
   }
@@ -880,6 +943,9 @@ export class MsgSyncManager{
         readMessage.readCount = info.readCount
         readMessage.memberCount = info.memberCount
         this.notifyMessageModified(readMessage)
+        if(readMessage.memberCount > 0 && readMessage.readCount >= readMessage.memberCount){
+          this.checkAndNotifyDestroyTime(readMessage, msg.sentTime)
+        }
       }
     })
     this.triggerGroupReadReceipt(msg.conversation, readNtfMsg.messages)

@@ -7,3 +7,13 @@ export class UserInfo{
   constructor() {
   }
 }
+
+export class FriendInfo{
+  userId:string = ''
+  isFriend:boolean = false
+  alias:string = ''
+  updTime:number = 0
+
+  constructor() {
+  }
+}

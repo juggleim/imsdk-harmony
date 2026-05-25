@@ -1,13 +1,14 @@
 import {MessageContent, MessageReaction} from './message'
-import { MsgFlag } from '../improto/msgflag'
-import { JimUtil } from '../commons/jimutil'
+import { MsgFlagTool } from '../improto/msgflag'
+import { JimUtil, StringMapItem } from '../commons/jimutil'
 import { JimMsgType } from './msgtypes'
 import { GroupMessageReadInfo } from './group'
+import { Conversation } from './conversation'
 
 interface IRecallCmdMessage{
   msg_id:string
   msg_time:number
-  exts:Map<string,string>
+  exts:StringMapItem[]
 }
 
 export class RecallCmdMessage extends MessageContent{
@@ -17,7 +18,7 @@ export class RecallCmdMessage extends MessageContent{
   constructor() {
     super()
     this.setMsgType(JimMsgType.RecallCmd)
-    this.setMsgFlag({isCmd:true})
+    this.setMsgFlag(MsgFlagTool.commandFlag())
   }
 
   encode(): Uint8Array {
@@ -59,7 +60,7 @@ export class ReadNtfMessage extends MessageContent{
   constructor() {
     super()
     this.setMsgType(JimMsgType.ReadNtf)
-    this.setMsgFlag({isCmd:true})
+    this.setMsgFlag(MsgFlagTool.commandFlag())
   }
 
   encode(): Uint8Array {
@@ -93,7 +94,7 @@ export class GroupReadNtfMessage extends MessageContent{
   constructor() {
     super()
     this.setMsgType(JimMsgType.GroupReadNtf)
-    this.setMsgFlag({isCmd:true})
+    this.setMsgFlag(MsgFlagTool.commandFlag())
   }
 
   encode(): Uint8Array {
@@ -132,6 +133,14 @@ export interface IClearUnreadConver{
   target_id:string
   channel_type:number
   latest_read_index:number
+  sub_channel?:string
+}
+
+class ClearUnreadConver implements IClearUnreadConver{
+  target_id:string = ''
+  channel_type:number = 0
+  latest_read_index:number = 0
+  sub_channel?:string = ''
 }
 
 interface IClearUnreadMessage{
@@ -143,12 +152,16 @@ export class ClearUnreadMessage extends  MessageContent{
   constructor() {
     super()
     this.setMsgType(JimMsgType.ClearUnread)
-    this.setMsgFlag({isCmd:true})
+    this.setMsgFlag(MsgFlagTool.commandFlag())
   }
 
   encode(): Uint8Array {
+    let conversations:IClearUnreadConver[] = []
+    this.conversations.forEach((conversation)=>{
+      conversations.push(this.buildClearUnreadConver(conversation))
+    })
     let str = JSON.stringify({
-      conversations:this.conversations
+      conversations:conversations
     })
     return JimUtil.stringToUint8Array(str)
   }
@@ -156,7 +169,20 @@ export class ClearUnreadMessage extends  MessageContent{
   decode(data: Uint8Array): void {
     let str = JimUtil.uint8ArrayToString(data)
     let t = JSON.parse(str) as IClearUnreadMessage
-    this.conversations = t.conversations
+    let conversations = t.conversations != undefined ? t.conversations : []
+    this.conversations = []
+    conversations.forEach((conversation)=>{
+      this.conversations.push(this.buildClearUnreadConver(conversation))
+    })
+  }
+
+  private buildClearUnreadConver(conversation:IClearUnreadConver):IClearUnreadConver {
+    let result = new ClearUnreadConver()
+    result.target_id = conversation.target_id
+    result.channel_type = conversation.channel_type
+    result.latest_read_index = conversation.latest_read_index
+    result.sub_channel = Conversation.normalizeSubChannel(conversation.sub_channel)
+    return result
   }
 }
 
@@ -178,7 +204,7 @@ export class ModifyMessage extends MessageContent{
   constructor() {
     super()
     this.setMsgType(JimMsgType.ModifyMsg)
-    this.setMsgFlag({isCmd:true})
+    this.setMsgFlag(MsgFlagTool.commandFlag())
   }
 
   encode(): Uint8Array {
@@ -230,7 +256,7 @@ export class TopMsgMessage extends MessageContent{
   constructor() {
     super()
     this.setMsgType(JimMsgType.TopMsg)
-    this.setMsgFlag({isCmd:true})
+    this.setMsgFlag(MsgFlagTool.commandFlag())
   }
 
   encode(): Uint8Array {

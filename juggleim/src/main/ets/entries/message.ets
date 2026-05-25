@@ -1,4 +1,4 @@
-import { JimUtil } from '../commons/jimutil'
+import { JimUtil, StringMapItem } from '../commons/jimutil'
 import { MsgFlag, MsgFlagTool } from '../improto/msgflag'
 import { Conversation } from './conversation'
 import { JimMsgType } from './msgtypes'
@@ -53,7 +53,7 @@ export class MessageContent{
   private msgFlag:MsgFlag
   constructor() {
     this.msgType = "jg:unknown"
-    this.msgFlag = {}
+    this.msgFlag = new MsgFlag()
   }
 
   getMsgType():string{
@@ -171,6 +171,7 @@ export class MediaMessageContent extends MessageContent{
 }
 
 export class Message{
+  clientMsgNo:number = 0
   conversation:Conversation = new Conversation('',0)
   clientId:string = ''
   messageId:string = ''
@@ -197,6 +198,7 @@ export class Message{
   lifeTime:number = 0
   lifeTimeAfterRead:number = 0
   destroyTime:number = 0
+  readTime:number = 0
 
   state:number = MessageSentState.none
 
@@ -215,7 +217,7 @@ export class TextMessage extends MessageContent{
   constructor() {
     super()
     this.setMsgType(JimMsgType.Text)
-    this.setMsgFlag({isStorage:true,isCount:true})
+    this.setMsgFlag(MsgFlagTool.storageCountFlag())
   }
 
   encode():Uint8Array{
@@ -245,7 +247,10 @@ export class PreviewUnit{
 
 interface IMergeMessage{
   title:string
-  conversation:Conversation
+  containerMsgId?:string
+  conversationId?:string
+  conversationType?:number
+  sub_channel?:string
   messageIdList:string[]
   previewList:PreviewUnit[]
   extra:string
@@ -253,6 +258,7 @@ interface IMergeMessage{
 
 export class MergeMessage extends  MessageContent{
   public title:string = ''
+  public containerMsgId:string = ''
   public conversation:Conversation = new Conversation("",0)
   public messageIdList:string[] = []
   public previewList:PreviewUnit[] = []
@@ -260,12 +266,16 @@ export class MergeMessage extends  MessageContent{
   constructor() {
     super()
     this.setMsgType(JimMsgType.Merge)
-    this.setMsgFlag({isStorage:true,isCount:true})
+    this.setMsgFlag(MsgFlagTool.storageCountFlag())
   }
 
   encode():Uint8Array{
     let str = JSON.stringify({
       title:this.title,
+      containerMsgId:this.containerMsgId,
+      conversationId:this.conversation.conversationId,
+      conversationType:this.conversation.conversationType,
+      sub_channel:Conversation.normalizeSubChannel(this.conversation.subChannel),
       messageIdList:this.messageIdList,
       previewList:this.previewList,
       extra:this.extra
@@ -277,10 +287,19 @@ export class MergeMessage extends  MessageContent{
     let str = JimUtil.uint8ArrayToString(data)
     let t = JSON.parse(str) as IMergeMessage
     this.title = t.title
-    this.messageIdList = t.messageIdList
-    this.conversation = t.conversation
-    this.previewList = t.previewList
-    this.extra = t.extra
+    this.messageIdList = t.messageIdList != undefined ? t.messageIdList : []
+    this.containerMsgId = t.containerMsgId != undefined ? t.containerMsgId : ''
+    if(t.conversationId != undefined && t.conversationType != undefined){
+      this.conversation = new Conversation(
+        t.conversationId,
+        t.conversationType,
+        Conversation.normalizeSubChannel(t.sub_channel)
+      )
+    }else{
+      this.conversation = new Conversation("",0)
+    }
+    this.previewList = t.previewList != undefined ? t.previewList : []
+    this.extra = t.extra != undefined ? t.extra : ''
   }
 }
 
@@ -294,7 +313,7 @@ export class VoiceMessage extends MediaMessageContent{
   constructor() {
     super()
     this.setMsgType(JimMsgType.Voice)
-    this.setMsgFlag({isStorage:true,isCount:true})
+    this.setMsgFlag(MsgFlagTool.storageCountFlag())
   }
 
   encode():Uint8Array{
@@ -326,7 +345,7 @@ export class ImageMessage extends MediaMessageContent{
   constructor() {
     super()
     this.setMsgType(JimMsgType.Image)
-    this.setMsgFlag({isStorage:true,isCount:true})
+    this.setMsgFlag(MsgFlagTool.storageCountFlag())
   }
 
   encode():Uint8Array{
@@ -360,7 +379,7 @@ export class FileMessage extends MediaMessageContent{
   constructor() {
     super()
     this.setMsgType(JimMsgType.File)
-    this.setMsgFlag({isStorage:true,isCount:true})
+    this.setMsgFlag(MsgFlagTool.storageCountFlag())
   }
 
   encode():Uint8Array{
@@ -396,7 +415,7 @@ export class VideoMessage extends MediaMessageContent{
   constructor() {
     super()
     this.setMsgType(JimMsgType.Video)
-    this.setMsgFlag({isStorage:true,isCount:true})
+    this.setMsgFlag(MsgFlagTool.storageCountFlag())
   }
 
   encode():Uint8Array{
@@ -420,7 +439,7 @@ export class VideoMessage extends MediaMessageContent{
 }
 
 interface IRecallInfoMessage{
-  exts:Map<string,string>
+  exts:StringMapItem[]
 }
 
 export class RecallInfoMessage extends MessageContent{
@@ -428,7 +447,7 @@ export class RecallInfoMessage extends MessageContent{
   constructor() {
     super()
     this.setMsgType(JimMsgType.RecallInfo)
-    this.setMsgFlag({isStorage:true,isCount:true})
+    this.setMsgFlag(MsgFlagTool.storageCountFlag())
   }
 
   encode(): Uint8Array {

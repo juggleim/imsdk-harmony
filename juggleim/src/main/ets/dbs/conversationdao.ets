@@ -15,13 +15,8 @@ export class ConversationDao{
   }
 
   queryConversations(start:number,count:number,isPositive:boolean):ConversationInfo[]{
-    let sql = `SELECT * FROM ${this.tableName} WHERE `
-    if(isPositive){
-      sql = sql + ` conver_time > ? order by conver_time asc`
-    }else{
-      sql = sql + ` conver_time < ? order by conver_time desc`
-    }
-    sql = sql + ` LIMIT ${count}`
+    let sql = `SELECT * FROM ${this.tableName} WHERE conver_time ${isPositive ? '>' : '<'} ?`
+    sql = sql + ` ORDER BY is_top DESC, top_time DESC, conver_time ${isPositive ? 'ASC' : 'DESC'} LIMIT ${count}`
     let args:Array<relationalStore.ValueType> = []
     args.push(start)
     let resultSet:relationalStore.ResultSet|undefined
@@ -63,10 +58,11 @@ export class ConversationDao{
     }
     if(options.tagId != ''){
       sql = sql +
-        ` AND EXISTS (SELECT 1 FROM conversation_tags tags WHERE tags.conver_type=${this.tableName}.conver_type AND tags.conver_id=${this.tableName}.conver_id AND tags.tag_id=?)`
+        ` AND EXISTS (SELECT 1 FROM conversation_tags tags WHERE tags.conver_type=${this.tableName}.conver_type AND tags.conver_id=${this.tableName}.conver_id AND tags.subchannel=${this.tableName}.subchannel AND tags.tag_id=?)`
       args.push(options.tagId)
     }
-    sql = sql + ` ORDER BY is_top DESC, top_time DESC, conver_time DESC LIMIT ${options.count}`
+    let sortDirection = options.direction == GetConversationDirection.Forward ? 'ASC' : 'DESC'
+    sql = sql + ` ORDER BY is_top DESC, top_time DESC, conver_time ${sortDirection} LIMIT ${options.count}`
     let resultSet:relationalStore.ResultSet|undefined
     let converList:ConversationInfo[] = []
     try{
@@ -84,7 +80,7 @@ export class ConversationDao{
   }
 
   upsert(conver:ConversationInfo):number{
-    let sql = `INSERT OR REPLACE INTO ${this.tableName} (conver_id,conver_type,draft,conver_time,last_msg_id,last_msg_time,last_msg_seq_no,last_read_msg_index,last_msg_index,last_msg_type,last_msg_content,last_msg_client_id,last_msg_direction,last_msg_state,last_msg_has_read,last_msg_sender_id,is_top,top_time,is_mute,unread_tag,mention_info,last_msg_mention_info) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
+    let sql = `INSERT OR REPLACE INTO ${this.tableName} (conver_id,conver_type,subchannel,draft,conver_time,last_msg_id,last_msg_time,last_msg_seq_no,last_read_msg_index,last_msg_index,last_msg_type,last_msg_content,last_msg_client_id,last_msg_direction,last_msg_state,last_msg_has_read,last_msg_sender_id,last_msg_subchannel,is_top,top_time,is_mute,unread_tag,mention_info,last_msg_mention_info) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
     let args:Array<relationalStore.ValueType> = []
     let draft = conver.draft
     if(draft == ''){
@@ -95,6 +91,7 @@ export class ConversationDao{
     }
     args.push(conver.conversation.conversationId)
     args.push(conver.conversation.conversationType)
+    args.push(Conversation.normalizeSubChannel(conver.conversation.subChannel))
     args.push(draft)
     // args.push(conver.syncTime)
     args.push(conver.converTime)
@@ -110,6 +107,7 @@ export class ConversationDao{
     args.push(conver.lastMessage.state)
     args.push(conver.lastMessage.hasRead)
     args.push(conver.lastMessage.senderId)
+    args.push(Conversation.normalizeSubChannel(conver.lastMessage.conversation.subChannel))
 
     args.push(conver.isTop?1:0)
     args.push(conver.topTime)
@@ -131,8 +129,8 @@ export class ConversationDao{
     let normalizedDraft = draft
     let converInfo = this.getConver(conver)
     if(converInfo != undefined){
-      let sql = `UPDATE ${this.tableName} SET draft=? WHERE conver_id=? AND conver_type=?`
-      let args:Array<relationalStore.ValueType> = [normalizedDraft, conver.conversationId, conver.conversationType]
+      let sql = `UPDATE ${this.tableName} SET draft=? WHERE conver_id=? AND conver_type=? AND subchannel=?`
+      let args:Array<relationalStore.ValueType> = [normalizedDraft, conver.conversationId, conver.conversationType, Conversation.normalizeSubChannel(conver.subChannel)]
       try{
         JimDbManager.instance.getDb()?.executeSync(sql,args)
         converInfo.draft = normalizedDraft
@@ -155,10 +153,11 @@ export class ConversationDao{
   }
 
   existByConver(conver:Conversation):boolean{
-    let sql = `SELECT id FROM ${this.tableName} WHERE conver_type=? and conver_id=?`
+    let sql = `SELECT id FROM ${this.tableName} WHERE conver_type=? and conver_id=? AND subchannel=?`
     let args:Array<relationalStore.ValueType> = []
     args.push(conver.conversationType)
     args.push(conver.conversationId)
+    args.push(Conversation.normalizeSubChannel(conver.subChannel))
     let resultSet:relationalStore.ResultSet|undefined
     try{
       resultSet = JimDbManager.instance.getDb()?.querySqlSync(sql,args)
@@ -177,10 +176,11 @@ export class ConversationDao{
   }
 
   getConver(c:Conversation):ConversationInfo|undefined{
-    let sql = `SELECT * FROM ${this.tableName} WHERE conver_type=? and conver_id=?`
+    let sql = `SELECT * FROM ${this.tableName} WHERE conver_type=? and conver_id=? AND subchannel=?`
     let args:Array<relationalStore.ValueType> = []
     args.push(c.conversationType)
     args.push(c.conversationId)
+    args.push(Conversation.normalizeSubChannel(c.subChannel))
     let resultSet:relationalStore.ResultSet|undefined
     let converInfo:ConversationInfo|undefined = undefined
     try{
@@ -200,9 +200,13 @@ export class ConversationDao{
     if(tagId == ''){
       return 0
     }
-    let sql = `SELECT SUM(CASE WHEN conver.last_msg_index > conver.last_read_msg_index THEN conver.last_msg_index - conver.last_read_msg_index ELSE 0 END) AS unread_count
+    let sql = `SELECT SUM(CASE
+        WHEN conver.last_msg_index = conver.last_read_msg_index AND conver.unread_tag = 1 THEN 1
+        WHEN conver.last_msg_index > conver.last_read_msg_index THEN conver.last_msg_index - conver.last_read_msg_index
+        ELSE 0
+      END) AS unread_count
       FROM ${this.tableName} conver
-      INNER JOIN conversation_tags tags ON tags.conver_type = conver.conver_type AND tags.conver_id = conver.conver_id
+      INNER JOIN conversation_tags tags ON tags.conver_type = conver.conver_type AND tags.conver_id = conver.conver_id AND tags.subchannel = conver.subchannel
       WHERE tags.tag_id = ?`
     let resultSet:relationalStore.ResultSet|undefined
     try{
@@ -218,14 +222,15 @@ export class ConversationDao{
     return 0
   }
 
-  delConver(converId:string,converType:number):number{
+  delConver(converId:string,converType:number, subChannel:string = ''):number{
     let delPre = new relationalStore.RdbPredicates(this.tableName)
     delPre.equalTo("conver_id",converId)
     delPre.equalTo("conver_type",converType)
+    delPre.equalTo("subchannel", Conversation.normalizeSubChannel(subChannel))
     try{
       let row = JimDbManager.instance.getDb()?.deleteSync(delPre)
       if(row!==undefined){
-        ConverTagDao.instance.clearTags(new Conversation(converId, converType))
+        ConverTagDao.instance.clearTags(new Conversation(converId, converType, subChannel))
         return row
       }
     }catch (e) {
@@ -235,8 +240,8 @@ export class ConversationDao{
   }
 
   clearLastMessage(conver:Conversation):ConversationInfo|undefined{
-    let sql = `UPDATE ${this.tableName} SET last_msg_id='',last_msg_time=0,last_msg_seq_no=0,last_msg_index=last_read_msg_index,last_msg_type='',last_msg_content='',last_msg_client_id='',last_msg_direction=0,last_msg_state=0,last_msg_has_read=0,last_msg_sender_id='',mention_info='',last_msg_mention_info='',unread_tag=0 WHERE conver_id=? AND conver_type=?`
-    let args:Array<relationalStore.ValueType> = [conver.conversationId, conver.conversationType]
+    let sql = `UPDATE ${this.tableName} SET last_msg_id='',last_msg_time=0,last_msg_seq_no=0,last_msg_index=last_read_msg_index,last_msg_type='',last_msg_content='',last_msg_client_id='',last_msg_direction=0,last_msg_state=0,last_msg_has_read=0,last_msg_sender_id='',last_msg_subchannel='',mention_info='',last_msg_mention_info='',unread_tag=0 WHERE conver_id=? AND conver_type=? AND subchannel=?`
+    let args:Array<relationalStore.ValueType> = [conver.conversationId, conver.conversationType, Conversation.normalizeSubChannel(conver.subChannel)]
     try{
       JimDbManager.instance.getDb()?.executeSync(sql,args)
       return this.getConver(conver)
@@ -247,7 +252,7 @@ export class ConversationDao{
   }
 
   updateByMessage(msg:Message):number{
-    let sql = `UPDATE ${this.tableName} SET conver_time=?,last_msg_id=?,last_msg_time=?,last_msg_seq_no=?,last_msg_client_id=?,last_msg_type=?,last_msg_content=?,last_msg_state=?,last_msg_sender_id=? WHERE conver_id=? AND conver_type=?`
+    let sql = `UPDATE ${this.tableName} SET conver_time=?,last_msg_id=?,last_msg_time=?,last_msg_seq_no=?,last_msg_client_id=?,last_msg_type=?,last_msg_content=?,last_msg_state=?,last_msg_sender_id=?,last_msg_subchannel=? WHERE conver_id=? AND conver_type=? AND subchannel=?`
     let args:Array<relationalStore.ValueType> = []
     args.push(msg.sentTime)
     args.push(msg.messageId)
@@ -258,9 +263,11 @@ export class ConversationDao{
     args.push(JimUtil.uint8ArrayToString(msg.msgContent.encode()))
     args.push(msg.state)
     args.push(msg.senderId)
+    args.push(Conversation.normalizeSubChannel(msg.conversation.subChannel))
 
     args.push(msg.conversation.conversationId)
     args.push(msg.conversation.conversationType)
+    args.push(Conversation.normalizeSubChannel(msg.conversation.subChannel))
 
     try{
       let vt = JimDbManager.instance.getDb()?.executeSync(sql,args)
@@ -272,7 +279,7 @@ export class ConversationDao{
   }
 
   updateLastMessageByMessage(msg:Message):number{
-    let sql = `UPDATE ${this.tableName} SET last_msg_id=?,last_msg_time=?,last_msg_seq_no=?,last_msg_client_id=?,last_msg_type=?,last_msg_content=?,last_msg_state=?,last_msg_sender_id=? WHERE conver_id=? AND conver_type=?`
+    let sql = `UPDATE ${this.tableName} SET last_msg_id=?,last_msg_time=?,last_msg_seq_no=?,last_msg_client_id=?,last_msg_type=?,last_msg_content=?,last_msg_state=?,last_msg_sender_id=?,last_msg_subchannel=? WHERE conver_id=? AND conver_type=? AND subchannel=?`
     let args:Array<relationalStore.ValueType> = []
     args.push(msg.messageId)
     args.push(msg.sentTime)
@@ -282,8 +289,10 @@ export class ConversationDao{
     args.push(JimUtil.uint8ArrayToString(msg.msgContent.encode()))
     args.push(msg.state)
     args.push(msg.senderId)
+    args.push(Conversation.normalizeSubChannel(msg.conversation.subChannel))
     args.push(msg.conversation.conversationId)
     args.push(msg.conversation.conversationType)
+    args.push(Conversation.normalizeSubChannel(msg.conversation.subChannel))
 
     try{
       let vt = JimDbManager.instance.getDb()?.executeSync(sql,args)
@@ -298,6 +307,7 @@ export class ConversationDao{
     let valuesBucket:relationalStore.ValuesBucket = {
       "conver_id":conver.conversation.conversationId,
       "conver_type":conver.conversation.conversationType,
+      "subchannel":Conversation.normalizeSubChannel(conver.conversation.subChannel),
       "draft":conver.draft,
       "conver_time":conver.converTime,
       "last_msg_id":conver.lastMessage.messageId,
@@ -312,6 +322,7 @@ export class ConversationDao{
       "last_msg_state":conver.lastMessage.state,
       "last_msg_has_read":conver.lastMessage.hasRead,
       "last_msg_sender_id":conver.lastMessage.senderId,
+      "last_msg_subchannel":Conversation.normalizeSubChannel(conver.lastMessage.conversation.subChannel),
       "is_top":conver.isTop?1:0,
       "top_time":conver.topTime,
       "is_mute":conver.isMute?1:0,
@@ -325,7 +336,8 @@ export class ConversationDao{
     conver.id = JimDbUtil.toNumber(resultSet, "id")
     let converId = JimDbUtil.toString(resultSet,"conver_id")
     let converType = JimDbUtil.toNumber(resultSet,"conver_type")
-    conver.conversation = new Conversation(converId,converType)
+    let subChannel = JimDbUtil.toString(resultSet,"subchannel")
+    conver.conversation = new Conversation(converId,converType, subChannel)
     conver.draft = JimDbUtil.toString(resultSet,"draft")
     conver.converTime = JimDbUtil.toNumber(resultSet,"conver_time")
 
@@ -345,6 +357,8 @@ export class ConversationDao{
     msg.state = JimDbUtil.toNumber(resultSet,"last_msg_state")
     msg.hasRead = JimDbUtil.toNumber(resultSet,"last_msg_has_read")>0
     msg.senderId = JimDbUtil.toString(resultSet,"last_msg_sender_id")
+    msg.conversation = conver.conversation.clone()
+    msg.conversation.subChannel = JimDbUtil.toString(resultSet, "last_msg_subchannel")
 
     conver.isTop = JimDbUtil.toNumber(resultSet,"is_top")>0
     conver.topTime = JimDbUtil.toNumber(resultSet,"top_time")

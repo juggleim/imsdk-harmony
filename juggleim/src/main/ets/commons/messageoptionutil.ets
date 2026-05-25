@@ -1,6 +1,7 @@
 import { immessage } from '../improto/immessage'
 import { Message } from '../entries/message'
 import { MentionType, MessageMentionInfo, PushData } from '../entries/messageoptions'
+import { Conversation } from '../entries/conversation'
 import { UserInfo } from '../entries/user'
 import { JimUtil } from './jimutil'
 
@@ -52,11 +53,11 @@ export class MessageOptionUtil {
     if (pushData == undefined) {
       return undefined
     }
-    return immessage.PushData.create({
-      title: pushData.title,
-      pushText: pushData.content,
-      pushExtraData: pushData.extra
-    })
+    let result = immessage.PushData.create({})
+    result.title = pushData.title
+    result.pushText = pushData.content
+    result.pushExtraData = pushData.extra
+    return result
   }
 
   static fromProtoPushData(pushData?: immessage.IPushData | null): PushData | undefined {
@@ -76,18 +77,18 @@ export class MessageOptionUtil {
     }
     let targetUsers: immessage.IUserInfo[] = []
     mentionInfo.targetUsers.forEach((user) => {
-      targetUsers.push(immessage.UserInfo.create({
-        userId: user.userId,
-        nickname: user.nickname,
-        userPortrait: user.userPortrait,
-        userType: user.userType,
-        updatedTime: user.updTime
-      }))
+      let targetUser = immessage.UserInfo.create({})
+      targetUser.userId = user.userId
+      targetUser.nickname = user.nickname
+      targetUser.userPortrait = user.userPortrait
+      targetUser.userType = user.userType
+      targetUser.updatedTime = user.updTime
+      targetUsers.push(targetUser)
     })
-    return immessage.MentionInfo.create({
-      mentionType: MessageOptionUtil.toProtoMentionType(mentionInfo.mentionType),
-      targetUsers: targetUsers
-    })
+    let result = immessage.MentionInfo.create({})
+    result.mentionType = MessageOptionUtil.toProtoMentionType(mentionInfo.mentionType)
+    result.targetUsers = targetUsers
+    return result
   }
 
   static fromProtoMentionInfo(mentionInfo?: immessage.IMentionInfo | null): MessageMentionInfo | undefined {
@@ -185,6 +186,13 @@ export class MessageOptionUtil {
   static applyProtoOptions(message: Message, downMsg: immessage.IDownMsg, referMessage?: Message): void {
     message.pushData = MessageOptionUtil.fromProtoPushData(downMsg.pushData)
     message.mentionInfo = MessageOptionUtil.fromProtoMentionInfo(downMsg.mentionInfo)
+    message.lifeTimeAfterRead = downMsg.lifeTimeAfterRead != undefined ?
+      JimUtil.toNumber(downMsg.lifeTimeAfterRead as number) : 0
+    message.destroyTime = downMsg.destroyTime != undefined ?
+      JimUtil.toNumber(downMsg.destroyTime as number) : 0
+    message.readTime = downMsg.readTime != undefined ?
+      JimUtil.toNumber(downMsg.readTime as number) : 0
+    message.isDeleted = downMsg.isDelete == true
     if (downMsg.referMsg != undefined && downMsg.referMsg != null) {
       message.referMsgId = downMsg.referMsg.msgId as string
       if (referMessage != undefined) {
@@ -194,24 +202,25 @@ export class MessageOptionUtil {
   }
 
   static toProtoDownMsg(message: Message): immessage.IDownMsg {
-    return immessage.DownMsg.create({
-      targetId: message.conversation.conversationId,
-      channelType: message.conversation.conversationType,
-      msgType: message.msgContent.getMsgType(),
-      senderId: message.senderId,
-      msgId: message.messageId,
-      msgSeqNo: message.msgSeqNo,
-      msgContent: message.msgContent.encode(),
-      msgTime: message.sentTime,
-      flags: message.flags,
-      clientUid: message.clientId,
-      pushData: MessageOptionUtil.toProtoPushData(message.pushData),
-      mentionInfo: MessageOptionUtil.toProtoMentionInfo(message.mentionInfo),
-      isRead: message.hasRead,
-      unreadIndex: message.msgUnreadIndex,
-      memberCount: message.memberCount,
-      SearchText: message.searchContent
-    })
+    let protoMsg = immessage.DownMsg.create({})
+    protoMsg.targetId = message.conversation.conversationId
+    protoMsg.channelType = message.conversation.conversationType
+    protoMsg.msgType = message.msgContent.getMsgType()
+    protoMsg.senderId = message.senderId
+    protoMsg.msgId = message.messageId
+    protoMsg.msgSeqNo = message.msgSeqNo
+    protoMsg.msgContent = message.msgContent.encode()
+    protoMsg.msgTime = message.sentTime
+    protoMsg.flags = message.flags
+    protoMsg.clientUid = message.clientId
+    protoMsg.pushData = MessageOptionUtil.toProtoPushData(message.pushData)
+    protoMsg.mentionInfo = MessageOptionUtil.toProtoMentionInfo(message.mentionInfo)
+    protoMsg.isRead = message.hasRead
+    protoMsg.unreadIndex = message.msgUnreadIndex
+    protoMsg.memberCount = message.memberCount
+    protoMsg.SearchText = message.searchContent
+    protoMsg.subChannel = Conversation.normalizeSubChannel(message.conversation.subChannel)
+    return protoMsg
   }
 
 }

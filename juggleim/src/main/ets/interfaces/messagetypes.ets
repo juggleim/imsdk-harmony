@@ -79,3 +79,4 @@ export type MsgGroupReadReceiptListener = (conver: Conversation, messages: Map<s
 export type MsgDeletedListener = (conver: Conversation, msgIds: string[]) => void
 export type MsgCleanedListener = (conver: Conversation, cleanTime: number, senderId: string) => void
 export type MsgTopChangedListener = (conver: Conversation, message: Message | null, operator: UserInfo | null, isTop: boolean, createdTime: number) => void
+export type MsgDestroyTimeUpdateListener = (messageId: string, conver: Conversation, destroyTime: number) => void

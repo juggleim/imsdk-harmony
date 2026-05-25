@@ -1,10 +1,11 @@
-import { Conversation, ConversationInfo, ConversationTag } from '../entries/conversation'
+import { Conversation, ConversationInfo, ConversationTag, ConversationTagInfo } from '../entries/conversation'
 
 export type ConversationCallback = (code: number, conver: ConversationInfo | null) => void
 export type ConversationsCallback = (code: number, convers: ConversationInfo[]) => void
 export type ConversationInsertCallback = (code: number, conver: ConversationInfo | null) => void
 export type TotalUnreadCountCallback = (code: number, count: number) => void
 export type ConversationTagsCallback = (code: number, tags: ConversationTag[]) => void
+export type ConversationTagInfosCallback = (code: number, tagInfos: ConversationTagInfo[]) => void
 
 export enum TopConverSortType {
   ByTopTime,

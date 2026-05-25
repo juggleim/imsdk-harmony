@@ -1,5 +1,5 @@
 import { Conversation } from '../entries/conversation'
-import { MessageContent } from '../entries/message'
+import { Message, MessageContent } from '../entries/message'
 import { MessageOptions } from '../entries/messageoptions'
 import { CommonCallback } from './commoncallback'
 import { IMessageUploadProvider, MediaUploadCredentialCallback } from './imessageuploadprovider'
@@ -17,8 +17,9 @@ import {
     MessageCallback,
     MessageReactionsCallback,
     MuteStatusCallback,
-    MsgCleanedListener,
+  MsgCleanedListener,
   MsgDeletedListener,
+  MsgDestroyTimeUpdateListener,
   MsgGroupReadReceiptListener,
   MsgModifiedListener,
   MsgReadReceiptListener,
@@ -50,6 +51,8 @@ export interface IMessageManager {
   removeMsgCleanedListener(listener: MsgCleanedListener): void
   addMsgTopChangedListener(listener: MsgTopChangedListener): void
   removeMsgTopChangedListener(listener: MsgTopChangedListener): void
+  addMsgDestroyTimeUpdateListener(listener: MsgDestroyTimeUpdateListener): void
+  removeMsgDestroyTimeUpdateListener(listener: MsgDestroyTimeUpdateListener): void
   registerMessage(msgType: string, constructor: Function): void
   setMessageUploadProvider(provider: IMessageUploadProvider | null): void
   getMessageUploadProvider(): IMessageUploadProvider | null
@@ -68,6 +71,8 @@ export interface IMessageManager {
   sendMessage(msg: MessageContent, conver: Conversation, options: MessageOptions, callback: MessageCallback): void
   sendMediaMessage(msg: MessageContent, conver: Conversation): void
   sendMediaMessage(msg: MessageContent, conver: Conversation, callback: MessageCallback): void
+  resendMessage(message: Message, callback: MessageCallback): Message
+  resendMediaMessage(message: Message, callback: MessageCallback): Message
   downloadMediaMessage(
     messageId: string,
     onProgress: DownloadMediaMessageProgressCallback,
@@ -83,8 +88,12 @@ export interface IMessageManager {
   queryMentionMessages(conver: Conversation, count: number, startTime: number, isPositive: boolean, callback: QryMessagesCallback): void
   clearMessages(conver: Conversation, options: ClearMsgOptions, callback: CommonCallback): void
   delMessages(conver: Conversation, msgIds: string[], delScope: number, callback: CommonCallback): void
+  getMessagesByClientMsgNos(clientMsgNos: number[]): Message[]
   getMessagesByMessageIds(conver: Conversation | null, msgIds: string[], callback: QryMessagesCallback): void
   getMessagesByIds(conver: Conversation | null, msgIds: string[], callback: QryMessagesCallback): void
+  saveMessage(msg: MessageContent, conver: Conversation): Message
+  saveMessage(msg: MessageContent, conver: Conversation, options: MessageOptions): Message
+  setMessageState(clientMsgNo: number, state: number): void
   updateMessage(msgId: string, msg: MessageContent, conver: Conversation, callback: MessageCallback): void
   modifyMessage(conver: Conversation, msgId: string, msg: MessageContent, callback: MessageCallback): void
   sendReadReceipt(conver: Conversation, msgIds: string[], callback: CommonCallback): void

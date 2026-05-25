@@ -8,6 +8,10 @@ import { GroupDao } from "./groupdao";
 import { GroupMemberDao } from "./groupmemberdao";
 import { ConfDao } from "./confdao";
 import { Conf } from "../entries/conf";
+import { FriendDao } from "./frienddao";
+import { ReactionDao } from "./reactiondao";
+import { MomentDao } from "./momentdao";
+import { ConversationTagInfoDao } from "./conversationtaginfodao";
 
 export class JimDbManager{
   static instance:JimDbManager = new JimDbManager()
@@ -66,6 +70,22 @@ export class JimDbManager{
 
   getGroupMemberDao():GroupMemberDao{
     return GroupMemberDao.instance
+  }
+
+  getFriendDao():FriendDao{
+    return FriendDao.instance
+  }
+
+  getReactionDao():ReactionDao{
+    return ReactionDao.instance
+  }
+
+  getMomentDao():MomentDao{
+    return MomentDao.instance
+  }
+
+  getConversationTagInfoDao():ConversationTagInfoDao{
+    return ConversationTagInfoDao.instance
   }
 
   private onUpgrade(){

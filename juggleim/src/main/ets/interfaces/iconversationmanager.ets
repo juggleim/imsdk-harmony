@@ -1,10 +1,11 @@
-import { Conversation } from '../entries/conversation'
+import { Conversation, ConversationTagInfo } from '../entries/conversation'
 import { CommonCallback } from './commoncallback'
 import {
   ConversationAddListener,
   ConversationCallback,
   ConversationDeleteListener,
   ConversationInsertCallback,
+  ConversationTagInfosCallback,
   ConversationTagsCallback,
   ConversationsCallback,
   ConversationUpdateListener,
@@ -29,6 +30,14 @@ export interface IConversationManager {
   setDraft(conver: Conversation, draft: string): void
   clearDraft(conver: Conversation): void
   insertConversation(conver: Conversation, callback: ConversationInsertCallback): void
+  createConversationTag(tagId: string, tagName: string, callback: CommonCallback): void
+  destroyConversationTag(tagId: string, callback: CommonCallback): void
+  updateConversationTagName(tagId: string, tagName: string, callback: CommonCallback): void
+  getCachedConversationTagList(): ConversationTagInfo[]
+  getConversationTagList(callback: ConversationTagInfosCallback): void
+  getTagsForConversation(conver: Conversation): ConversationTagInfo[]
+  addConversationsToTag(convers: Conversation[], tagId: string, callback: CommonCallback): void
+  removeConversationsFromTag(convers: Conversation[], tagId: string, callback: CommonCallback): void
   addConversationTag(conver: Conversation, tagId: string, callback: CommonCallback): void
   removeConversationTag(conver: Conversation, tagId: string, callback: CommonCallback): void
   getConversationTags(conver: Conversation, callback: ConversationTagsCallback): void
