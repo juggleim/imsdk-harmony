@@ -121,6 +121,14 @@ export class UserInfoManager implements IUserInfoManager{
     })
   }
 
+  fetchUserInfo(userid:string, callback:UserInfoCallback):void{
+    this.queryUserInfo(userid, callback)
+  }
+
+  fetchGroupInfo(groupId:string, callback:GroupInfoCallback):void{
+    this.queryGroupInfo(groupId, callback)
+  }
+
   public getRemoteUserInfo(userid:string,callback:UserInfoCallback){
     let req = immessage.UserIdReq.create({
       "userId":userid

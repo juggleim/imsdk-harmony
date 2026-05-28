@@ -21,6 +21,7 @@ import { HomeConstants } from '../constants/HomeConstants';
 import { HomeTopSearch } from '../views/common/HomeTopSearch';
 import { ObservedArray } from '../jim/common';
 import { JimServer } from '../jim/jimserver/jimserver';
+import { JuggleIm } from 'juggleim';
 
 @Component
 export struct ContactsList {
@@ -36,18 +37,42 @@ export struct ContactsList {
   @State contactList:ObservedArray<ContactsDataInterface> = []
 
   aboutToAppear(): void {
+    this.contactList = new ObservedArray<ContactsDataInterface>([])
     JimServer.instance.getFriendManager().QueryFriends(1,50,'',(users)=>{
       console.log("jchat_contact_code:",users.items.length)
       this.contactList.push(ContactsListData[0])
       users.items.forEach((val)=>{
         console.log("jchat_contact_list:",JSON.stringify(val))
-        this.contactList.push({
+        let contactItem:ContactsDataInterface = {
           user_id:val.user_id,
           name:val.nickname,
           en_name:val.pinyin as string,
-          icon:val.avatar
-        })
+          icon:val.avatar,
+          friendTag: ''
+        }
+        this.contactList.push(contactItem)
+        this.refreshFriendTag(contactItem.user_id, this.contactList.length - 1)
       })
+    })
+  }
+
+  private refreshFriendTag(userId:string, index:number):void{
+    if(userId == '' || index < 0){
+      return
+    }
+    JuggleIm.instance.getUserInfoManager().queryFriendInfo(userId, (code, friendInfo)=>{
+      if(code != 0 || friendInfo == null){
+        return
+      }
+      if(index >= this.contactList.length){
+        return
+      }
+      let contactItem = this.contactList[index]
+      if(contactItem.user_id != userId){
+        return
+      }
+      contactItem.friendTag = friendInfo.isFriend ? '好友' : ''
+      this.contactList = new ObservedArray<ContactsDataInterface>(this.contactList.slice())
     })
   }
 
@@ -84,7 +109,7 @@ export struct ContactsList {
 
           ForEach(this.contactList, (item: ContactsDataInterface, index: number) => {
             ListItem() {
-              ContactsItem({ name: item.name, icon: item.icon })
+              ContactsItem({ name: item.name, icon: item.icon, friendTag: item.friendTag ?? '' })
                 .onClick(() => {
                   if (this.pageInfo.size() > 1) {
                     this.pageInfo.pop();

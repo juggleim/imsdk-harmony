@@ -38,6 +38,8 @@ export struct ConversationProfile {
   @State private groupPortrait:string = ''
   @State private groupMembers:ObservedArray<GroupMemberPreviewItem> = new ObservedArray<GroupMemberPreviewItem>([])
   @State private groupMemberCount:number = 0
+  @State private friendStatus:string = ''
+  @State private friendAlias:string = ''
   @State private isConversationTop:boolean = false
   @State private isUpdatingConversationTop:boolean = false
   @State private isConversationMute:boolean = false
@@ -55,6 +57,8 @@ export struct ConversationProfile {
     this.groupPortrait = ''
     this.groupMembers = new ObservedArray<GroupMemberPreviewItem>([])
     this.groupMemberCount = 0
+    this.friendStatus = ''
+    this.friendAlias = ''
     this.isConversationTop = false
     this.isUpdatingConversationTop = false
     this.isConversationMute = false
@@ -85,7 +89,23 @@ export struct ConversationProfile {
     let user = JuggleIm.instance.getUserInfoManager().getLocalUserInfo(this.conversationId)
     if(user != null && user.nickname != ''){
       this.title = user.nickname
+    } else {
+      this.title = this.conversationId
     }
+    JuggleIm.instance.getUserInfoManager().queryUserInfo(this.conversationId, (code, remoteUser)=>{
+      if(code == 0 && remoteUser.nickname != ''){
+        this.title = remoteUser.nickname
+      }
+    })
+    JuggleIm.instance.getUserInfoManager().queryFriendInfo(this.conversationId, (code, friendInfo)=>{
+      if(code != 0 || friendInfo == null){
+        this.friendStatus = '好友状态异常'
+        this.friendAlias = ''
+        return
+      }
+      this.friendStatus = friendInfo.isFriend ? '好友' : '非好友'
+      this.friendAlias = friendInfo.alias != '' ? friendInfo.alias : ''
+    })
   }
 
   private loadGroupInfo():void{
@@ -417,8 +437,16 @@ export struct ConversationProfile {
         Column() {
           this.infoRow('会话名称', this.title)
           Divider().strokeWidth(1).color('#EAEAEA')
-          this.infoRow('会话类型', this.typeLabel)
-          Divider().strokeWidth(1).color('#EAEAEA')
+          if(this.conversationType == 1){
+            this.infoRow('好友状态', this.friendStatus != '' ? this.friendStatus : '加载中')
+            Divider().strokeWidth(1).color('#EAEAEA')
+            this.infoRow('好友备注', this.friendAlias != '' ? this.friendAlias : '无')
+            Divider().strokeWidth(1).color('#EAEAEA')
+          }
+          else{
+            this.infoRow('会话类型', this.typeLabel)
+            Divider().strokeWidth(1).color('#EAEAEA')
+          }
           this.infoRow('会话 ID', this.conversationId)
           Divider().strokeWidth(1).color('#EAEAEA')
           this.switchRow('消息免打扰', this.isConversationMute, this.isUpdatingConversationMute, '已开启', '未开启', (value:boolean)=>{

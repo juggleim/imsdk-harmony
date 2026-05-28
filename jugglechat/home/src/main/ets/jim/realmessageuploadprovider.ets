@@ -32,22 +32,26 @@ export class RealMessageUploadProvider implements IMessageUploadProvider {
   ): void {
     let fileType = this.resolveFileType(msg)
     let ext = this.getFileExtension(msg.localPath)
-    JuggleIm.instance.getMessageManager().queryUploadFileCredential(fileType, ext, (code, credential)=>{
-      if(code != 0 || credential == null){
-        onError(code != 0 ? code : -1, 'query upload credential failed')
-        return
+    JuggleIm.instance.getMessageManager().queryUploadFileCredential(
+      fileType,
+      ext,
+      (code: number, credential: MediaUploadCredential | null) => {
+        if(code != 0 || credential == null){
+          onError(code != 0 ? code : -1, 'query upload credential failed')
+          return
+        }
+        console.info(`jimsdk_media_upload_credential:${credential.ossType}:${credential.uploadUrl}:${credential.downloadUrl}`)
+        if(credential.ossType == MediaUploadOssType.qiNiu){
+          onError(-4, 'qiniu upload is not supported in harmony yet')
+          return
+        }
+        if(credential.uploadUrl == ''){
+          onError(-5, 'upload url is empty')
+          return
+        }
+        this.uploadByPreSign(msg, credential, onProgress, onSuccess, onError, onCancel)
       }
-      console.info(`jimsdk_media_upload_credential:${credential.ossType}:${credential.uploadUrl}:${credential.downloadUrl}`)
-      if(credential.ossType == MediaUploadOssType.qiNiu){
-        onError(-4, 'qiniu upload is not supported in harmony yet')
-        return
-      }
-      if(credential.uploadUrl == ''){
-        onError(-5, 'upload url is empty')
-        return
-      }
-      this.uploadByPreSign(msg, credential, onProgress, onSuccess, onError, onCancel)
-    })
+    )
   }
 
   private resolveFileType(msg:MediaMessageContent):number{
@@ -123,13 +127,12 @@ export class RealMessageUploadProvider implements IMessageUploadProvider {
       usingCache: false,
       readTimeout: 20000,
       connectTimeout: 20000
-    }, (err, responseCode)=>{
+    }, (err: BusinessError | undefined, responseCode: number)=>{
       requestTask.off('dataSendProgress')
       requestTask.destroy()
       if(err){
-        let httpError = err as BusinessError
-        console.error(`jimsdk_media_upload_http_fail:${credential.ossType}:${httpError.code}:${httpError.message}`)
-        onError(httpError.code, httpError.message)
+        console.error(`jimsdk_media_upload_http_fail:${credential.ossType}:${err.code}:${err.message}`)
+        onError(err.code, err.message)
         return
       }
       console.info(`jimsdk_media_upload_response_code:${credential.ossType}:${responseCode}`)

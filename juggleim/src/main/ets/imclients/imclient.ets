@@ -1,6 +1,7 @@
 import webSocket from '@ohos.net.webSocket'
 import { systemDateTime } from '@kit.BasicServicesKit';
 import {JuggleIm} from '../juggleim'
+import { JimDbManager } from '../dbs/dbmanager';
 import {JimUtil} from '../commons/jimutil'
 import { HashMap } from '@kit.ArkTS';
 import { BusinessError } from '@kit.BasicServicesKit';
@@ -130,6 +131,7 @@ export class ImClient{
   disconnect(isLogout:boolean){
     if(this.pingTaskId>0) {
       clearInterval(this.pingTaskId)
+      this.pingTaskId = 0
     }
     if(this.status === ConnStatus.connected && this.wsSocket != undefined){
       let ext = isLogout ? 'receivePush=false' : 'receivePush=true'
@@ -144,6 +146,12 @@ export class ImClient{
   }
 
   private close(){
+    if(this.connectTimeoutId > 0){
+      clearTimeout(this.connectTimeoutId)
+      this.connectTimeoutId = 0
+    }
+    this.publishCache = new HashMap()
+    this.queryCache = new HashMap()
     this.wsSocket?.off('open')
     this.wsSocket?.off('message')
     this.wsSocket?.off('error')
@@ -195,6 +203,7 @@ export class ImClient{
       let code = wsMsg.disconnectMsgBody?.code
       if(typeof  code == 'number'){
         this.status = ConnStatus.disconnected
+        JimDbManager.instance.closeDb()
         this.setConnectStatus(this.status,code,JuggleIm.instance.userId)
       }
     }else if(wsMsg.cmd == Cmd.publish){

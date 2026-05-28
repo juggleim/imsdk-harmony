@@ -173,8 +173,8 @@ ArkTS 兼容约束已单独记录在 [docs/arkts-compat-notes.md](/Users/helena/
 | SDK-11 | 进行中 | 已有本地搜索、mention 查询、部分历史消息查询；但 `getFirstUnreadMessage/searchConversationsWithMessageContent/getLocalAndRemoteMessages/getMergedMessageList/getMessageReadTime` 未补齐 | 按接口缺口逐个补，优先 `getFirstUnreadMessage` 和 `getLocalAndRemoteMessages` |
 | SDK-12 | 进行中 | 已为消息表、SQL migration、DAO 和 manager 补 `clientMsgNo` 存储与查询 / 状态更新入口；但按 `clientMsgNo` 的本地属性接口和兼容迁移还没做完 | 补 `clientMsgNo` 维度的本地属性读写接口，并验证旧库升级后的兼容性 |
 | SDK-13 | 进行中 | 已有上传 provider 和 `sendMediaMessage`，但 Android 对外 `uploadImage(path)` 公共 API 还没单独补出 | 增加 `uploadImage(path)` 并复用现有上传 provider 返回值 |
-| SDK-14 | 进行中 | 已补 batch user/group/friend 查询、group/member 统一入口，以及 user/friend 的远端查询回调入口，但仍需继续对拍 Android 的统一门面语义 | 继续核对 public facade 覆盖面与远端刷新语义，必要时再收敛统一入口 |
-| SDK-15 | 待开始 | 当前连接实现仍偏轻量，尚未形成 Android 那种状态机级收敛逻辑 | 在 SDK-08 完成后再做状态机、断线恢复、DB open/close 通知收口 |
+| SDK-14 | 已实现（待验证） | 已补 batch user/group/friend 查询、group/member 统一入口，以及 Android 同名的 `fetchUserInfo/fetchGroupInfo/fetchFriendInfo` 回调入口；demo 单聊资料页和联系人列表已接入对应刷新路径 | 重新核对 public facade 覆盖面与远端刷新语义，做一次 Android 对拍验证 |
+| SDK-15 | 进行中 | 当前已补断开时的 DB 关闭、连接超时清理、挂起请求容器重置，但仍未形成 Android 那种完整状态机级收敛逻辑 | 继续补状态流转、断线恢复、DB open/close 通知与参数注入时机 |
 | SDK-16 | 进行中 | 置顶、免打扰、清未读、tag 关系和部分本地回写已补；但排序、topTime、重启后状态与 Android 还没完整对拍 | 做会话列表排序、置顶/免打扰回显、同步后状态回归 |
 | SDK-17 | 进行中 | reaction/favorite/top/mute 功能链已具备，但本地先行、远端成功、DB 回写、listener 时序还没系统对拍 | 以日志方式跑完整链路，对照 Android 的事件顺序收口 |
 | SDK-18 | 进行中 | 当前已有多类消息 listener 和 destroy time listener；但 sync listener、preprocessor、stream listener 仍不完整 | 先梳理 Android 对外监听面，再补缺的 listener 类型 |

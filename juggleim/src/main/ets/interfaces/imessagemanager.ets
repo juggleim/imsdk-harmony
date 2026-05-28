@@ -5,6 +5,12 @@ import { MessageQueryOptions } from '../entries/messagequeryoptions'
 import { MessageOptions } from '../entries/messageoptions'
 import { CommonCallback } from './commoncallback'
 import {
+  IMessageUploadProvider,
+  MediaUploadCredentialCallback,
+  MediaUploadErrorCallback,
+  MediaUploadSuccessCallback
+} from './imessageuploadprovider'
+import {
   BroadcastMessageCallback,
   ClearMsgOptions,
   DownloadMediaMessageCancelCallback,

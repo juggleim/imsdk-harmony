@@ -42,6 +42,7 @@ export class JimDbManager{
       this.db.close()
       this.db = undefined
     }
+    this.hasInit = false
   }
 
   getConfDao():ConfDao{

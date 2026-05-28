@@ -20,6 +20,8 @@ export interface IUserInfoManager {
   getUserInfo(userid: string): Promise<UserInfo>
   queryUserInfo(userid: string, callback: UserInfoCallback): void
   getRemoteUserInfo(userid: string, callback: UserInfoCallback): void
+  fetchUserInfo(userid: string, callback: UserInfoCallback): void
+  fetchGroupInfo(groupId: string, callback: GroupInfoCallback): void
   saveFriendInfo(friendInfo: FriendInfo): void
   getLocalFriendInfo(userid: string): FriendInfo | null
   getFriendInfo(userid: string): FriendInfo | null

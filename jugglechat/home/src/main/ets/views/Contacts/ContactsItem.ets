@@ -21,6 +21,7 @@ export struct ContactsItem {
   @StorageProp('currentBreakpoint') currentBreakpoint: string = BreakpointConstants.BREAKPOINT_SM;
   private name?: ResourceStr;
   private icon?: ResourceStr;
+  @Prop friendTag: string = ''
 
   private getDefaultBackgroundColor():string{
     return CommonUtil.getBackgroundColor(this.name as string)
@@ -63,6 +64,13 @@ export struct ContactsItem {
       }
       .flexShrink(BaseConstants.FLEX_SHRINK_ONE)
       .margin({ left: $r('app.float.icon_margin_one') })
+
+      if(this.friendTag != ''){
+        Text(this.friendTag)
+          .fontSize(BaseConstants.FONT_SIZE_TWELVE)
+          .fontColor($r('app.color.text_input_default_color'))
+          .margin({ left: $r('app.float.icon_margin_one') })
+      }
 
       Blank()
     }

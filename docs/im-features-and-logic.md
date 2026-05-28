@@ -561,6 +561,9 @@
 - 本地没有则调用 `qry_user_info`
 - 拉到后回写本地库
 - `needUpdate` 用更新时间判断是否要覆盖旧数据
+- `queryUserInfo(userid, callback)` 可直接触发远端刷新，适合资料页这类需要即时更新标题 / 头像的场景
+- `queryFriendInfo(userid, callback)` 可直接刷新好友态，demo 联系人列表会据此展示好友标签
+- 单聊资料页也会使用 `queryFriendInfo(userid, callback)` 展示好友状态和备注
 
 ### 结论
 **已实现。**

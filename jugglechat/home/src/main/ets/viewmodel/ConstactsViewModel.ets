@@ -18,6 +18,7 @@ interface ContactsDataInterface {
   name: ResourceStr;
   en_name: string;
   icon: ResourceStr;
+  friendTag?: string;
 }
 
 const ContactsListData: ContactsDataInterface[] = [

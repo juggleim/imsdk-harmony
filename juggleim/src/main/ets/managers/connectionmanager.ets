@@ -36,6 +36,7 @@ export class ConnectionManager implements IConnectionManager {
   disconnect(receivePush:boolean = false){
     (JuggleIm.instance.getChatroomManager() as ChatroomManager).userDisconnect()
     this.imclient.disconnect(!receivePush)
+    JimDbManager.instance.closeDb()
   }
 
   registerPushToken(channel:PushChannel, token:string, callback?:CommonCallback):void{
