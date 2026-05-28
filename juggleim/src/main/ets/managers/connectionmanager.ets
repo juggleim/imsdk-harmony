@@ -8,6 +8,7 @@ import { CommonCallback } from '../interfaces/commoncallback'
 import { pushtoken } from '../improto/pushtoken.js'
 import { JimErrorCode } from '../entries/errcode'
 import { PushChannel, pushChannelToConnectName, pushChannelToDisplayName } from '../entries/push'
+import { JimUtil } from '../commons/jimutil'
 
 const PUSH_TRACE_TAG:string = 'PUSHTRACE'
 const PUSH_PLATFORM_ANDROID:number = 1
@@ -32,9 +33,9 @@ export class ConnectionManager implements IConnectionManager {
     this.imclient.connect(token)
   }
 
-  disconnect(){
+  disconnect(receivePush:boolean = false){
     (JuggleIm.instance.getChatroomManager() as ChatroomManager).userDisconnect()
-    this.imclient.disconnect(true)
+    this.imclient.disconnect(!receivePush)
   }
 
   registerPushToken(channel:PushChannel, token:string, callback?:CommonCallback):void{
@@ -65,6 +66,27 @@ export class ConnectionManager implements IConnectionManager {
       console.log(`${PUSH_TRACE_TAG} sdk_register_push_token_ack: channel=${pushChannelToDisplayName(channel)}, code=${code}, userId=${JuggleIm.instance.userId}`)
       callback?.(code)
     })
+  }
+
+  setLanguage(language:string):void{
+    JuggleIm.instance.config.language = language.trim()
+  }
+
+  getLanguage():string{
+    return JuggleIm.instance.config.language
+  }
+
+  getConnectionStatus():number{
+    return this.imclient.status
+  }
+
+  setConnectParams(params:Map<string, string>):void{
+    JuggleIm.instance.config.connectParams = params
+    let serialized = ''
+    if(params.size > 0){
+      serialized = JSON.stringify(JimUtil.map2Obj(params))
+    }
+    JuggleIm.instance.config.connectExt = serialized
   }
 
   addConnectStatusListener(l:ConnStatusListener){

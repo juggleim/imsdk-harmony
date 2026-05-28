@@ -7,7 +7,7 @@ import { BusinessError } from '@kit.BasicServicesKit';
 import { JSON } from '@kit.ArkTS';
 import {imconnect} from '../improto/imconnect.js'
 import {Cmd,newConnectMessage, newUserPublishMessage,newQueryMessage, newUserPubAckMessage,
-  newPingMessag} from '../improto/connectmsg'
+  newPingMessag, newDisconnectMessage} from '../improto/connectmsg'
 import { PreferenceUtil } from '../commons/preferenceutil';
 
 export class ConnStatus{
@@ -85,7 +85,9 @@ export class ImClient{
         "deviceId":JuggleIm.instance.config.deviceId,
         "pushToken":JuggleIm.instance.config.pushToken,
         "packageName":JuggleIm.instance.config.packageName,
-        "pushChannel":JuggleIm.instance.config.pushChannel
+        "pushChannel":JuggleIm.instance.config.pushChannel,
+        "language":JuggleIm.instance.config.language,
+        "ext":JuggleIm.instance.config.connectExt
       }))
       this.writeImWsMessage(wsMsg)
     })
@@ -128,6 +130,14 @@ export class ImClient{
   disconnect(isLogout:boolean){
     if(this.pingTaskId>0) {
       clearInterval(this.pingTaskId)
+    }
+    if(this.status === ConnStatus.connected && this.wsSocket != undefined){
+      let ext = isLogout ? 'receivePush=false' : 'receivePush=true'
+      let wsMsg = newDisconnectMessage(imconnect.DisconnectMsgBody.create({
+        code: 0,
+        ext: ext
+      }))
+      this.writeImWsMessage(wsMsg)
     }
     this.close()
     this.setConnectStatus(ConnStatus.disconnected,0,this.userId)

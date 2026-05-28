@@ -5,8 +5,12 @@ export type ConnectionStatusListener = (status: number, reasonCode: number, user
 
 export interface IConnectionManager {
   connect(token: string): void
-  disconnect(): void
+  disconnect(receivePush?: boolean): void
   registerPushToken(channel: PushChannel, token: string, callback?: CommonCallback): void
+  setLanguage(language: string): void
+  getLanguage(): string
+  getConnectionStatus(): number
+  setConnectParams(params: Map<string, string>): void
   addConnectStatusListener(l: ConnectionStatusListener): void
   removeConnectStatusListener(l: ConnectionStatusListener): void
 }

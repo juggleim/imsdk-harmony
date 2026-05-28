@@ -78,7 +78,7 @@ export {
   MomentReactionsCallback,
   MomentsCallback
 } from './src/main/ets/interfaces/momenttypes'
-export { UserInfoCallback } from './src/main/ets/interfaces/userinfotypes'
+export { FriendInfoCallback, UserInfoCallback } from './src/main/ets/interfaces/userinfotypes'
 
 export { ConnStatus } from './src/main/ets/imclients/imclient'
 export { PushChannel } from './src/main/ets/entries/push'
@@ -113,5 +113,5 @@ export {
   MomentMediaType,
   MomentReaction
 } from './src/main/ets/entries/moment'
-export { UserInfo } from './src/main/ets/entries/user'
+export { FriendInfo, UserInfo } from './src/main/ets/entries/user'
 export { GroupInfo, GroupMember, GroupMessageMemberReadDetail, GroupMessageReadInfo, GroupMessageReadInfoDetail } from './src/main/ets/entries/group'

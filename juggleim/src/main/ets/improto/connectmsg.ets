@@ -27,6 +27,12 @@ export function newConnectMessage(body:imconnect.ConnectMsgBody):imconnect.ImWeb
   return wsMsg
 }
 
+export function newDisconnectMessage(body:imconnect.DisconnectMsgBody):imconnect.ImWebsocketMsg{
+  let wsMsg = newImWsMsg(Cmd.disconnect)
+  wsMsg.disconnectMsgBody = body
+  return wsMsg
+}
+
 export function newUserPublishMessage(body:imconnect.PublishMsgBody):imconnect.ImWebsocketMsg{
   let wsMsg = newImWsMsg(Cmd.publish)
   wsMsg.publishMsgBody = body

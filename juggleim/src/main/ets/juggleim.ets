@@ -33,6 +33,9 @@ export class JimConfig{
   pushChannel:string = ''
   appServerUrl:string = ''
   authToken:string = ''
+  language:string = ''
+  connectExt:string = ''
+  connectParams:Map<string, string> = new Map<string, string>()
 }
 
 export class JuggleIm{

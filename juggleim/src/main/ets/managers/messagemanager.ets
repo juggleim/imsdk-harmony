@@ -26,7 +26,9 @@ import {
   IMessageUploadProvider,
   MediaUploadCredential,
   MediaUploadCredentialCallback,
-  MediaUploadResult
+  MediaUploadErrorCallback,
+  MediaUploadResult,
+  MediaUploadSuccessCallback
 } from '../interfaces/imessageuploadprovider'
 import { HashMap } from '@kit.ArkTS'
 import { JimDbManager } from '../dbs/dbmanager'
@@ -204,6 +206,34 @@ export class MessageManager implements IMessageManager{
 
   getMessageUploadProvider():IMessageUploadProvider | null{
     return this.messageUploadProvider
+  }
+
+  uploadImage(path:string, onSuccess:MediaUploadSuccessCallback, onError?:MediaUploadErrorCallback):void{
+    let normalizedPath = path.trim()
+    if(normalizedPath == ''){
+      onError?.(-1, 'image path is empty')
+      return
+    }
+    if(this.messageUploadProvider == null){
+      onError?.(-1, 'message upload provider is not set')
+      return
+    }
+    let image = new ImageMessage()
+    image.localPath = normalizedPath
+    this.messageUploadProvider.uploadMediaMessage(
+      image,
+      ()=>{
+      },
+      (result)=>{
+        onSuccess(result)
+      },
+      (code, message)=>{
+        onError?.(code, message)
+      },
+      ()=>{
+        onError?.(-2, 'upload canceled')
+      }
+    )
   }
 
   addMessageReaction(messageId:string, reactionId:string, callback:CommonCallback):void{
