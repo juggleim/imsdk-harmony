@@ -262,10 +262,12 @@ Harmony 分成两套，但 `IUserInfoManager` 现在已经承接了 user/group/f
   - `getLocalGroupMembers`
   - `queryGroupMembers`
   - `getUserInfo`
+  - `queryUserInfo`
   - `getRemoteUserInfo`
   - `saveFriendInfo`
   - `getLocalFriendInfo`
   - `getFriendInfo`
+  - `queryFriendInfo`
   - `fetchFriendInfo`
   - `checkFriend`
 - `IGroupInfoManager`

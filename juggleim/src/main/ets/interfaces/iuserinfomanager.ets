@@ -18,10 +18,12 @@ export interface IUserInfoManager {
   getLocalGroupMembers(groupId: string): GroupMember[]
   queryGroupMembers(groupId: string, callback: GroupMembersCallback): void
   getUserInfo(userid: string): Promise<UserInfo>
+  queryUserInfo(userid: string, callback: UserInfoCallback): void
   getRemoteUserInfo(userid: string, callback: UserInfoCallback): void
   saveFriendInfo(friendInfo: FriendInfo): void
   getLocalFriendInfo(userid: string): FriendInfo | null
   getFriendInfo(userid: string): FriendInfo | null
+  queryFriendInfo(userid: string, callback: FriendInfoCallback): void
   fetchFriendInfo(userid: string): Promise<FriendInfo>
   checkFriend(userid: string, callback: FriendInfoCallback): void
 }

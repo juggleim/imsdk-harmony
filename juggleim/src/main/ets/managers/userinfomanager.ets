@@ -108,6 +108,19 @@ export class UserInfoManager implements IUserInfoManager{
     })
   }
 
+  queryUserInfo(userid:string, callback:UserInfoCallback):void{
+    if(userid == ''){
+      callback(-1, new UserInfo())
+      return
+    }
+    this.getRemoteUserInfo(userid, (code, user)=>{
+      if(code == 0){
+        JimDbManager.instance.getUserDao().upsert(user)
+      }
+      callback(code, user)
+    })
+  }
+
   public getRemoteUserInfo(userid:string,callback:UserInfoCallback){
     let req = immessage.UserIdReq.create({
       "userId":userid
@@ -152,6 +165,19 @@ export class UserInfoManager implements IUserInfoManager{
       }
     })
     return null
+  }
+
+  queryFriendInfo(userid:string, callback:FriendInfoCallback):void{
+    if(userid == ''){
+      callback(-1, new FriendInfo())
+      return
+    }
+    this.fetchFriendInfo(userid).then((friendInfo)=>{
+      if(friendInfo.updTime > 0){
+        this.saveFriendInfo(friendInfo)
+      }
+      callback(0, friendInfo)
+    })
   }
 
   fetchFriendInfo(userid:string):Promise<FriendInfo>{
