@@ -1,6 +1,7 @@
 import { Conversation } from '../entries/conversation'
 import { FavoriteMessage, Message, MessageContent, MessageReactionResult } from '../entries/message'
 import { GroupMessageReadInfo, GroupMessageReadInfoDetail } from '../entries/group'
+import { SearchConversationsResult } from '../entries/searchconversationresult'
 import { UserInfo } from '../entries/user'
 
 export type MessageCallback = (code: number, msg: Message | null) => void
@@ -9,6 +10,13 @@ export type GroupMessageReadInfoDetailCallback = (code: number, detail: GroupMes
 export type MessageReactionsCallback = (code: number, items: MessageReactionResult[]) => void
 export type FavoriteMessagesCallback = (code: number, items: FavoriteMessage[], offset: string) => void
 export type TopMessageCallback = (code: number, message: Message | null, operator: UserInfo | null, createdTime: number) => void
+export type ISearchConversationWithMessageContentCallback = (resultList: SearchConversationsResult[]) => void
+export type IGetMessagesCallback = (code: number, messages: Message[]) => void
+export interface IGetLocalAndRemoteMessagesCallback {
+  onGetLocalList(messages: Message[], hasRemote: boolean): void
+  onGetRemoteList(messages: Message[]): void
+  onGetRemoteListError(errorCode: number): void
+}
 export type DownloadMediaMessageProgressCallback = (progress: number, msg: Message) => void
 export type DownloadMediaMessageSuccessCallback = (msg: Message) => void
 export type DownloadMediaMessageErrorCallback = (code: number) => void

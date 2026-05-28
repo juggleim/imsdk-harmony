@@ -5,10 +5,12 @@ import { JimUtil } from "../commons/jimutil";
 import { MsgFlagTool } from "../improto/msgflag";
 import { JimDbManager } from "./dbmanager";
 import { JimDbUtil } from "./dbutil";
-import { Conversation } from "../entries/conversation";
+import { Conversation, ConversationInfo } from "../entries/conversation";
 import { MsgHandler } from "../entries/msghandler";
 import { MessageOptionUtil } from "../commons/messageoptionutil";
 import { ReactionDao } from "./reactiondao";
+import { MessageQueryOptions } from "../entries/messagequeryoptions";
+import { SearchConversationsResult } from "../entries/searchconversationresult";
 
 export class MessageDao{
   static instance:MessageDao = new MessageDao()
@@ -267,6 +269,91 @@ export class MessageDao{
     }finally {
       resultSet?.close()
     }
+  }
+
+  searchConversationsWithMessageContent(options:MessageQueryOptions, now:number):SearchConversationsResult[]{
+    let sql = `SELECT conver_type, conver_id, subchannel, COUNT(*) AS match_count, MAX(sent_time) AS sort_time FROM ${this.tableName} WHERE is_deleted=0 AND (destroy_time=0 OR destroy_time>?)`
+    let args:Array<relationalStore.ValueType> = [now]
+    if(options != undefined){
+      let conversations = options.conversations != undefined ? options.conversations : []
+      if(conversations.length > 0){
+        let conversationClauses:string[] = []
+        conversations.forEach((conver)=>{
+          conversationClauses.push(`(conver_type=? AND conver_id=? AND subchannel=?)`)
+          args.push(conver.conversationType)
+          args.push(conver.conversationId)
+          args.push(Conversation.normalizeSubChannel(conver.subChannel))
+        })
+        sql = sql + ` AND (${conversationClauses.join(' OR ')})`
+      }
+      if(options.direction >= 0){
+        sql = sql + ` AND direction=?`
+        args.push(options.direction)
+      }
+      if(options.contentTypes != undefined && options.contentTypes.length > 0){
+        let placeholders:string[] = []
+        options.contentTypes.forEach((contentType)=>{
+          placeholders.push('?')
+          args.push(contentType)
+        })
+        sql = sql + ` AND msg_type IN (${placeholders.join(',')})`
+      }
+      if(options.senderUserIds != undefined && options.senderUserIds.length > 0){
+        let placeholders:string[] = []
+        options.senderUserIds.forEach((senderUserId)=>{
+          placeholders.push('?')
+          args.push(senderUserId)
+        })
+        sql = sql + ` AND sender_id IN (${placeholders.join(',')})`
+      }
+      if(options.states != undefined && options.states.length > 0){
+        let placeholders:string[] = []
+        options.states.forEach((state)=>{
+          placeholders.push('?')
+          args.push(state)
+        })
+        sql = sql + ` AND state IN (${placeholders.join(',')})`
+      }
+      if(options.conversationTypes != undefined && options.conversationTypes.length > 0){
+        let placeholders:string[] = []
+        options.conversationTypes.forEach((conversationType)=>{
+          placeholders.push('?')
+          args.push(conversationType)
+        })
+        sql = sql + ` AND conver_type IN (${placeholders.join(',')})`
+      }
+      let searchContent = options.searchContent != undefined ? options.searchContent.trim() : ''
+      if(searchContent != ''){
+        sql = sql + ` AND search_content LIKE ?`
+        args.push(`%${searchContent}%`)
+      }
+    }
+    sql = sql + ` GROUP BY conver_type, conver_id, subchannel ORDER BY sort_time DESC`
+    let resultSet:relationalStore.ResultSet|undefined
+    let resultList:SearchConversationsResult[] = []
+    try{
+      resultSet = JimDbManager.instance.getDb()?.querySqlSync(sql,args)
+      while (resultSet?.goToNextRow()){
+        let converType = JimDbUtil.toNumber(resultSet, 'conver_type')
+        let converId = JimDbUtil.toString(resultSet, 'conver_id')
+        let subChannel = JimDbUtil.toString(resultSet, 'subchannel')
+        let conver = new Conversation(converId, converType, subChannel)
+        let converInfo = JimDbManager.instance.getConversationDao().getConver(conver)
+        if(converInfo == undefined){
+          converInfo = new ConversationInfo()
+          converInfo.conversation = conver
+        }
+        let result = new SearchConversationsResult()
+        result.conversationInfo = converInfo
+        result.matchedCount = JimDbUtil.toNumber(resultSet, 'match_count')
+        resultList.push(result)
+      }
+    }catch (e){
+      console.error(`jimsdk_db_fail. [${this.tableName}] err:${e.message}`)
+    }finally {
+      resultSet?.close()
+    }
+    return resultList
   }
 
   queryMentionMessages(conver:Conversation, startTime:number, count:number, isPositive:boolean):Message[]{

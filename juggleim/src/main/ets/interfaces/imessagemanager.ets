@@ -1,27 +1,27 @@
+import { HashMap } from '@kit.ArkTS'
 import { Conversation } from '../entries/conversation'
 import { Message, MessageContent } from '../entries/message'
+import { MessageQueryOptions } from '../entries/messagequeryoptions'
 import { MessageOptions } from '../entries/messageoptions'
 import { CommonCallback } from './commoncallback'
 import {
-  IMessageUploadProvider,
-  MediaUploadCredentialCallback,
-  MediaUploadErrorCallback,
-  MediaUploadSuccessCallback
-} from './imessageuploadprovider'
-import {
-    BroadcastMessageCallback,
-    ClearMsgOptions,
-    DownloadMediaMessageCancelCallback,
-    DownloadMediaMessageErrorCallback,
-    DownloadMediaMessageProgressCallback,
-    DownloadMediaMessageSuccessCallback,
-    FavoriteMessagesCallback,
-    GetFavoriteMessageOption,
+  BroadcastMessageCallback,
+  ClearMsgOptions,
+  DownloadMediaMessageCancelCallback,
+  DownloadMediaMessageErrorCallback,
+  DownloadMediaMessageProgressCallback,
+  DownloadMediaMessageSuccessCallback,
+  FavoriteMessagesCallback,
+  GetFavoriteMessageOption,
   GetMessageOptions,
-    GroupMessageReadInfoDetailCallback,
-    MessageCallback,
-    MessageReactionsCallback,
-    MuteStatusCallback,
+  GetMessageDirection,
+  IGetLocalAndRemoteMessagesCallback,
+  IGetMessagesCallback,
+  GroupMessageReadInfoDetailCallback,
+  ISearchConversationWithMessageContentCallback,
+  MessageCallback,
+  MessageReactionsCallback,
+  MuteStatusCallback,
   MsgCleanedListener,
   MsgDeletedListener,
   MsgDestroyTimeUpdateListener,
@@ -37,7 +37,6 @@ import {
   TimePeriod,
   TopMessageCallback
 } from './messagetypes'
-import { HashMap } from '@kit.ArkTS'
 
 export interface IMessageManager {
   addMsgReceivedListener(listener: MsgReceivedListener): void
@@ -91,7 +90,11 @@ export interface IMessageManager {
   queryMessages(conver: Conversation, options: GetMessageOptions, callback: QryMessagesCallback): void
   queryLocalMessages(conver: Conversation, options: GetMessageOptions, callback: QryMessagesCallback): void
   queryRemoteMessages(conver: Conversation, options: GetMessageOptions, callback: QryMessagesCallback): void
+  getLocalAndRemoteMessages(conver: Conversation, count: number, startTime: number, direction: GetMessageDirection, callback: IGetLocalAndRemoteMessagesCallback): void
+  getFirstUnreadMessage(conver: Conversation, callback: IGetMessagesCallback): void
+  getMergedMessageList(containerMsgId: string, callback: IGetMessagesCallback): void
   queryMentionMessages(conver: Conversation, count: number, startTime: number, isPositive: boolean, callback: QryMessagesCallback): void
+  searchConversationsWithMessageContent(options: MessageQueryOptions, callback: ISearchConversationWithMessageContentCallback): void
   clearMessages(conver: Conversation, options: ClearMsgOptions, callback: CommonCallback): void
   delMessages(conver: Conversation, msgIds: string[], delScope: number, callback: CommonCallback): void
   getMessagesByClientMsgNos(clientMsgNos: number[]): Message[]
@@ -106,6 +109,7 @@ export interface IMessageManager {
   getGroupMessageReadInfoDetail(conver: Conversation, msgId: string, callback: GroupMessageReadInfoDetailCallback): void
   recallMessage(conver: Conversation, msgId: string, extras: HashMap<string, string>, callback: MessageCallback): void
   searchMessages(params: SearchParams, callback: QryMessagesCallback): void
+  getMessageReadTime(clientMsgNo: number): number
   setLocalAttribute(msgId: string, attribute: string): void
   getLocalAttribute(msgId: string): string
   setLocalAttribue(msgId: string, attribute: string): void

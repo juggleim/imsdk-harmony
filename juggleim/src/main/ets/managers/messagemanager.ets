@@ -19,6 +19,7 @@ import {
   VoiceMessage
 } from '../entries/message'
 import { Conversation, ConversationInfo } from '../entries/conversation'
+import { MessageQueryOptions } from '../entries/messagequeryoptions'
 import { MsgFlagTool } from '../improto/msgflag'
 import { ImClient } from '../imclients/imclient'
 import { CommonCallback } from '../interfaces/commoncallback'
@@ -53,6 +54,8 @@ import {
   GetFavoriteMessageOption,
   GetMessageDirection,
   GetMessageOptions,
+  IGetLocalAndRemoteMessagesCallback,
+  IGetMessagesCallback,
   GroupMessageReadInfoDetailCallback,
   MessageCallback,
   MessageReactionsCallback,
@@ -66,6 +69,7 @@ import {
   MsgReceivedListener,
   MsgRecalledListener,
   MsgTopChangedListener,
+  ISearchConversationWithMessageContentCallback,
   QryMessagesCallback,
   QueryMsgOptions,
   SearchParams,
@@ -84,6 +88,8 @@ export {
   GetFavoriteMessageOption,
   GetMessageDirection,
   GetMessageOptions,
+  IGetLocalAndRemoteMessagesCallback,
+  IGetMessagesCallback,
   GroupMessageReadInfoDetailCallback,
   MessageCallback,
   MessageReactionsCallback,
@@ -97,6 +103,7 @@ export {
   MsgReceivedListener,
   MsgRecalledListener,
   MsgTopChangedListener,
+  ISearchConversationWithMessageContentCallback,
   QryMessagesCallback,
   QueryMsgOptions,
   SearchParams,
@@ -105,6 +112,8 @@ export {
 } from '../interfaces/messagetypes'
 
 const TOP_TRACE_TAG:string = 'TOPTRACE'
+const QRY_FIRST_UNREAD_MSG:string = 'qry_first_unread_msg'
+const QRY_MERGED_MSGS:string = 'qry_merged_msgs'
 
 class MessageSendContext {
   callback:MessageCallback = (_code:number, _message:Message|null)=>{}
@@ -1062,6 +1071,81 @@ export class MessageManager implements IMessageManager{
     return JimDbManager.instance.getMessageDao().getMessagesByClientMsgNos(clientMsgNos)
   }
 
+  getMessageReadTime(clientMsgNo:number):number{
+    if(clientMsgNo <= 0){
+      return 0
+    }
+    let messages = this.getMessagesByClientMsgNos([clientMsgNo])
+    if(messages.length == 0){
+      return 0
+    }
+    return messages[0].readTime
+  }
+
+  getFirstUnreadMessage(conver:Conversation, callback:IGetMessagesCallback):void{
+    let req = immessage.QryFirstUnreadMsgReq.create({})
+    req.targetId = conver.conversationId
+    req.channelType = conver.conversationType
+    req.subChannel = Conversation.normalizeSubChannel(conver.subChannel)
+    let data = immessage.QryFirstUnreadMsgReq.encode(req).finish()
+    this.imclient.query(QRY_FIRST_UNREAD_MSG, conver.conversationId, data, (code, qryAck)=>{
+      if(code != 0){
+        callback(code, [])
+        return
+      }
+      try{
+        let resp = immessage.DownMsgSet.decode(qryAck.data as Uint8Array)
+        let messages:Message[] = []
+        resp.msgs.forEach((msg)=>{
+          messages.push(MsgHandler.downMsg2Message(msg))
+        })
+        this.persistRemoteMessages(messages)
+        callback(0, messages)
+      }catch (e){
+        console.error(`jimsdk_get_first_unread_decode_fail: ${(e as Error).message}`)
+        callback(-1, [])
+      }
+    })
+  }
+
+  getMergedMessageList(containerMsgId:string, callback:IGetMessagesCallback):void{
+    let normalizedContainerMsgId = containerMsgId.trim()
+    if(normalizedContainerMsgId == ''){
+      callback(-1, [])
+      return
+    }
+    let req = immessage.QryMergedMsgsReq.create({})
+    req.startTime = 0
+    req.count = 100
+    req.order = 0
+    let data = immessage.QryMergedMsgsReq.encode(req).finish()
+    this.imclient.query(QRY_MERGED_MSGS, normalizedContainerMsgId, data, (code, qryAck)=>{
+      if(code != 0){
+        callback(code, [])
+        return
+      }
+      try{
+        let resp = immessage.DownMsgSet.decode(qryAck.data as Uint8Array)
+        let messages:Message[] = []
+        resp.msgs.forEach((msg)=>{
+          messages.push(MsgHandler.downMsg2Message(msg))
+        })
+        this.persistRemoteMessages(messages)
+        callback(0, messages)
+      }catch (e){
+        console.error(`jimsdk_get_merged_decode_fail: ${(e as Error).message}`)
+        callback(-1, [])
+      }
+    })
+  }
+
+  searchConversationsWithMessageContent(options:MessageQueryOptions, callback:ISearchConversationWithMessageContentCallback):void{
+    let resultList = JimDbManager.instance.getMessageDao().searchConversationsWithMessageContent(options, new Date().getTime())
+    if(callback != null){
+      callback(resultList)
+    }
+  }
+
   setMessageState(clientMsgNo:number, state:number):void{
     if(clientMsgNo <= 0){
       return
@@ -1643,15 +1727,10 @@ export class MessageManager implements IMessageManager{
   private mergeLocalMessageState(localMsgs:Message[], remoteMsgs:Message[]):void{
     localMsgs.forEach((localMsg)=>{
       remoteMsgs.forEach((remoteMsg)=>{
-        let isSameMessage = false
-        if(localMsg.messageId != '' && remoteMsg.messageId != '' && localMsg.messageId == remoteMsg.messageId){
-          isSameMessage = true
-        } else if(localMsg.clientId != '' && remoteMsg.clientId != '' && localMsg.clientId == remoteMsg.clientId){
-          isSameMessage = true
-        }
-        if(!isSameMessage){
+        if(!this.isSameMessage(localMsg, remoteMsg)){
           return
         }
+        remoteMsg.clientMsgNo = localMsg.clientMsgNo
         remoteMsg.state = localMsg.state
         remoteMsg.direction = localMsg.direction
         remoteMsg.hasRead = localMsg.hasRead
@@ -1662,9 +1741,89 @@ export class MessageManager implements IMessageManager{
         remoteMsg.referredMessage = localMsg.referredMessage
         remoteMsg.mentionInfo = localMsg.mentionInfo
         remoteMsg.localAttribute = localMsg.localAttribute
+        if(localMsg.msgContent != null && remoteMsg.msgContent != null && localMsg.msgContent.constructor == remoteMsg.msgContent.constructor){
+          if(localMsg.msgContent instanceof MediaMessageContent && remoteMsg.msgContent instanceof MediaMessageContent){
+            remoteMsg.msgContent.localPath = localMsg.msgContent.localPath
+            remoteMsg.msgContent.url = localMsg.msgContent.url
+            remoteMsg.msgContent.extra = localMsg.msgContent.extra
+            remoteMsg.msgContent.uploadState = localMsg.msgContent.uploadState
+            remoteMsg.msgContent.uploadProgress = localMsg.msgContent.uploadProgress
+          }
+          if(localMsg.msgContent instanceof ImageMessage && remoteMsg.msgContent instanceof ImageMessage){
+            remoteMsg.msgContent.thumbnail = localMsg.msgContent.thumbnail
+            remoteMsg.msgContent.height = localMsg.msgContent.height
+            remoteMsg.msgContent.width = localMsg.msgContent.width
+            remoteMsg.msgContent.size = localMsg.msgContent.size
+          }else if(localMsg.msgContent instanceof FileMessage && remoteMsg.msgContent instanceof FileMessage){
+            remoteMsg.msgContent.name = localMsg.msgContent.name
+            remoteMsg.msgContent.size = localMsg.msgContent.size
+            remoteMsg.msgContent.type = localMsg.msgContent.type
+          }else if(localMsg.msgContent instanceof VideoMessage && remoteMsg.msgContent instanceof VideoMessage){
+            remoteMsg.msgContent.poster = localMsg.msgContent.poster
+            remoteMsg.msgContent.height = localMsg.msgContent.height
+            remoteMsg.msgContent.width = localMsg.msgContent.width
+            remoteMsg.msgContent.size = localMsg.msgContent.size
+            remoteMsg.msgContent.duration = localMsg.msgContent.duration
+          }else if(localMsg.msgContent instanceof VoiceMessage && remoteMsg.msgContent instanceof VoiceMessage){
+            remoteMsg.msgContent.type = localMsg.msgContent.type
+            remoteMsg.msgContent.duration = localMsg.msgContent.duration
+          }
+        }
         return
       })
     })
+  }
+
+  private isRemoteMessagesNeeded(localMessages:Message[], count:number):boolean{
+    if(localMessages == null || localMessages.length == 0){
+      return true
+    }
+    if(localMessages.length < count){
+      return true
+    }
+    let expectedSeqNo = localMessages[0].msgSeqNo
+    for(let i = 1; i < localMessages.length; i++){
+      let message = localMessages[i]
+      if(message.state != MessageSentState.success || message.msgSeqNo <= 0){
+        continue
+      }
+      if(expectedSeqNo < 0){
+        expectedSeqNo = message.msgSeqNo
+        continue
+      }
+      expectedSeqNo++
+      if(message.msgSeqNo != expectedSeqNo){
+        return true
+      }
+    }
+    return false
+  }
+
+  private isSameMessage(localMsg:Message, remoteMsg:Message):boolean{
+    if(localMsg.messageId != '' && remoteMsg.messageId != '' && localMsg.messageId == remoteMsg.messageId){
+      return true
+    }
+    if(localMsg.clientId != '' && remoteMsg.clientId != '' && localMsg.clientId == remoteMsg.clientId){
+      return true
+    }
+    return false
+  }
+
+  private mergeLocalAndRemoteMessages(localMsgs:Message[], remoteMsgs:Message[]):Message[]{
+    let mergedList:Message[] = remoteMsgs.slice()
+    localMsgs.forEach((localMsg)=>{
+      let isContain = false
+      for(let i = 0; i < mergedList.length; i++){
+        if(this.isSameMessage(localMsg, mergedList[i])){
+          isContain = true
+          break
+        }
+      }
+      if(!isContain){
+        mergedList.push(localMsg)
+      }
+    })
+    return mergedList
   }
 
   queryLocalMessages(conver:Conversation,options:GetMessageOptions,callback:QryMessagesCallback){
@@ -1714,6 +1873,37 @@ export class MessageManager implements IMessageManager{
       }else{
         callback(code,msgs,false)
       }
+    })
+  }
+
+  getLocalAndRemoteMessages(conver:Conversation, count:number, startTime:number, direction:GetMessageDirection, callback:IGetLocalAndRemoteMessagesCallback):void{
+    if(count <= 0){
+      callback.onGetLocalList([], false)
+      return
+    }
+    if(count > 100){
+      count = 100
+    }
+    let options = new GetMessageOptions()
+    options.count = count
+    options.time = startTime
+    options.direction = direction
+    this.queryLocalMessages(conver, options, (_code, localMessages)=>{
+      let needRemote = this.isRemoteMessagesNeeded(localMessages, count)
+      callback.onGetLocalList(localMessages, needRemote)
+      if(!needRemote){
+        return
+      }
+      this.queryRemoteMessages(conver, options, (remoteCode, remoteMessages)=>{
+        if(remoteCode != 0){
+          callback.onGetRemoteListError(remoteCode)
+          return
+        }
+        this.persistRemoteMessages(remoteMessages)
+        let mergeList = this.mergeLocalAndRemoteMessages(localMessages, remoteMessages)
+        mergeList.sort((left, right) => left.sentTime - right.sentTime)
+        callback.onGetRemoteList(mergeList)
+      })
     })
   }
 
