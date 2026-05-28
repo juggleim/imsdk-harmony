@@ -5,7 +5,7 @@ import { JimDbUtil } from "./dbutil"
 import { Message } from "../entries/message";
 import { JimDbManager } from "./dbmanager";
 import { MsgHandler } from "../entries/msghandler";
-import { GetConversationDirection, GetConversationOptions } from "../interfaces/conversationtypes";
+import { GetConversationDirection, GetConversationOptions, TopConverSortType } from "../interfaces/conversationtypes";
 import { ConverTagDao } from "./convertagdao";
 
 export class ConversationDao{
@@ -16,7 +16,7 @@ export class ConversationDao{
 
   queryConversations(start:number,count:number,isPositive:boolean):ConversationInfo[]{
     let sql = `SELECT * FROM ${this.tableName} WHERE conver_time ${isPositive ? '>' : '<'} ?`
-    sql = sql + ` ORDER BY is_top DESC, top_time DESC, conver_time ${isPositive ? 'ASC' : 'DESC'} LIMIT ${count}`
+    sql = sql + ` ${this.buildConversationOrderClause(isPositive)} LIMIT ${count}`
     let args:Array<relationalStore.ValueType> = []
     args.push(start)
     let resultSet:relationalStore.ResultSet|undefined
@@ -62,7 +62,7 @@ export class ConversationDao{
       args.push(options.tagId)
     }
     let sortDirection = options.direction == GetConversationDirection.Forward ? 'ASC' : 'DESC'
-    sql = sql + ` ORDER BY is_top DESC, top_time DESC, conver_time ${sortDirection} LIMIT ${options.count}`
+    sql = sql + ` ${this.buildConversationOrderClause(options.direction == GetConversationDirection.Forward, sortDirection)} LIMIT ${options.count}`
     let resultSet:relationalStore.ResultSet|undefined
     let converList:ConversationInfo[] = []
     try{
@@ -222,6 +222,51 @@ export class ConversationDao{
     return 0
   }
 
+  queryUnreadCountByTypes(conversationTypes:number[]):number{
+    let normalizedTypes:number[] = []
+    conversationTypes.forEach((conversationType)=>{
+      if(normalizedTypes.indexOf(conversationType) < 0){
+        normalizedTypes.push(conversationType)
+      }
+    })
+    if(normalizedTypes.length == 0){
+      return 0
+    }
+    let placeholders:string[] = []
+    let args:Array<relationalStore.ValueType> = []
+    normalizedTypes.forEach((conversationType)=>{
+      placeholders.push('?')
+      args.push(conversationType)
+    })
+    let sql = `SELECT SUM(CASE
+        WHEN conver.last_msg_index = conver.last_read_msg_index AND conver.unread_tag = 1 THEN 1
+        WHEN conver.last_msg_index > conver.last_read_msg_index THEN conver.last_msg_index - conver.last_read_msg_index
+        ELSE 0
+      END) AS unread_count
+      FROM ${this.tableName} conver
+      WHERE conver.conver_type IN (${placeholders.join(',')})`
+    let resultSet:relationalStore.ResultSet|undefined
+    try{
+      resultSet = JimDbManager.instance.getDb()?.querySqlSync(sql, args)
+      if(resultSet?.goToNextRow()){
+        return JimDbUtil.toNumber(resultSet,'unread_count')
+      }
+    }catch (e) {
+      console.error(`jimsdk_db_fail. [${this.tableName}] err:${e.message}`)
+    }finally {
+      resultSet?.close()
+    }
+    return 0
+  }
+
+  getTopConversationsOrderType():TopConverSortType{
+    return JimDbManager.instance.getConfDao().getTopConverSortType()
+  }
+
+  setTopConversationsOrderType(sortType:TopConverSortType):void{
+    JimDbManager.instance.getConfDao().setTopConverSortType(sortType)
+  }
+
   delConver(converId:string,converType:number, subChannel:string = ''):number{
     let delPre = new relationalStore.RdbPredicates(this.tableName)
     delPre.equalTo("conver_id",converId)
@@ -369,5 +414,17 @@ export class ConversationDao{
 
     conver.lastMessage = msg
     return conver
+  }
+
+  private buildConversationOrderClause(isPositive:boolean, sortDirection:string = ''):string{
+    let normalizedDirection = sortDirection
+    if(normalizedDirection == ''){
+      normalizedDirection = isPositive ? 'ASC' : 'DESC'
+    }
+    let topOrderType = this.getTopConversationsOrderType()
+    if(topOrderType == TopConverSortType.BySortTime){
+      return `ORDER BY is_top DESC, conver_time ${normalizedDirection}, top_time DESC`
+    }
+    return `ORDER BY is_top DESC, top_time DESC, conver_time ${normalizedDirection}`
   }
 }

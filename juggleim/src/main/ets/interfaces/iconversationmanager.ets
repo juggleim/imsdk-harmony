@@ -44,9 +44,11 @@ export interface IConversationManager {
   setUnread(conver: Conversation, callback: CommonCallback): void
   delConversation(conver: Conversation, callback: CommonCallback): void
   setTop(conver: Conversation, isTop: boolean, callback: CommonCallback): void
+  setTopConversationsOrderType(sortType: TopConverSortType): void
   getTopConversations(sortType: TopConverSortType, start: number, isPositive: boolean, callback: ConversationsCallback): void
   setMute(conver: Conversation, isMute: boolean, callback: CommonCallback): void
   getTotalUnreadCount(callback: TotalUnreadCountCallback): void
+  getUnreadCountWithTypes(conversationTypes: number[], callback: TotalUnreadCountCallback): void
   getTotalUnreadCountByTag(tagId: string, callback: TotalUnreadCountCallback): void
   clearTotalUnreadCount(callback: CommonCallback): void
   clearUnreadCount(conver: Conversation, callback: CommonCallback): void

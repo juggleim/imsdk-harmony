@@ -3,6 +3,7 @@ import { relationalStore } from "@kit.ArkData"
 import { JimDbUtil } from "./dbutil"
 import { JimDbManager } from "./dbmanager"
 import { JimUtil } from "../commons/jimutil"
+import { TopConverSortType } from "../interfaces/conversationtypes"
 
 export class ConfDao{
   static instance:ConfDao = new ConfDao()
@@ -96,6 +97,21 @@ export class ConfDao{
     let conf = new Conf()
     conf.key = 'sendbox_sync_time'
     conf.value = t.toString()
+    this.upsert(conf)
+  }
+
+  getTopConverSortType():TopConverSortType{
+    let sortType = JimUtil.stringToNumber(this.getByKey('top_conver_sort_type'))
+    if(sortType != TopConverSortType.BySortTime){
+      return TopConverSortType.ByTopTime
+    }
+    return TopConverSortType.BySortTime
+  }
+
+  setTopConverSortType(sortType:TopConverSortType){
+    let conf = new Conf()
+    conf.key = 'top_conver_sort_type'
+    conf.value = sortType.toString()
     this.upsert(conf)
   }
 

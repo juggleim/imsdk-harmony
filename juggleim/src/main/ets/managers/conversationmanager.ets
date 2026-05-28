@@ -417,6 +417,12 @@ export class ConversationManager implements IConversationManager{
     })
   }
 
+  setTopConversationsOrderType(sortType:TopConverSortType):void{
+    let normalizedSortType = sortType == TopConverSortType.BySortTime ?
+      TopConverSortType.BySortTime : TopConverSortType.ByTopTime
+    JimDbManager.instance.getConfDao().setTopConverSortType(normalizedSortType)
+  }
+
   getTopConversations(sortType:TopConverSortType,start:number,isPositive:boolean,callback:ConversationsCallback){
     let order:number = 0
     if(isPositive){
@@ -501,6 +507,16 @@ export class ConversationManager implements IConversationManager{
         callback(code,0)
       }
     })
+  }
+
+  getUnreadCountWithTypes(conversationTypes:number[], callback:TotalUnreadCountCallback){
+    let normalizedTypes:number[] = []
+    conversationTypes.forEach((conversationType)=>{
+      if(normalizedTypes.indexOf(conversationType) < 0){
+        normalizedTypes.push(conversationType)
+      }
+    })
+    callback(0, JimDbManager.instance.getConversationDao().queryUnreadCountByTypes(normalizedTypes))
   }
 
   getTotalUnreadCountByTag(tagId:string,callback:TotalUnreadCountCallback){
