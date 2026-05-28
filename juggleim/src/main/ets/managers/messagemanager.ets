@@ -2466,12 +2466,25 @@ export class MessageManager implements IMessageManager{
     callback(0, msgs, false)
   }
 
-  setLocalAttribute(msgId:string,attribute:string){
-    JimDbManager.instance.getMessageDao().updateLocalAttribute(msgId, attribute)
+  setLocalAttribute(msgId:string,attribute:string):void
+  setLocalAttribute(clientMsgNo:number,attribute:string):void
+  setLocalAttribute(msgId:string|number,attribute:string):void{
+    let msgDao = JimDbManager.instance.getMessageDao()
+    if(typeof msgId === 'number'){
+      msgDao.updateLocalAttributeByClientMsgNo(msgId, attribute)
+    }else{
+      msgDao.updateLocalAttribute(msgId, attribute)
+    }
   }
 
-  getLocalAttribute(msgId:string):string{
-    return JimDbManager.instance.getMessageDao().getLocalAttribute(msgId)
+  getLocalAttribute(msgId:string):string
+  getLocalAttribute(clientMsgNo:number):string
+  getLocalAttribute(msgId:string|number):string{
+    let msgDao = JimDbManager.instance.getMessageDao()
+    if(typeof msgId === 'number'){
+      return msgDao.getLocalAttributeByClientMsgNo(msgId)
+    }
+    return msgDao.getLocalAttribute(msgId)
   }
 
   setLocalAttribue(msgId:string,attribute:string){

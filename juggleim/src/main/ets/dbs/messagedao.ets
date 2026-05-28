@@ -687,6 +687,21 @@ export class MessageDao{
     return 0
   }
 
+  updateLocalAttributeByClientMsgNo(clientMsgNo:number, attribute:string):number{
+    if(clientMsgNo <= 0){
+      return 0
+    }
+    let sql = `UPDATE ${this.tableName} SET local_attribute=? WHERE client_msg_no=?`
+    let args:Array<relationalStore.ValueType> = [attribute, clientMsgNo]
+    try{
+      let vt = JimDbManager.instance.getDb()?.executeSync(sql,args)
+      return vt as number
+    }catch (e) {
+      console.error(`jimsdk_db_fail. [${this.tableName}] err:${e.message}`)
+    }
+    return 0
+  }
+
   updateDestroyTime(msgId:string, destroyTime:number):number{
     let sql = `UPDATE ${this.tableName} SET destroy_time=? WHERE msg_id=?`
     let args:Array<relationalStore.ValueType> = [destroyTime, msgId]
@@ -715,6 +730,26 @@ export class MessageDao{
   getLocalAttribute(msgId:string):string{
     let sql = `SELECT local_attribute FROM ${this.tableName} WHERE msg_id=?`
     let args:Array<relationalStore.ValueType> = [msgId]
+    let resultSet:relationalStore.ResultSet|undefined
+    try{
+      resultSet = JimDbManager.instance.getDb()?.querySqlSync(sql,args)
+      if(resultSet?.goToNextRow()){
+        return JimDbUtil.toString(resultSet,'local_attribute')
+      }
+    }catch (e) {
+      console.error(`jimsdk_db_fail. [${this.tableName}] err:${e.message}`)
+    }finally {
+      resultSet?.close()
+    }
+    return ''
+  }
+
+  getLocalAttributeByClientMsgNo(clientMsgNo:number):string{
+    if(clientMsgNo <= 0){
+      return ''
+    }
+    let sql = `SELECT local_attribute FROM ${this.tableName} WHERE client_msg_no=?`
+    let args:Array<relationalStore.ValueType> = [clientMsgNo]
     let resultSet:relationalStore.ResultSet|undefined
     try{
       resultSet = JimDbManager.instance.getDb()?.querySqlSync(sql,args)

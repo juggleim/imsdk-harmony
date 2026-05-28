@@ -59,7 +59,7 @@
 | SDK-11 | 消息接口 - query/search | Harmony 缺 `getFirstUnreadMessage/searchConversationsWithMessageContent/getLocalAndRemoteMessages/getMergedMessageList/getMessageReadTime` | 补齐高级查询与搜索能力 | `messagemanager.ets`、DAO、proto/network 层 | 查询结果、分页、时间锚点、远端回包处理与 Android 等价 | P1 |
 | SDK-12 | 消息接口 - local attribute | Harmony 只有按 `msgId` 存取，本质弱于 Android 按 `clientMsgNo` 管理 | 补齐按 `clientMsgNo` 的本地属性能力 | `messagemanager.ets`、`messagedao.ets` | 本地消息 ID 未换远端 ID 前后都能稳定读写属性 | P1 |
 | SDK-13 | 消息接口 - uploadImage | Harmony 无 Android 公共 `uploadImage(path)` 能力 | 增加等价 public API，并接入现有上传体系 | `interfaces/imessagemanager.ets`、`messagemanager.ets` | demo 资料编辑、图片上传等可直接调用 SDK 能力 | P1 |
-| SDK-14 | User/Group/Friend facade | Harmony 拆成 `UserInfoManager + GroupInfoManager`，缺 friend 与 batch 能力 | 补齐 `getUserInfoList/getGroupInfoList/getFriendInfo/fetchFriendInfo` 等，必要时增加 facade | `interfaces/*userinfo*.ets`、`managers/*` | API 能覆盖 Android 所有 user/group/friend 查询场景 | P1 |
+| SDK-14 | User/Group/Friend facade | Harmony 拆成 `UserInfoManager + GroupInfoManager`，当前已补 batch / friend / group member 入口，但仍需继续对拍 Android 的统一门面行为 | 继续核对 public facade 的覆盖面与远端刷新语义，必要时再收敛统一入口 | `interfaces/*userinfo*.ets`、`managers/*` | API 能覆盖 Android 所有 user/group/friend 查询场景 | P1 |
 | SDK-15 | 连接实现逻辑 | Harmony 连接实现较轻，缺 Android 状态机级别的状态收敛 | 对齐关键逻辑：状态流转、断线恢复、DB open/close 通知、参数注入时机 | `connectionmanager.ets`、`imclients/imclient.ets` | 日志链路与行为结果与 Android 一致 | P1 |
 | SDK-16 | 会话排序/未读/置顶逻辑 | 现已修过一部分，但需要从 SDK 层彻底对齐 Android | 统一会话排序、topTime、未读标签、mute/top 回显与回写逻辑 | `conversationmanager.ets`、`msgsyncmanager.ets`、DAO | 列表排序、详情回显、重启后状态、同步后状态全部一致 | P1 |
 | SDK-17 | reaction/favorite/top/mute 同步链路 | 有功能，但需核实本地/远端/回调/回显时机是否完全等价 | 按 Android 链路逐项收敛 | `messagemanager.ets`、`msgsyncmanager.ets`、DAO | 本地先行、远端成功、DB 回写、listener 派发顺序与 Android 对齐 | P1 |
@@ -173,7 +173,7 @@ ArkTS 兼容约束已单独记录在 [docs/arkts-compat-notes.md](/Users/helena/
 | SDK-11 | 进行中 | 已有本地搜索、mention 查询、部分历史消息查询；但 `getFirstUnreadMessage/searchConversationsWithMessageContent/getLocalAndRemoteMessages/getMergedMessageList/getMessageReadTime` 未补齐 | 按接口缺口逐个补，优先 `getFirstUnreadMessage` 和 `getLocalAndRemoteMessages` |
 | SDK-12 | 进行中 | 已为消息表、SQL migration、DAO 和 manager 补 `clientMsgNo` 存储与查询 / 状态更新入口；但按 `clientMsgNo` 的本地属性接口和兼容迁移还没做完 | 补 `clientMsgNo` 维度的本地属性读写接口，并验证旧库升级后的兼容性 |
 | SDK-13 | 进行中 | 已有上传 provider 和 `sendMediaMessage`，但 Android 对外 `uploadImage(path)` 公共 API 还没单独补出 | 增加 `uploadImage(path)` 并复用现有上传 provider 返回值 |
-| SDK-14 | 进行中 | group/user 一部分能力已补，但 friend facade、批量 user/group/friend 查询仍不完整 | 补 batch facade 和 friend 相关 facade，统一到 public interface |
+| SDK-14 | 进行中 | 已补 batch user/group/friend 查询和 group/member 统一入口，但仍需对拍 Android 的统一门面语义 | 继续核对 public facade 覆盖面与远端刷新语义，必要时再收敛统一入口 |
 | SDK-15 | 待开始 | 当前连接实现仍偏轻量，尚未形成 Android 那种状态机级收敛逻辑 | 在 SDK-08 完成后再做状态机、断线恢复、DB open/close 通知收口 |
 | SDK-16 | 进行中 | 置顶、免打扰、清未读、tag 关系和部分本地回写已补；但排序、topTime、重启后状态与 Android 还没完整对拍 | 做会话列表排序、置顶/免打扰回显、同步后状态回归 |
 | SDK-17 | 进行中 | reaction/favorite/top/mute 功能链已具备，但本地先行、远端成功、DB 回写、listener 时序还没系统对拍 | 以日志方式跑完整链路，对照 Android 的事件顺序收口 |

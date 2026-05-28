@@ -52,6 +52,49 @@ export class UserDao{
     return null
   }
 
+  getUserList(userIdList:string[]):UserInfo[]{
+    let requestIds:string[] = []
+    userIdList.forEach((userId)=>{
+      let normalizedUserId = userId.trim()
+      if(normalizedUserId != '' && requestIds.indexOf(normalizedUserId) < 0){
+        requestIds.push(normalizedUserId)
+      }
+    })
+    if(requestIds.length == 0){
+      return []
+    }
+    let placeholders:string[] = []
+    let args:Array<relationalStore.ValueType> = []
+    requestIds.forEach((userId)=>{
+      placeholders.push('?')
+      args.push(userId)
+    })
+    let sql = `SELECT user_id,name,portrait,user_type,upd_time FROM ${this.tableName} WHERE user_id IN (${placeholders.join(',')})`
+    let resultSet:relationalStore.ResultSet|undefined
+    let queriedUsers:UserInfo[] = []
+    try{
+      resultSet = JimDbManager.instance.getDb()?.querySqlSync(sql,args)
+      while (resultSet?.goToNextRow()){
+        queriedUsers.push(this.toUser(resultSet))
+      }
+    }catch (e){
+      console.error(`jimsdk_db_fail. [${this.tableName}] err:${e.message}`)
+    }finally {
+      resultSet?.close()
+    }
+    let orderedUsers:UserInfo[] = []
+    requestIds.forEach((requestId)=>{
+      for(let i = 0; i < queriedUsers.length; i++){
+        let user = queriedUsers[i]
+        if(user.userId == requestId){
+          orderedUsers.push(user)
+          break
+        }
+      }
+    })
+    return orderedUsers
+  }
+
   upsert(user:UserInfo):number{
     let sql = `INSERT OR REPLACE INTO ${this.tableName} (user_id,name,portrait,user_type,upd_time) VALUES (?,?,?,?,?)`
     let args:Array<relationalStore.ValueType> = []

@@ -245,16 +245,33 @@ Android `IUserInfoManager` 是统一门面，覆盖：
 
 ### Harmony
 
-Harmony 分成两套：
+Harmony 分成两套，但 `IUserInfoManager` 现在已经承接了 user/group/friend 的批量和群成员查询入口：
 
 - `IUserInfoManager`
   - `saveUserInfo`
   - `getLocalUserInfo`
+  - `getUserInfoList`
+  - `getGroupInfoList`
+  - `getFriendInfoList`
+  - `getLocalGroupInfo`
+  - `getGroupInfo`
+  - `queryGroupInfo`
+  - `getLocalGroupMember`
+  - `getGroupMember`
+  - `queryGroupMember`
+  - `getLocalGroupMembers`
+  - `queryGroupMembers`
   - `getUserInfo`
   - `getRemoteUserInfo`
+  - `saveFriendInfo`
+  - `getLocalFriendInfo`
+  - `getFriendInfo`
+  - `fetchFriendInfo`
+  - `checkFriend`
 - `IGroupInfoManager`
   - `saveGroupInfo`
   - `getLocalGroupInfo`
+  - `getGroupInfoList`
   - `getGroupInfo`
   - `queryGroupInfo`
   - `getLocalGroupMember`
@@ -265,17 +282,11 @@ Harmony 分成两套：
 
 ### 缺口
 
-- 无 friend API：
-  - `getFriendInfo`
-  - `fetchFriendInfo`
-- 无批量用户 / 群组接口：
-  - `getUserInfoList`
-  - `getGroupInfoList`
-- 无 Android 那种统一 user/group/friend facade
+- 仍需继续对拍 Android 的统一门面语义，确认远端刷新和返回值行为完全一致
 
 ### 结论
 
-Harmony 的 user/group 数据已经能支撑聊天与 demo，但 **friend 域缺失**，这会直接影响 SDK 与 demo 的好友相关能力对齐。
+Harmony 的 user/group/friend 数据面已经覆盖了大部分查询场景，但 **统一门面的行为和 Android 仍需继续对拍**。
 
 ## 4.5 `IChatroomManager`
 

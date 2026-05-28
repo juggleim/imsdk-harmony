@@ -37,6 +37,11 @@ export class GroupInfoManager implements IGroupInfoManager{
     return null
   }
 
+  getGroupInfoList(groupIdList:string[]):GroupInfo[]{
+    let dao = JimDbManager.instance.getGroupDao()
+    return dao.getGroupList(groupIdList)
+  }
+
   getGroupInfo(groupId:string):GroupInfo|null{
     if(groupId == ''){
       return null

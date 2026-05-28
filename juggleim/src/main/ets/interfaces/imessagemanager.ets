@@ -111,6 +111,8 @@ export interface IMessageManager {
   searchMessages(params: SearchParams, callback: QryMessagesCallback): void
   getMessageReadTime(clientMsgNo: number): number
   setLocalAttribute(msgId: string, attribute: string): void
+  setLocalAttribute(clientMsgNo: number, attribute: string): void
   getLocalAttribute(msgId: string): string
+  getLocalAttribute(clientMsgNo: number): string
   setLocalAttribue(msgId: string, attribute: string): void
 }

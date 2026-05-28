@@ -1,9 +1,11 @@
 import { JimDbManager } from "../dbs/dbmanager";
+import { GroupInfo, GroupMember } from "../entries/group";
 import { FriendInfo, UserInfo } from "../entries/user";
 import { ImClient } from "../imclients/imclient";
 import { immessage } from "../improto/immessage";
 import { JimUtil } from "../commons/jimutil";
 import { IUserInfoManager } from '../interfaces/iuserinfomanager'
+import { GroupInfoCallback, GroupMemberCallback, GroupMembersCallback } from '../interfaces/igroupinfomanager'
 import { FriendInfoCallback, UserInfoCallback } from '../interfaces/userinfotypes'
 import { JuggleIm } from '../juggleim'
 
@@ -35,6 +37,51 @@ export class UserInfoManager implements IUserInfoManager{
       return user
     }
     return null
+  }
+
+  getUserInfoList(userIdList:string[]):UserInfo[]{
+    let userDao = JimDbManager.instance.getUserDao()
+    return userDao.getUserList(userIdList)
+  }
+
+  getGroupInfoList(groupIdList:string[]):GroupInfo[]{
+    return JuggleIm.instance.getGroupInfoManager().getGroupInfoList(groupIdList)
+  }
+
+  getFriendInfoList(friendIdList:string[]):FriendInfo[]{
+    return JimDbManager.instance.getFriendDao().getFriendList(friendIdList)
+  }
+
+  getLocalGroupInfo(groupId:string):GroupInfo|null{
+    return JuggleIm.instance.getGroupInfoManager().getLocalGroupInfo(groupId)
+  }
+
+  getGroupInfo(groupId:string):GroupInfo|null{
+    return JuggleIm.instance.getGroupInfoManager().getGroupInfo(groupId)
+  }
+
+  queryGroupInfo(groupId:string, callback:GroupInfoCallback):void{
+    JuggleIm.instance.getGroupInfoManager().queryGroupInfo(groupId, callback)
+  }
+
+  getLocalGroupMember(groupId:string, memberId:string):GroupMember|null{
+    return JuggleIm.instance.getGroupInfoManager().getLocalGroupMember(groupId, memberId)
+  }
+
+  getGroupMember(groupId:string, memberId:string):GroupMember|null{
+    return JuggleIm.instance.getGroupInfoManager().getGroupMember(groupId, memberId)
+  }
+
+  queryGroupMember(groupId:string, memberId:string, callback:GroupMemberCallback):void{
+    JuggleIm.instance.getGroupInfoManager().queryGroupMember(groupId, memberId, callback)
+  }
+
+  getLocalGroupMembers(groupId:string):GroupMember[]{
+    return JuggleIm.instance.getGroupInfoManager().getLocalGroupMembers(groupId)
+  }
+
+  queryGroupMembers(groupId:string, callback:GroupMembersCallback):void{
+    JuggleIm.instance.getGroupInfoManager().queryGroupMembers(groupId, callback)
   }
 
   getUserInfo(userid:string):Promise<UserInfo>{

@@ -7,6 +7,7 @@ export type GroupMemberCallback = (code: number, member: GroupMember | null) => 
 export interface IGroupInfoManager {
   saveGroupInfo(grpInfo: GroupInfo): void
   getLocalGroupInfo(groupId: string): GroupInfo | null
+  getGroupInfoList(groupIdList: string[]): GroupInfo[]
   getGroupInfo(groupId: string): GroupInfo | null
   queryGroupInfo(groupId: string, callback: GroupInfoCallback): void
   getLocalGroupMember(groupId: string, memberId: string): GroupMember | null

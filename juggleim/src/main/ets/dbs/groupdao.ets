@@ -51,6 +51,49 @@ export class GroupDao{
     return null
   }
 
+  getGroupList(groupIdList:string[]):GroupInfo[]{
+    let requestIds:string[] = []
+    groupIdList.forEach((groupId)=>{
+      let normalizedGroupId = groupId.trim()
+      if(normalizedGroupId != '' && requestIds.indexOf(normalizedGroupId) < 0){
+        requestIds.push(normalizedGroupId)
+      }
+    })
+    if(requestIds.length == 0){
+      return []
+    }
+    let placeholders:string[] = []
+    let args:Array<relationalStore.ValueType> = []
+    requestIds.forEach((groupId)=>{
+      placeholders.push('?')
+      args.push(groupId)
+    })
+    let sql = `SELECT group_id,name,portrait,upd_time FROM ${this.tableName} WHERE group_id IN (${placeholders.join(',')})`
+    let resultSet:relationalStore.ResultSet|undefined
+    let queriedGroups:GroupInfo[] = []
+    try{
+      resultSet = JimDbManager.instance.getDb()?.querySqlSync(sql,args)
+      while (resultSet?.goToNextRow()){
+        queriedGroups.push(this.toGroupInfo(resultSet))
+      }
+    }catch (e) {
+      console.error(`jimsdk_db_fail. [${this.tableName}] err:${e.message}`)
+    }finally {
+      resultSet?.close()
+    }
+    let orderedGroups:GroupInfo[] = []
+    requestIds.forEach((requestId)=>{
+      for(let i = 0; i < queriedGroups.length; i++){
+        let group = queriedGroups[i]
+        if(group.groupId == requestId){
+          orderedGroups.push(group)
+          break
+        }
+      }
+    })
+    return orderedGroups
+  }
+
   upsert(grp:GroupInfo):number{
     let sql = `INSERT OR REPLACE INTO ${this.tableName} (group_id,name,portrait,upd_time) VALUES (?,?,?,?)`
     let args:Array<relationalStore.ValueType> = []
