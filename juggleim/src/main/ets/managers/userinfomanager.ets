@@ -1,10 +1,11 @@
 import { JimDbManager } from "../dbs/dbmanager";
-import { UserInfo } from "../entries/user";
+import { FriendInfo, UserInfo } from "../entries/user";
 import { ImClient } from "../imclients/imclient";
 import { immessage } from "../improto/immessage";
 import { JimUtil } from "../commons/jimutil";
 import { IUserInfoManager } from '../interfaces/iuserinfomanager'
-import { UserInfoCallback } from '../interfaces/userinfotypes'
+import { FriendInfoCallback, UserInfoCallback } from '../interfaces/userinfotypes'
+import { JuggleIm } from '../juggleim'
 
 export { UserInfoCallback } from '../interfaces/userinfotypes'
 
@@ -79,6 +80,103 @@ export class UserInfoManager implements IUserInfoManager{
       }else{
         callback(code,user)
       }
+    })
+  }
+
+  saveFriendInfo(friendInfo:FriendInfo){
+    JimDbManager.instance.getFriendDao().upsert(friendInfo)
+  }
+
+  getLocalFriendInfo(userid:string):FriendInfo|null{
+    return JimDbManager.instance.getFriendDao().getFriend(userid)
+  }
+
+  getFriendInfo(userid:string):FriendInfo|null{
+    if(userid == ''){
+      return null
+    }
+    let localFriend = this.getLocalFriendInfo(userid)
+    if(localFriend != null){
+      return localFriend
+    }
+    this.fetchFriendInfo(userid).then((friendInfo)=>{
+      if(friendInfo.updTime > 0){
+        this.saveFriendInfo(friendInfo)
+      }
+    })
+    return null
+  }
+
+  fetchFriendInfo(userid:string):Promise<FriendInfo>{
+    return new Promise((resolve)=>{
+      let friendInfo = new FriendInfo()
+      friendInfo.userId = userid
+      if(userid == ''){
+        resolve(friendInfo)
+        return
+      }
+      this.queryFriendPage(userid, '', friendInfo, resolve)
+    })
+  }
+
+  checkFriend(userid:string, callback:FriendInfoCallback):void{
+    if(userid == ''){
+      callback(-1, new FriendInfo())
+      return
+    }
+    let req = immessage.CheckFriendsReq.create({})
+    req.friendIds = [userid]
+    let data = immessage.CheckFriendsReq.encode(req).finish()
+    this.imclient.query("check_friends", JuggleIm.instance.userId, data, (code, qryAck)=>{
+      let friendInfo = this.getLocalFriendInfo(userid) ?? new FriendInfo()
+      friendInfo.userId = userid
+      friendInfo.updTime = Date.now()
+      if(code != 0){
+        callback(code, friendInfo)
+        return
+      }
+      let resp = immessage.CheckFriendsResp.decode(qryAck.data as Uint8Array)
+      friendInfo.isFriend = resp.checkResults != undefined && resp.checkResults[userid] == true
+      this.saveFriendInfo(friendInfo)
+      callback(0, friendInfo)
+    })
+  }
+
+  private queryFriendPage(userid:string, offset:string, friendInfo:FriendInfo, resolve:(friendInfo:FriendInfo)=>void):void{
+    let req = immessage.QryFriendsReq.create({})
+    req.limit = 200
+    req.offset = offset
+    let data = immessage.QryFriendsReq.encode(req).finish()
+    this.imclient.query("qry_friends", JuggleIm.instance.userId, data, (code, qryAck)=>{
+      if(code != 0){
+        resolve(friendInfo)
+        return
+      }
+      let resp = immessage.QryFriendsResp.decode(qryAck.data as Uint8Array)
+      let matched = resp.items.find((item)=>{
+        return item.friendId == userid
+      })
+      if(matched != undefined){
+        friendInfo.isFriend = true
+        friendInfo.updTime = Date.now()
+        this.saveFriendInfo(friendInfo)
+        resolve(friendInfo)
+        return
+      }
+      let nextOffset = resp.offset != undefined ? resp.offset as string : ''
+      if(nextOffset != ''){
+        this.queryFriendPage(userid, nextOffset, friendInfo, resolve)
+        return
+      }
+      let localFriend = this.getLocalFriendInfo(userid)
+      if(localFriend != null){
+        resolve(localFriend)
+        return
+      }
+      friendInfo.isFriend = false
+      friendInfo.updTime = Date.now()
+      this.saveFriendInfo(friendInfo)
+      resolve(friendInfo)
     })
   }
 }
