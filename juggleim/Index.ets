@@ -1,6 +1,6 @@
 export { JuggleIm, JimConfig } from './src/main/ets/juggleim'
 
-export { ConnectionStatusListener, IConnectionManager } from './src/main/ets/interfaces/iconnectionmanager'
+export { ConnectionStatusListener, ConnectionStatusListenerValue, ConnectionStatusObserver, IConnectionManager } from './src/main/ets/interfaces/iconnectionmanager'
 export { IChatroomManager } from './src/main/ets/interfaces/ichatroommanager'
 export { IConversationManager } from './src/main/ets/interfaces/iconversationmanager'
 export { IMessageManager } from './src/main/ets/interfaces/imessagemanager'

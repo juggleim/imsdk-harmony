@@ -53,7 +53,7 @@
 | SDK-05 | 本地存储 - moment | Harmony `MomentManager` 只有内存缓存，无 SQLite 持久化 | 新增 moment 表与 DAO，对齐 Android `MomentSql/DBManager` 行为 | 新增 SQL、DAO、`momentmanager.ets` | 朋友圈列表/详情/评论/点赞重启后可回显，本地缓存命中逻辑与 Android 一致 | P0 |
 | SDK-06 | 本地存储 - conversation tag 元数据 | Harmony 只有 `conversation_tags` 关系表，无 `conversation_tag_info` | 补齐 tag info 持久化与同步处理 | SQL、DAO、`conversationmanager.ets`、`msgsyncmanager.ets` | tag 创建/改名/删除/查询/会话绑定关系可持久化并回显 | P0 |
 | SDK-07 | 消息字段域 | Harmony `messages` 缺 `clientMsgNo/life_time/life_time_after_read/destroy_time/read_time/subchannel` 等 | 补齐关键字段与 DAO 查询能力 | SQL、`messagedao.ets`、`entries/message.ets` | 可支持 resend、消息状态回写、销毁/已读时间等 Android 等价逻辑 | P0 |
-| SDK-08 | 连接接口 | Harmony `IConnectionManager` 缺 `disconnect(receivePush)`、语言、连接参数、连接状态、DB 生命周期监听 | 补齐 public interface 和实现链路 | `interfaces/iconnectionmanager.ets`、`managers/connectionmanager.ets` | API 对齐 Android，推送语言/receivePush/headers/状态回调可用 | P0 |
+| SDK-08 | 连接接口 | Harmony `IConnectionManager` 已补 `disconnect(receivePush)`、语言、连接参数、连接状态、keyed 监听、DB 生命周期监听；当前主要是做回归验证 | 继续核对 public interface 和实现链路 | `interfaces/iconnectionmanager.ets`、`managers/connectionmanager.ets` | API 对齐 Android，推送语言/receivePush/headers/状态回调可用 | P0 |
 | SDK-09 | 会话接口 - tag/full query | Harmony 缺完整 tag API、`getUnreadCountWithTypes`、`setTopConversationsOrderType`、sync/tag listener | 补齐 `IConversationManager` 到 Android 等价能力 | `interfaces/iconversationmanager.ets`、`managers/conversationmanager.ets` | tag 全链路、类型未读统计、top 排序策略、listener 全部可用 | P0 |
 | SDK-10 | 消息接口 - resend/state | Harmony 缺 `resendMessage/resendMediaMessage/saveMessage/getMessagesByClientMsgNos/setMessageState` 等 | 补齐发送失败恢复和状态控制能力 | `interfaces/imessagemanager.ets`、`managers/messagemanager.ets`、`dbs/messagedao.ets` | 文本/媒体失败后可重发，状态迁移与 Android 一致，DB 正确回写 | P0 |
 | SDK-11 | 消息接口 - query/search | Harmony 缺 `getFirstUnreadMessage/searchConversationsWithMessageContent/getLocalAndRemoteMessages/getMergedMessageList/getMessageReadTime` | 补齐高级查询与搜索能力 | `messagemanager.ets`、DAO、proto/network 层 | 查询结果、分页、时间锚点、远端回包处理与 Android 等价 | P1 |
@@ -167,14 +167,14 @@ ArkTS 兼容约束已单独记录在 [docs/arkts-compat-notes.md](/Users/helena/
 | SDK-05 | 已实现（待验证） | `momentdao.ets` 与 `momentmanager.ets` 已形成持久化读写闭环 | 验证列表缓存命中、详情回显、评论点赞后重启恢复 |
 | SDK-06 | 已实现（待验证） | `conversation_tag_infos` DAO、tag 元数据缓存、查询和同步写回已落地 | 验证 tag 创建/改名/删除/会话绑定关系的回显与重启恢复 |
 | SDK-07 | 进行中 | `subchannel/lifeTime/lifeTimeAfterRead/destroyTime/readTime` 已进入消息模型、DAO、proto 和部分 sync 逻辑；`clientMsgNo` 字段、SQL、DAO 查询、状态回写和 resend 入口已补，但还缺编译与升级验证 | 重新编译验证 `clientMsgNo` 改造；检查 resend 后发送成功、失败、会话回显三条状态流转 |
-| SDK-08 | 进行中 | 已有 `connect/disconnect/registerPushToken/status listener`，Push token 注册链路也已补；但 `disconnect(receivePush)`、语言、headers、DB 生命周期监听仍缺 | 收口连接 public API，对齐 Android 的参数面和状态通知 |
+| SDK-08 | 已实现（待验证） | 已有 `connect/disconnect/registerPushToken/status listener`，Push token 注册链路也已补；本轮又补齐 `disconnect(receivePush)`、语言、headers、keyed 监听、DB 生命周期监听、连接状态观察器分发 | 做一次 Android 对拍验证，重点核对状态回调和 DB open/close 顺序 |
 | SDK-09 | 进行中 | tag API、tag 元数据、会话 listener、按 tag 未读统计已补；但 `getUnreadCountWithTypes`、`setTopConversationsOrderType` 等还缺 | 继续补会话 public API 缺口，并核对排序/回显行为 |
 | SDK-10 | 已实现（待验证） | 已补媒体发送、编辑消息、按 ID 查消息、已读回执、reaction/favorite/top，本轮补齐了 `saveMessage/getMessagesByClientMsgNos/setMessageState/resendMessage/resendMediaMessage` | 重新编译并重点验证文本/媒体失败后重发、上传后重发、状态回写、listener 时序 |
 | SDK-11 | 进行中 | 已有本地搜索、mention 查询、部分历史消息查询；但 `getFirstUnreadMessage/searchConversationsWithMessageContent/getLocalAndRemoteMessages/getMergedMessageList/getMessageReadTime` 未补齐 | 按接口缺口逐个补，优先 `getFirstUnreadMessage` 和 `getLocalAndRemoteMessages` |
 | SDK-12 | 进行中 | 已为消息表、SQL migration、DAO 和 manager 补 `clientMsgNo` 存储与查询 / 状态更新入口；但按 `clientMsgNo` 的本地属性接口和兼容迁移还没做完 | 补 `clientMsgNo` 维度的本地属性读写接口，并验证旧库升级后的兼容性 |
 | SDK-13 | 进行中 | 已有上传 provider 和 `sendMediaMessage`，但 Android 对外 `uploadImage(path)` 公共 API 还没单独补出 | 增加 `uploadImage(path)` 并复用现有上传 provider 返回值 |
 | SDK-14 | 已实现（待验证） | 已补 batch user/group/friend 查询、group/member 统一入口，以及 Android 同名的 `fetchUserInfo/fetchGroupInfo/fetchFriendInfo` 回调入口；demo 单聊资料页和联系人列表已接入对应刷新路径 | 重新核对 public facade 覆盖面与远端刷新语义，做一次 Android 对拍验证 |
-| SDK-15 | 进行中 | 当前已补断开时的 DB 关闭、连接超时清理、挂起请求容器重置，但仍未形成 Android 那种完整状态机级收敛逻辑 | 继续补状态流转、断线恢复、DB open/close 通知与参数注入时机 |
+| SDK-15 | 进行中 | 当前已补断开时的 DB 关闭、连接超时清理、挂起请求容器重置、`setConnectParams(signKey, headers)` 到 `connectExt` 的注入、DB open/close 生命周期通知、断线后的自动重连、前后台 `pushSwitch`；本轮又补了重连前的状态复位、服务端断开后的 socket/缓存清理、默认网络恢复后的补连、`waiting` 态收敛、connect 包里的 `sdkVersion/networkId/clientIp/instanceId/isBackend` 注入，以及断开时 `onDbClose` 早于 `disconnected` 的回调顺序、bootstrap / `ConversationList` 的 keyed 监听收口，但仍未形成 Android 那种完整状态机级收敛逻辑 | 继续补状态流转与参数注入时机；demo 已接入对象监听器日志验证 DB 开关和前后台 push 开关 |
 | SDK-16 | 进行中 | 置顶、免打扰、清未读、tag 关系和部分本地回写已补；但排序、topTime、重启后状态与 Android 还没完整对拍 | 做会话列表排序、置顶/免打扰回显、同步后状态回归 |
 | SDK-17 | 进行中 | reaction/favorite/top/mute 功能链已具备，但本地先行、远端成功、DB 回写、listener 时序还没系统对拍 | 以日志方式跑完整链路，对照 Android 的事件顺序收口 |
 | SDK-18 | 进行中 | 当前已有多类消息 listener 和 destroy time listener；但 sync listener、preprocessor、stream listener 仍不完整 | 先梳理 Android 对外监听面，再补缺的 listener 类型 |
@@ -190,6 +190,13 @@ ArkTS 兼容约束已单独记录在 [docs/arkts-compat-notes.md](/Users/helena/
 | 已处理 | `clientMsgNo` 基础能力 | 已补 `Message.clientMsgNo`、messages 表字段与 migration、DAO 查询/状态更新，以及 `saveMessage/getMessagesByClientMsgNos/setMessageState/resend*` 入口 |
 | 待重新编译确认 | 用户给出的 35 个报错列表 | 其中一部分行号已和当前源码不再对应，说明旧报错里已有一部分被吃掉；需要新一轮编译结果确认剩余真实阻塞 |
 | 仍未完成 | `SDK-10` 验证收口 | resend / save / state 接口已落代码，但现有 `clientMsgNo` 链路还缺编译、旧库升级和时序验证 |
+
+### SDK-15 真机验证点（先按通过推进）
+
+- 网络断开后会进入 fail / 重连流程，网络恢复后能自动补连。
+- 连接成功后 DB open 先于同步与页面拉取。
+- 主动断开、后台切换与 `pushSwitch` 的状态回调顺序稳定。
+- `disconnect(receivePush)` 语义与前后台切换不会互相打架。
 
 ### 当前建议的下一步
 

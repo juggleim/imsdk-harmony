@@ -743,7 +743,7 @@ export class MsgSyncManager{
   public async syncAfterConnect(status:number,reasonCode:number,userId:string){
     if(status === ConnStatus.connected) {
       if (!JimDbManager.instance.hasInit) {
-        JuggleIm.instance.initDb(userId)
+        await JuggleIm.instance.initDb(userId)
       }
       JuggleIm.instance.getMsgSyncManager().resetCompleteFirstSync()
       let isContinue:boolean = true

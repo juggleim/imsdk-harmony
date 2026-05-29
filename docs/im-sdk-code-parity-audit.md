@@ -119,21 +119,26 @@
 ### Harmony 当前
 
 - `connect`
-- `disconnect()`
+- `disconnect(receivePush)`
 - `registerPushToken`
+- `setLanguage`
+- `getLanguage`
+- `pushSwitch`
+- `setConnectParams(params)`
+- `setConnectParams(signKey, headers)`
+- `getConnectionStatus`
 - `addConnectStatusListener(listener)`
+- `addConnectStatusListener(String key, listener)`
 - `removeConnectStatusListener(listener)`
+- `removeConnectStatusListener(String key)`
 
 ### 差异结论
 
-Harmony 在连接管理接口上缺口最大：
+Harmony 在连接管理接口上已基本补齐，剩余主要是对拍验证：
 
-- 缺 `disconnect(receivePush)` 语义；
-- 缺推送语言设置与查询；
-- 缺连接参数注入；
-- 缺 keyed listener；
-- 缺 `onDbOpen/onDbClose` 生命周期回调；
-- 缺 public `getConnectionStatus()`，虽然 `JuggleIm` 有 `getConnStatus()`，但不在 interface 上。
+- keyed listener 已补齐；
+- `onDbOpen/onDbClose` 生命周期回调已补齐；
+- `disconnect(receivePush)`、语言、连接参数、`pushSwitch`、`getConnectionStatus()` 已补齐。
 
 ## 4.2 `IConversationManager`
 

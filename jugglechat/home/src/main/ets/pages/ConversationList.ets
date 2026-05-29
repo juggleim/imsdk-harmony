@@ -32,6 +32,7 @@ import {
 import { toConverViewItem } from '../viewmodel/ConversationViewModel'
 
 const TOP_TRACE_TAG:string = 'TOPTRACE'
+const RECONNECT_RELOAD_LISTENER_KEY:string = 'conversation_list_reconnect_reload'
 
 @Component
 export struct ConversationList {
@@ -130,6 +131,7 @@ export struct ConversationList {
   }
 
   aboutToDisappear(): void {
+    JuggleIm.instance.getConnectionManager().removeConnectStatusListener(RECONNECT_RELOAD_LISTENER_KEY)
     JuggleIm.instance.getConversationManager().removeConversationAddListener(this.converAddListener)
     JuggleIm.instance.getConversationManager().removeConversationUpdateListener(this.converUpdListener)
     JuggleIm.instance.getConversationManager().removeConversationDeleteListener(this.converDelListener)
@@ -139,8 +141,8 @@ export struct ConversationList {
     this.resetConverTimes()
     this.conversationList = new ObservedArray<ConversationViewItem>([])
 
-    if(JuggleIm.instance.getConnStatus() == ConnStatus.connecting){
-      JuggleIm.instance.getConnectionManager().addConnectStatusListener((status,code)=>{
+    if(JuggleIm.instance.getConnStatus() == ConnStatus.connecting || JuggleIm.instance.getConnStatus() == ConnStatus.waiting){
+      JuggleIm.instance.getConnectionManager().addConnectStatusListener(RECONNECT_RELOAD_LISTENER_KEY, (status, _code, _userId) => {
         if(status==ConnStatus.connected){
           this.reloadConversations()
         }

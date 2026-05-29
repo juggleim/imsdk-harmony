@@ -2,6 +2,7 @@ import { AbilityConstant, ConfigurationConstant, UIAbility, Want } from '@kit.Ab
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { window } from '@kit.ArkUI';
 import { HarmonyPushManager } from 'home/src/main/ets/jim/harmonypushmanager'
+import { JuggleIm } from 'juggleim'
 
 const DOMAIN = 0x0000;
 
@@ -38,10 +39,14 @@ export default class DemoAbility extends UIAbility {
   onForeground(): void {
     // Ability has brought to foreground
     hilog.info(DOMAIN, 'testTag', '%{public}s', 'Ability onForeground');
+    JuggleIm.instance.config.isBackend = false
+    JuggleIm.instance.getConnectionManager().pushSwitch(false)
   }
 
   onBackground(): void {
     // Ability has back to background
     hilog.info(DOMAIN, 'testTag', '%{public}s', 'Ability onBackground');
+    JuggleIm.instance.config.isBackend = true
+    JuggleIm.instance.getConnectionManager().pushSwitch(true)
   }
 }

@@ -13,6 +13,11 @@ import { ReactionDao } from "./reactiondao";
 import { MomentDao } from "./momentdao";
 import { ConversationTagInfoDao } from "./conversationtaginfodao";
 
+export interface DbLifecycleListener {
+  onDbOpen?(): void
+  onDbClose?(): void
+}
+
 export class JimDbManager{
   static instance:JimDbManager = new JimDbManager()
   private constructor() {
@@ -20,17 +25,43 @@ export class JimDbManager{
 
   private db?:relationalStore.RdbStore
   public hasInit:boolean = false
+  private dbLifecycleListeners:DbLifecycleListener[] = []
+  private dbLifecycleToken:number = 0
+  private dbInitPromise:Promise<void>|undefined = undefined
 
   async init(appkey:string,userId:string){
-    let dbName = `${appkey}_${userId}.db`
-    const storeConfig:relationalStore.StoreConfig = {
-      name:dbName,
-      securityLevel:relationalStore.SecurityLevel.S1,
-      encrypt:false
+    if(this.hasInit && this.db != undefined){
+      return
     }
-    this.db = await relationalStore.getRdbStore(getContext(),storeConfig)
-    this.onUpgrade()
-    this.hasInit = true
+    if(this.dbInitPromise != undefined){
+      return this.dbInitPromise
+    }
+    let lifecycleToken = ++this.dbLifecycleToken
+    let initPromise = (async ()=>{
+      let dbName = `${appkey}_${userId}.db`
+      const storeConfig:relationalStore.StoreConfig = {
+        name:dbName,
+        securityLevel:relationalStore.SecurityLevel.S1,
+        encrypt:false
+      }
+      let openedDb = await relationalStore.getRdbStore(getContext(),storeConfig)
+      if(lifecycleToken != this.dbLifecycleToken){
+        openedDb.close()
+        return
+      }
+      this.db = openedDb
+      this.onUpgrade()
+      this.hasInit = true
+      this.notifyDbOpen()
+    })()
+    this.dbInitPromise = initPromise
+    try{
+      await initPromise
+    } finally {
+      if(this.dbInitPromise === initPromise){
+        this.dbInitPromise = undefined
+      }
+    }
   }
 
   getDb():relationalStore.RdbStore|undefined{
@@ -38,11 +69,29 @@ export class JimDbManager{
   }
 
   closeDb(){
+    this.dbLifecycleToken++
+    let wasOpen = this.db !== undefined || this.hasInit
     if(this.db!==undefined){
       this.db.close()
       this.db = undefined
     }
     this.hasInit = false
+    if(wasOpen){
+      this.notifyDbClose()
+    }
+  }
+
+  addDbLifecycleListener(listener:DbLifecycleListener){
+    this.dbLifecycleListeners.push(listener)
+  }
+
+  removeDbLifecycleListener(listener:DbLifecycleListener){
+    for(let i=0;i<this.dbLifecycleListeners.length;i++){
+      if(this.dbLifecycleListeners[i]===listener){
+        this.dbLifecycleListeners.splice(i,1)
+        break
+      }
+    }
   }
 
   getConfDao():ConfDao{
@@ -145,5 +194,17 @@ export class JimDbManager{
     conf.key = "sql_version"
     conf.value = version.toString()
     ConfDao.instance.upsert(conf)
+  }
+
+  private notifyDbOpen(){
+    this.dbLifecycleListeners.forEach((listener)=>{
+      listener.onDbOpen?.()
+    })
+  }
+
+  private notifyDbClose(){
+    this.dbLifecycleListeners.forEach((listener)=>{
+      listener.onDbClose?.()
+    })
   }
 }

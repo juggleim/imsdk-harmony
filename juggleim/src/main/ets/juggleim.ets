@@ -26,6 +26,7 @@ export class JimConfig{
   healthCheckAddress:string = ''
   appkey:string = ''
   platform:string = 'Harmony'
+  sdkVersion:string = '1.8.47.1'
   protoId:string = 'jug9le1m'
   deviceId:string = ''
   packageName:string = ''
@@ -34,8 +35,12 @@ export class JimConfig{
   appServerUrl:string = ''
   authToken:string = ''
   language:string = ''
+  instanceId:string = ''
+  isBackend:boolean = false
   connectExt:string = ''
   connectParams:Map<string, string> = new Map<string, string>()
+  connectSignKey:string = ''
+  connectHeaders:Map<string, string> = new Map<string, string>()
 }
 
 export class JuggleIm{
@@ -85,6 +90,7 @@ export class JuggleIm{
     }
     this.config.appkey = appkey
     this.config.deviceId = PreferenceUtil.getDeviceId()
+    this.config.instanceId = this.config.deviceId
   }
 
   setPackageName(packageName:string):void{
@@ -99,10 +105,10 @@ export class JuggleIm{
     this.config.appServerUrl = normalizedUrl
   }
 
-  initDb(userId:string){
+  async initDb(userId:string):Promise<void>{
     let appkey = this.config.appkey
     if(userId!=''&&appkey!='') {
-      JimDbManager.instance.init(appkey,userId)
+      await JimDbManager.instance.init(appkey,userId)
     }
   }
 
