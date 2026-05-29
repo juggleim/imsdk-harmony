@@ -95,6 +95,7 @@ export struct ConversationDetail {
   @Prop currentFeatureIndex: number;
   @Prop conversationId:string
   @Prop conversationType:number
+  @State private conversationSubChannel:string = ''
   @Consume('pageInfo') pageInfo: NavPathStack;
   @State private conversationTitle:string = ''
   @State msgList:ObservedArray<MessageViewItem>=new ObservedArray<MessageViewItem>([])
@@ -164,7 +165,7 @@ export struct ConversationDetail {
   }
 
   private getConversation():Conversation{
-    let conversation = new Conversation(this.conversationId,this.conversationType)
+    let conversation = new Conversation(this.conversationId,this.conversationType,this.conversationSubChannel)
     conversation.msgIndex = this.maxMsgIndex
     return conversation
   }
@@ -825,7 +826,7 @@ export struct ConversationDetail {
       this.showToast('当前消息类型暂不支持转发')
       return
     }
-    JuggleIm.instance.getMessageManager().sendMessage(forwardMsg, new Conversation(target.converId, target.converType), (code, msg)=>{
+    JuggleIm.instance.getMessageManager().sendMessage(forwardMsg, new Conversation(target.converId, target.converType, target.subChannel), (code, msg)=>{
       if(code == 0){
         this.showToast('已转发')
         this.closePanels()
@@ -1332,11 +1333,12 @@ export struct ConversationDetail {
     this.conversationId = param.conversationId
     this.conversationType = param.converType
     this.conversationTitle = param.title
+    this.conversationSubChannel = param.subChannel ?? ''
     console.log("jimsdk_video_converid:",this.conversationId)
 
     this.msgReceiveListener = async (message)=>{
       let conver = message.conversation
-      if(conver?.conversationId===param.conversationId && conver?.conversationType===param.converType){
+      if(conver?.conversationId===param.conversationId && conver?.conversationType===param.converType && (conver?.subChannel ?? '')===this.conversationSubChannel){
         await this.appendMessage(message, true)
         this.markConversationRead()
         this.sendReadReceiptIfNeeded([message])
@@ -1344,17 +1346,17 @@ export struct ConversationDetail {
     }
     this.msgModifiedListener = async (message)=>{
       let conver = message.conversation
-      if(conver?.conversationId===param.conversationId && conver?.conversationType===param.converType){
+      if(conver?.conversationId===param.conversationId && conver?.conversationType===param.converType && (conver?.subChannel ?? '')===this.conversationSubChannel){
         await this.appendMessage(message, false)
       }
     }
     this.readReceiptListener = async (conver, msgIds)=>{
-      if(conver.conversationId===param.conversationId && conver.conversationType===param.converType){
+      if(conver.conversationId===param.conversationId && conver.conversationType===param.converType && (conver.subChannel ?? '')===this.conversationSubChannel){
         await this.refreshMessagesByIds(msgIds)
       }
     }
     this.groupReadReceiptListener = async (conver, messages)=>{
-      if(conver.conversationId!==param.conversationId || conver.conversationType!==param.converType){
+      if(conver.conversationId!==param.conversationId || conver.conversationType!==param.converType || (conver.subChannel ?? '')!==this.conversationSubChannel){
         return
       }
       let changedMessageIds:string[] = []
@@ -1395,6 +1397,7 @@ export struct ConversationDetail {
             currentConversationUserName: $conversationTitle,
             conversationId: this.conversationId,
             conversationType: this.conversationType,
+            subChannel: this.conversationSubChannel,
             showProfile: this.conversationType != 3
           })
             .height(Adaptive.ContactItemHeight(this.currentBreakpoint))
@@ -2006,7 +2009,7 @@ export struct ConversationDetail {
                     .onClick(()=>{
                       this.sendForwardMessage(item)
                     })
-                  }, (item: ConversationViewItem, index: number) => `${index}_${item.converId}_${item.converType}`)
+                  }, (item: ConversationViewItem, index: number) => `${index}_${item.getKey()}`)
                 }
                 .constraintSize({ maxHeight: '50%' })
                 .divider({

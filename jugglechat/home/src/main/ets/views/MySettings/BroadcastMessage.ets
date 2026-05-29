@@ -19,7 +19,7 @@ const TOP_TRACE_TAG:string = 'TOPTRACE'
 @Observed
 class BroadcastConversationItem {
   key:string = ''
-  conversation:Conversation = new Conversation('', 0)
+  conversation:Conversation = new Conversation('', 0, '')
   title:string = ''
   preview:string = ''
   time:string = ''
@@ -109,8 +109,8 @@ export default struct BroadcastMessagePage {
 
   private async toConversationItem(conver:ConversationInfo):Promise<BroadcastConversationItem>{
     let item = new BroadcastConversationItem()
-    item.key = `${conver.conversation.conversationType}_${conver.conversation.conversationId}`
-    item.conversation = new Conversation(conver.conversation.conversationId, conver.conversation.conversationType)
+    item.conversation = new Conversation(conver.conversation.conversationId, conver.conversation.conversationType, conver.conversation.subChannel)
+    item.key = item.conversation.getKey()
     item.title = await this.resolveConversationTitle(conver)
     item.preview = conver.lastMessage.messageId != '' || conver.lastMessage.clientId != '' ? buildMessagePreview(conver.lastMessage.msgContent) : ''
     item.time = conver.converTime > 0 ? CommonUtil.getTimeToYYYYDDMMHHMMSS(conver.converTime) : ''
@@ -181,7 +181,7 @@ export default struct BroadcastMessagePage {
     console.log(`${TOP_TRACE_TAG} broadcast_page_send_start: count=${selectedItems.length}, textLength=${content.length}, targets=${JSON.stringify(selectedItems.map((item)=>item.key))}`)
     let callback = new BroadcastSendCallback(
       (message:Message | null, code:number, processCount:number, totalCount:number)=>{
-        let key = message != null ? `${message.conversation.conversationType}_${message.conversation.conversationId}` : ''
+        let key = message != null ? message.conversation.getKey() : ''
         let nextItems = this.progressItems.slice()
         let foundIndex = nextItems.findIndex((item)=>{
           return item.key == key
@@ -199,7 +199,7 @@ export default struct BroadcastMessagePage {
       }
     )
     JuggleIm.instance.getMessageManager().broadcastMessage(textMessage, selectedItems.map((item)=>{
-      return new Conversation(item.conversation.conversationId, item.conversation.conversationType)
+      return new Conversation(item.conversation.conversationId, item.conversation.conversationType, item.conversation.subChannel)
     }), callback)
   }
 

@@ -9,6 +9,7 @@ export struct MentionMessages {
   @Consume('pageInfo') pageInfo: NavPathStack
   @State private conversationId:string = ''
   @State private conversationType:number = 2
+  @State private conversationSubChannel:string = ''
   @State private title:string = ''
   @State private messages:ObservedArray<MessageViewItem> = new ObservedArray<MessageViewItem>([])
   @State private refreshing:boolean = false
@@ -20,6 +21,7 @@ export struct MentionMessages {
     let params = this.pageInfo.getParamByIndex(this.pageInfo.size() - 1) as MentionMessagesParams
     this.conversationId = params.conversationId
     this.conversationType = params.converType
+    this.conversationSubChannel = params.subChannel ?? ''
     this.title = params.title
     this.loadMentionMessages(true)
   }
@@ -32,7 +34,7 @@ export struct MentionMessages {
   }
 
   private getConversation():Conversation{
-    return new Conversation(this.conversationId, this.conversationType)
+    return new Conversation(this.conversationId, this.conversationType, this.conversationSubChannel)
   }
 
   private showToast(message:string):void{

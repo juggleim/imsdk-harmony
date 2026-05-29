@@ -27,6 +27,7 @@ class ConversationViewItem {
   userId:string
   converId:string
   converType:number
+  subChannel:string
   lastMsgTime:number
   converTime:number
   isTop:boolean
@@ -42,6 +43,7 @@ class ConversationViewItem {
     userId:string,
     converId:string,
     converType:number,
+    subChannel:string,
     lastMsgTime:number,
     converTime:number,
     isTop:boolean,
@@ -57,6 +59,7 @@ class ConversationViewItem {
     this.userId = userId
     this.converId = converId
     this.converType = converType
+    this.subChannel = subChannel
     this.lastMsgTime = lastMsgTime
     this.converTime = converTime
     this.isTop = isTop
@@ -68,6 +71,10 @@ class ConversationViewItem {
     this.msg = msg
     this.time = time
     this.icon = icon
+  }
+
+  getKey():string{
+    return `${this.converType}_${this.converId}_${this.subChannel}`
   }
 };
 
@@ -113,7 +120,7 @@ export function toConverViewItem(conver:ConversationInfo):ConversationViewItem{
   let timeStr = CommonUtil.getTimeToYYYYDDMMHHMMSS(conver.converTime)
 
   return new ConversationViewItem("", conver.conversation.conversationId,
-    conver.conversation.conversationType, conver.lastMessage.sentTime, conver.converTime,
+    conver.conversation.conversationType, conver.conversation.subChannel, conver.lastMessage.sentTime, conver.converTime,
     conver.isTop, conver.topTime, conver.isMute, isDraft, tags, title,
     msgStr, timeStr, iconUrl)
 }
@@ -123,11 +130,13 @@ class ConversationDetailParams{
   conversationId:string
   userId:string
   title:string
-  constructor(userId:string,converId:string,converType:number, title:string = '') {
+  subChannel:string
+  constructor(userId:string,converId:string,converType:number, title:string = '', subChannel:string = '') {
     this.userId = userId
     this.conversationId = converId
     this.converType = converType
     this.title = title
+    this.subChannel = subChannel
   }
 }
 
@@ -135,11 +144,13 @@ class ConversationRouteParams {
   converType:number
   conversationId:string
   title:string
+  subChannel:string
 
-  constructor(conversationId:string, converType:number, title:string) {
+  constructor(conversationId:string, converType:number, title:string, subChannel:string = '') {
     this.conversationId = conversationId
     this.converType = converType
     this.title = title
+    this.subChannel = subChannel
   }
 }
 
@@ -155,11 +166,13 @@ class MentionMessagesParams {
   conversationId:string
   converType:number
   title:string
+  subChannel:string
 
-  constructor(conversationId:string, converType:number, title:string) {
+  constructor(conversationId:string, converType:number, title:string, subChannel:string = '') {
     this.conversationId = conversationId
     this.converType = converType
     this.title = title
+    this.subChannel = subChannel
   }
 }
 

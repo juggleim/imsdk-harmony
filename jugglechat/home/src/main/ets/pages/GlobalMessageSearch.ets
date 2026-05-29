@@ -16,17 +16,23 @@ import { ConversationDetailParams, GlobalMessageSearchParams } from '../viewmode
 class SearchConversationGroup {
   conversationId:string
   conversationType:number
+  subChannel:string
   title:string
   icon:string
   matchedCount:number = 0
   latestTime:number = 0
   previews:ObservedArray<MessageViewItem> = new ObservedArray<MessageViewItem>([])
 
-  constructor(conversationId:string, conversationType:number, title:string, icon:string) {
+  constructor(conversationId:string, conversationType:number, title:string, icon:string, subChannel:string = '') {
     this.conversationId = conversationId
     this.conversationType = conversationType
+    this.subChannel = subChannel
     this.title = title
     this.icon = icon
+  }
+
+  getKey():string{
+    return `${this.conversationType}_${this.conversationId}_${this.subChannel}`
   }
 }
 
@@ -131,12 +137,12 @@ export struct GlobalMessageSearch {
     if(conversation.conversationType == 1){
       let user = await JuggleIm.instance.getUserInfoManager().getUserInfo(conversation.conversationId)
       let title = user.nickname != '' ? user.nickname : conversation.conversationId
-      return new SearchConversationGroup(conversation.conversationId, conversation.conversationType, title, user.userPortrait)
+      return new SearchConversationGroup(conversation.conversationId, conversation.conversationType, title, user.userPortrait, conversation.subChannel)
     }
     let localGroup = JuggleIm.instance.getGroupInfoManager().getLocalGroupInfo(conversation.conversationId)
     if(localGroup != null){
       let title = localGroup.groupName != '' ? localGroup.groupName : conversation.conversationId
-      return new SearchConversationGroup(conversation.conversationId, conversation.conversationType, title, localGroup.groupPortrait)
+      return new SearchConversationGroup(conversation.conversationId, conversation.conversationType, title, localGroup.groupPortrait, conversation.subChannel)
     }
     let remoteGroup = await new Promise<GroupInfo | null>((resolve)=>{
       JuggleIm.instance.getGroupInfoManager().queryGroupInfo(conversation.conversationId, (code, group)=>{
@@ -145,9 +151,9 @@ export struct GlobalMessageSearch {
     })
     if(remoteGroup != null){
       let title = remoteGroup.groupName != '' ? remoteGroup.groupName : conversation.conversationId
-      return new SearchConversationGroup(conversation.conversationId, conversation.conversationType, title, remoteGroup.groupPortrait)
+      return new SearchConversationGroup(conversation.conversationId, conversation.conversationType, title, remoteGroup.groupPortrait, conversation.subChannel)
     }
-    return new SearchConversationGroup(conversation.conversationId, conversation.conversationType, conversation.conversationId, '')
+    return new SearchConversationGroup(conversation.conversationId, conversation.conversationType, conversation.conversationId, '', conversation.subChannel)
   }
 
   private async performSearch():Promise<void>{
@@ -170,7 +176,7 @@ export struct GlobalMessageSearch {
           continue
         }
         let conversation = message.conversation
-        let key = `${conversation.conversationId}_${conversation.conversationType}`
+        let key = `${conversation.conversationType}_${conversation.conversationId}_${conversation.subChannel}`
         let group = groupedMap.get(key)
         if(group == undefined){
           group = await this.getConversationDisplayMeta(conversation)
@@ -225,7 +231,7 @@ export struct GlobalMessageSearch {
     let userId = group.conversationType == 1 ? group.conversationId : ''
     this.pageInfo.pushPath({
       name: 'ConversationDetail',
-      param: new ConversationDetailParams(userId, group.conversationId, group.conversationType, group.title)
+      param: new ConversationDetailParams(userId, group.conversationId, group.conversationType, group.title, group.subChannel)
     })
   }
 
@@ -392,7 +398,7 @@ export struct GlobalMessageSearch {
               ListItem() {
                 this.groupItem(group)
               }
-            }, (group:SearchConversationGroup) => `${group.conversationId}_${group.conversationType}`)
+            }, (group:SearchConversationGroup) => group.getKey())
           }
         }
         .divider({

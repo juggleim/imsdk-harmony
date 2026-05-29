@@ -79,7 +79,7 @@ export struct ConversationList {
 
   private mergeConversationViewItem(converViewItem:ConversationViewItem):void{
     let foundIndex = this.conversationList.findIndex((item)=>{
-      return item.converId == converViewItem.converId && item.converType == converViewItem.converType
+      return item.getKey() == converViewItem.getKey()
     })
     if(foundIndex >= 0){
       this.conversationList[foundIndex] = converViewItem
@@ -103,7 +103,7 @@ export struct ConversationList {
       this.conversationList.slice().sort((a,b)=>this.compareConversation(a, b))
     )
     let order = this.conversationList.map((item)=>{
-      return `${item.converType}_${item.converId}[top=${item.isTop},topTime=${item.topTime},converTime=${item.converTime}]`
+      return `${item.getKey()}[top=${item.isTop},topTime=${item.topTime},converTime=${item.converTime}]`
     })
     console.log(`${TOP_TRACE_TAG} conversation_list_sorted: count=${order.length}, order=${JSON.stringify(order)}`)
   }
@@ -113,7 +113,8 @@ export struct ConversationList {
       let route = this.pageInfo.getParamByIndex(index) as ConversationRouteParams | undefined
       if(route != undefined &&
         route.conversationId == item.converId &&
-        route.converType == item.converType){
+        route.converType == item.converType &&
+        (route.subChannel ?? '') == item.subChannel){
         return true
       }
     }
@@ -172,12 +173,12 @@ export struct ConversationList {
         console.log(`${TOP_TRACE_TAG} conversation_list_update_item: converId=${conver.conversation.conversationId}, converType=${conver.conversation.conversationType}, isTop=${conver.isTop}, topTime=${conver.topTime}, converTime=${conver.converTime}`)
         let converViewItem = toConverViewItem(conver)
         updatedConverList.push(converViewItem)
-        let key:string = conver.conversation.conversationId+"_"+conver.conversation.conversationType
+        let key:string = converViewItem.getKey()
         updatedConverKeys.set(key,true)
       })
       let tmpConverList:ObservedArray<ConversationViewItem>=new ObservedArray<ConversationViewItem>([])
       this.conversationList.forEach((conver)=>{
-        let key = conver.converId+"_"+conver.converType
+        let key = conver.getKey()
         if(!updatedConverKeys.has(key)){
           tmpConverList.push(conver)
         }
@@ -197,12 +198,12 @@ export struct ConversationList {
       let delConverKeys:Map<string,boolean> = new Map()
       convers.forEach((conver)=>{
         console.log(`${TOP_TRACE_TAG} conversation_list_delete_item: converId=${conver.conversation.conversationId}, converType=${conver.conversation.conversationType}`)
-        let key:string = conver.conversation.conversationId+"_"+conver.conversation.conversationType
+        let key:string = `${conver.conversation.conversationType}_${conver.conversation.conversationId}_${conver.conversation.subChannel}`
         delConverKeys.set(key,true)
       })
       let tmpConverList:ObservedArray<ConversationViewItem>=new ObservedArray<ConversationViewItem>([])
       this.conversationList.forEach((conver)=>{
-        let key = conver.converId+"_"+conver.converType
+        let key = conver.getKey()
         if(!delConverKeys.has(key)){
           tmpConverList.push(conver)
         }
@@ -255,7 +256,7 @@ export struct ConversationList {
                 if (this.pageInfo.size() > 1) {
                   this.pageInfo.pop();
                 }
-                this.pageInfo.pushPath({ name: 'ConversationDetail',param:new ConversationDetailParams(item.userId,item.converId,item.converType, item.name as string)});
+                this.pageInfo.pushPath({ name: 'ConversationDetail',param:new ConversationDetailParams(item.userId,item.converId,item.converType, item.name as string, item.subChannel)});
                 this.currentConversationUserName = item.name;
                 this.currentContactUserName = '';
               })
@@ -263,7 +264,7 @@ export struct ConversationList {
           }
           .height(Adaptive.ContactItemHeight(this.currentBreakpoint))
 
-        }, (item: ConversationViewItem) => `${item.converType}_${item.converId}`)
+        }, (item: ConversationViewItem) => item.getKey())
       }
       .onReachEnd(()=>{
         console.log("jimsdk_end, load more")

@@ -34,6 +34,7 @@ export struct ConversationProfile {
   @State private title:string = '会话详情'
   @State private conversationId:string = ''
   @State private conversationType:number = 1
+  @State private conversationSubChannel:string = ''
   @State private typeLabel:string = ''
   @State private groupPortrait:string = ''
   @State private groupMembers:ObservedArray<GroupMemberPreviewItem> = new ObservedArray<GroupMemberPreviewItem>([])
@@ -52,6 +53,7 @@ export struct ConversationProfile {
     this.conversationId = params.conversationId
     this.conversationType = params.converType
     this.title = params.title != '' ? params.title : '会话详情'
+    this.conversationSubChannel = params.subChannel ?? ''
     console.log(`${TOP_TRACE_TAG} profile_appear: converId=${this.conversationId}, converType=${this.conversationType}, title=${this.title}`)
     this.typeLabel = this.conversationType == 2 ? '群聊' : '单聊'
     this.groupPortrait = ''
@@ -144,7 +146,7 @@ export struct ConversationProfile {
   }
 
   private getConversation():Conversation{
-    return new Conversation(this.conversationId, this.conversationType)
+    return new Conversation(this.conversationId, this.conversationType, this.conversationSubChannel)
   }
 
   private showToast(message:string):void{
@@ -161,7 +163,8 @@ export struct ConversationProfile {
       for(let i = 0; i < convers.length; i++){
         let item = convers[i]
         if(item.conversation.conversationId == this.conversationId &&
-          item.conversation.conversationType == this.conversationType){
+          item.conversation.conversationType == this.conversationType &&
+          (item.conversation.subChannel ?? '') == this.conversationSubChannel){
           console.log(`${TOP_TRACE_TAG} profile_conversation_update: converId=${item.conversation.conversationId}, converType=${item.conversation.conversationType}, isTop=${item.isTop}, topTime=${item.topTime}, isMute=${item.isMute}`)
           this.applyConversationInfo(item)
           return
@@ -199,7 +202,8 @@ export struct ConversationProfile {
       for(let i = 0; i < convers.length; i++){
         let item = convers[i]
         if(item.conversation.conversationId == this.conversationId &&
-          item.conversation.conversationType == this.conversationType){
+          item.conversation.conversationType == this.conversationType &&
+          (item.conversation.subChannel ?? '') == this.conversationSubChannel){
           console.log(`${TOP_TRACE_TAG} profile_load_conversation_settings_local_hit: converId=${item.conversation.conversationId}, converType=${item.conversation.conversationType}, isTop=${item.isTop}, topTime=${item.topTime}, isMute=${item.isMute}`)
           this.applyConversationInfo(item)
           return
@@ -474,7 +478,7 @@ export struct ConversationProfile {
           .onClick(()=>{
             this.pageInfo.pushPath({
               name: 'ConversationHistory',
-              param: new ConversationRouteParams(this.conversationId, this.conversationType, this.title)
+              param: new ConversationRouteParams(this.conversationId, this.conversationType, this.title, this.conversationSubChannel)
             })
           })
         }
@@ -506,10 +510,10 @@ export struct ConversationProfile {
             .padding({ left: 16, right: 16, top: 16, bottom: 16 })
             .onClick(()=>{
               this.pageInfo.pushPath({
-                name: 'MentionMessages',
-                param: new MentionMessagesParams(this.conversationId, this.conversationType, this.title)
-              })
+              name: 'MentionMessages',
+              param: new MentionMessagesParams(this.conversationId, this.conversationType, this.title, this.conversationSubChannel)
             })
+          })
           }
           .width('100%')
           .backgroundColor(Color.White)

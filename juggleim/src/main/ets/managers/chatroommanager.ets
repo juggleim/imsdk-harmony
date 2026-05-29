@@ -438,7 +438,7 @@ export class ChatroomManager implements IChatroomManager {
 
   private clearChatroom(chatroomId:string):void {
     this.removeChatroom(chatroomId)
-    JimDbManager.instance.getMessageDao().clearConversationMessages(new Conversation(chatroomId, 3), 0, '')
+    JimDbManager.instance.getMessageDao().clearConversationMessages(new Conversation(chatroomId, 3, ''), 0, '')
   }
 
   private removeChatroom(chatroomId:string):void {

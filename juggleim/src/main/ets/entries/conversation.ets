@@ -33,7 +33,7 @@ export class Conversation{
 
 export class ConversationInfo{
   id:number = 0
-  conversation:Conversation = new Conversation("",0)
+  conversation:Conversation = new Conversation("",0,'')
   lastMessage:Message = new Message()
   unreadCount:number = 0
   converTime:number = 0
@@ -49,7 +49,7 @@ export class ConversationInfo{
 }
 
 export class ConversationTag{
-  conversation:Conversation = new Conversation("",0)
+  conversation:Conversation = new Conversation("",0,'')
   tagId:string = ''
   constructor() {
   }

@@ -23,6 +23,7 @@ export struct ConversationDetailTopSearch {
   @Link currentConversationUserName: string;
   @Prop conversationId:string
   @Prop conversationType:number
+  @Prop subChannel:string = ''
   @Prop showProfile:boolean = true
   @Consume('pageInfo') pageInfo: NavPathStack;
 
@@ -56,7 +57,8 @@ export struct ConversationDetailTopSearch {
             param: new ConversationRouteParams(
               this.conversationId,
               this.conversationType,
-              this.currentConversationUserName || HomeConstants.CONVERSATION_DETAIL_TOP_TITLE
+              this.currentConversationUserName || HomeConstants.CONVERSATION_DETAIL_TOP_TITLE,
+              this.subChannel
             )
           })
         })

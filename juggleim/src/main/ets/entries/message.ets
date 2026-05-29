@@ -172,7 +172,7 @@ export class MediaMessageContent extends MessageContent{
 
 export class Message{
   clientMsgNo:number = 0
-  conversation:Conversation = new Conversation('',0)
+  conversation:Conversation = new Conversation('',0,'')
   clientId:string = ''
   messageId:string = ''
   // msgType:string = ''
@@ -259,7 +259,7 @@ interface IMergeMessage{
 export class MergeMessage extends  MessageContent{
   public title:string = ''
   public containerMsgId:string = ''
-  public conversation:Conversation = new Conversation("",0)
+  public conversation:Conversation = new Conversation("",0,'')
   public messageIdList:string[] = []
   public previewList:PreviewUnit[] = []
   public extra:string = ''
@@ -296,7 +296,7 @@ export class MergeMessage extends  MessageContent{
         Conversation.normalizeSubChannel(t.sub_channel)
       )
     }else{
-      this.conversation = new Conversation("",0)
+      this.conversation = new Conversation("",0,'')
     }
     this.previewList = t.previewList != undefined ? t.previewList : []
     this.extra = t.extra != undefined ? t.extra : ''

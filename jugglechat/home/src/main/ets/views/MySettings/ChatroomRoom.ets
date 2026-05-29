@@ -128,7 +128,7 @@ export default struct ChatroomRoomPage {
   }
 
   private getConversation():Conversation {
-    return new Conversation(this.chatroomId, 3)
+    return new Conversation(this.chatroomId, 3, '')
   }
 
   aboutToAppear(): void {

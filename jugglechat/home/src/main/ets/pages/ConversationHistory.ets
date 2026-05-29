@@ -17,6 +17,7 @@ export struct ConversationHistory {
   @Consume('pageInfo') pageInfo: NavPathStack
   @State private conversationId:string = ''
   @State private conversationType:number = 1
+  @State private conversationSubChannel:string = ''
   @State private sourceMessages:ObservedArray<MessageViewItem> = new ObservedArray<MessageViewItem>([])
   @State private displayMessages:ObservedArray<MessageViewItem> = new ObservedArray<MessageViewItem>([])
   @State private selectedMessageTypeFilter:string = 'all'
@@ -34,6 +35,7 @@ export struct ConversationHistory {
     let params = this.pageInfo.getParamByIndex(this.pageInfo.size() - 1) as ConversationRouteParams
     this.conversationId = params.conversationId
     this.conversationType = params.converType
+    this.conversationSubChannel = params.subChannel ?? ''
     this.loadInitialHistory()
   }
 
@@ -45,7 +47,7 @@ export struct ConversationHistory {
   }
 
   private getConversation():Conversation{
-    return new Conversation(this.conversationId, this.conversationType)
+    return new Conversation(this.conversationId, this.conversationType, this.conversationSubChannel)
   }
 
   private showToast(message:string):void{
