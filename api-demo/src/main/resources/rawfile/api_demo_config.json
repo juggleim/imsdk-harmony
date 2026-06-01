@@ -1,0 +1,413 @@
+{
+  "defaults": {
+    "address": "https://example.com",
+    "appkey": "demo-appkey",
+    "token": "demo-token",
+    "userId": "user-1",
+    "packageName": "com.example.apidemo",
+    "language": "zh-CN",
+    "advancedJson": "{\"conversationType\":\"1\",\"conversationId\":\"demo-conv\",\"subChannel\":\"\",\"groupId\":\"group-1\",\"chatroomId\":\"chatroom-1\",\"tagId\":\"tag-1\",\"tagName\":\"Tag 1\",\"messageId\":\"msg-1\",\"clientMsgNo\":\"0\",\"clientMsgNosJson\":\"[1,2]\",\"count\":\"20\",\"time\":\"0\",\"direction\":\"0\",\"isPositive\":\"false\",\"startTime\":\"0\",\"prevMessageCount\":\"20\",\"isAutoCreate\":\"false\",\"pushChannel\":\"2\",\"pushToken\":\"demo-push-token\",\"signKey\":\"demo-sign-key\",\"searchContent\":\"demo\",\"filePath\":\"/tmp/demo.dat\",\"contentKind\":\"text\",\"contentJson\":\"{\\\"content\\\":\\\"Hello\\\",\\\"extra\\\":\\\"\\\"}\",\"messageType\":\"jg:demo_custom\",\"msgIdsJson\":\"[\\\"msg-1\\\",\\\"msg-2\\\"]\",\"conversationIdsJson\":\"[{\\\"conversationId\\\":\\\"demo-conv\\\",\\\"conversationType\\\":1,\\\"subChannel\\\":\\\"\\\"}]\",\"conversationsJson\":\"[{\\\"conversationId\\\":\\\"demo-conv\\\",\\\"conversationType\\\":1,\\\"subChannel\\\":\\\"\\\"}]\",\"contentTypesJson\":\"[\\\"jg:text\\\"]\",\"userIdsJson\":\"[\\\"user-1\\\",\\\"user-2\\\"]\",\"senderUserIdsJson\":\"[\\\"user-1\\\"]\",\"statesJson\":\"[1,2]\",\"conversationTypesJson\":\"[1]\",\"groupIdsJson\":\"[\\\"group-1\\\"]\",\"friendIdsJson\":\"[\\\"user-1\\\"]\",\"periodsJson\":\"[{\\\"startTime\\\":\\\"09:00\\\",\\\"endTime\\\":\\\"10:00\\\"}]\",\"mapJson\":\"{\\\"a\\\":\\\"b\\\",\\\"c\\\":\\\"d\\\"}\",\"paramsJson\":\"{\\\"x\\\":\\\"y\\\"}\",\"headersJson\":\"{\\\"Authorization\\\":\\\"Bearer demo\\\"}\",\"reactionId\":\"like\",\"momentId\":\"moment-1\",\"commentId\":\"comment-1\",\"parentCommentId\":\"\",\"cleanTime\":\"0\",\"cleanScope\":\"0\",\"limit\":\"20\",\"offset\":\"\",\"conversationJson\":\"{\\\"conversationId\\\":\\\"demo-conv\\\",\\\"conversationType\\\":1,\\\"subChannel\\\":\\\"\\\"}\",\"messageOptionsJson\":\"{\\\"referredMessageId\\\":\\\"\\\",\\\"pushTitle\\\":\\\"demo\\\",\\\"pushContent\\\":\\\"demo content\\\",\\\"pushExtra\\\":\\\"\\\",\\\"lifeTime\\\":0,\\\"lifeTimeAfterRead\\\":0,\\\"mentionType\\\":0,\\\"targetUsersJson\\\":\\\"[]\\\"}\",\"getConversationOptionsJson\":\"{\\\"count\\\":20,\\\"time\\\":0,\\\"direction\\\":0,\\\"conversationTypesJson\\\":\\\"[1]\\\",\\\"tagId\\\":\\\"\\\"}\",\"getMessageOptionsJson\":\"{\\\"count\\\":20,\\\"time\\\":0,\\\"direction\\\":0,\\\"contentTypesJson\\\":\\\"[\\\\\\\"jg:text\\\\\\\"]\\\"}\",\"messageQueryOptionsJson\":\"{\\\"searchContent\\\":\\\"demo\\\",\\\"senderUserIdsJson\\\":\\\"[]\\\",\\\"contentTypesJson\\\":\\\"[]\\\",\\\"conversationsJson\\\":\\\"[]\\\",\\\"statesJson\\\":\\\"[]\\\",\\\"direction\\\":0,\\\"conversationTypesJson\\\":\\\"[]\\\"}\",\"searchParamsJson\":\"{\\\"keywords\\\":\\\"demo\\\",\\\"msgTypesJson\\\":\\\"[\\\\\\\"jg:text\\\\\\\"]\\\",\\\"startTime\\\":0,\\\"endTime\\\":0,\\\"count\\\":50,\\\"direction\\\":0,\\\"conversationJson\\\":\\\"{\\\\\\\"conversationId\\\\\\\":\\\\\\\"demo-conv\\\\\\\",\\\\\\\"conversationType\\\\\\\":1,\\\\\\\"subChannel\\\\\\\":\\\\\\\"\\\\\\\"}\\\"}\",\"clearMsgOptionsJson\":\"{\\\"cleanTime\\\":0,\\\"cleanScope\\\":0,\\\"senderId\\\":\\\"\\\",\\\"cleanTimeOffset\\\":0}\",\"favoriteOptionJson\":\"{\\\"offset\\\":\\\"\\\",\\\"count\\\":20}\",\"timePeriodsJson\":\"[{\\\"startTime\\\":\\\"09:00\\\",\\\"endTime\\\":\\\"10:00\\\"}]\",\"momentOptionJson\":\"{\\\"startTime\\\":0,\\\"count\\\":20,\\\"direction\\\":0,\\\"userId\\\":\\\"user-1\\\"}\",\"momentCommentOptionJson\":\"{\\\"momentId\\\":\\\"moment-1\\\",\\\"startTime\\\":0,\\\"count\\\":20,\\\"direction\\\":0}\",\"momentMediaJson\":\"[{\\\"url\\\":\\\"https://example.com/demo.jpg\\\",\\\"type\\\":0,\\\"snapshotUrl\\\":\\\"\\\",\\\"height\\\":0,\\\"width\\\":0,\\\"duration\\\":0}]\",\"pushDataJson\":\"{\\\"title\\\":\\\"demo\\\",\\\"content\\\":\\\"demo content\\\",\\\"extra\\\":\\\"\\\"}\",\"messageMentionJson\":\"{\\\"mentionType\\\":0,\\\"targetUsersJson\\\":\\\"[]\\\"}\",\"userInfoJson\":\"{\\\"userId\\\":\\\"user-1\\\",\\\"nickname\\\":\\\"User 1\\\",\\\"userPortrait\\\":\\\"\\\",\\\"userType\\\":0,\\\"updTime\\\":0}\",\"groupInfoJson\":\"{\\\"groupId\\\":\\\"group-1\\\",\\\"groupName\\\":\\\"Group 1\\\",\\\"groupPortrait\\\":\\\"\\\",\\\"updTime\\\":0}\",\"groupMemberJson\":\"{\\\"groupId\\\":\\\"group-1\\\",\\\"memberId\\\":\\\"user-1\\\",\\\"displayName\\\":\\\"User 1\\\"}\",\"friendInfoJson\":\"{\\\"userId\\\":\\\"user-1\\\",\\\"isFriend\\\":\\\"true\\\",\\\"alias\\\":\\\"Friend 1\\\",\\\"updTime\\\":0}\",\"groupMessageReadInfoDetailJson\":\"{\\\"readCount\\\":0,\\\"memberCount\\\":0,\\\"readMembers\\\":[],\\\"unreadMembers\\\":[]}\"}"
+  },
+  "categories": [
+    {
+      "id": "sdk",
+      "title": "SDK",
+      "description": "基础初始化与配置",
+      "actions": [
+        {
+          "id": "sdk_init",
+          "title": "init",
+          "target": "sdk",
+          "method": "init",
+          "description": "初始化 SDK",
+          "callbackKind": "none",
+          "args": [
+            { "key": "address", "label": "address", "kind": "text", "defaultValue": "", "sourceKey": "address" },
+            { "key": "appkey", "label": "appkey", "kind": "text", "defaultValue": "", "sourceKey": "appkey" }
+          ]
+        },
+        {
+          "id": "sdk_set_package_name",
+          "title": "setPackageName",
+          "target": "sdk",
+          "method": "setPackageName",
+          "callbackKind": "none",
+          "args": [
+            { "key": "packageName", "label": "packageName", "kind": "text", "sourceKey": "packageName" }
+          ]
+        },
+        {
+          "id": "sdk_set_app_server_url",
+          "title": "setAppServerUrl",
+          "target": "sdk",
+          "method": "setAppServerUrl",
+          "callbackKind": "none",
+          "args": [
+            { "key": "appServerUrl", "label": "appServerUrl", "kind": "text", "defaultValue": "https://example.com" }
+          ]
+        },
+        {
+          "id": "sdk_init_db",
+          "title": "initDb",
+          "target": "sdk",
+          "method": "initDb",
+          "callbackKind": "none",
+          "args": [
+            { "key": "userId", "label": "userId", "kind": "text", "sourceKey": "userId" }
+          ]
+        },
+        {
+          "id": "sdk_get_conn_status",
+          "title": "getConnStatus",
+          "target": "sdk",
+          "method": "getConnStatus",
+          "callbackKind": "none",
+          "args": []
+        },
+        {
+          "id": "sdk_get_connection_manager",
+          "title": "getConnectionManager",
+          "target": "sdk",
+          "method": "getConnectionManager",
+          "callbackKind": "none",
+          "args": []
+        },
+        {
+          "id": "sdk_get_message_manager",
+          "title": "getMessageManager",
+          "target": "sdk",
+          "method": "getMessageManager",
+          "callbackKind": "none",
+          "args": []
+        },
+        {
+          "id": "sdk_get_conversation_manager",
+          "title": "getConversationManager",
+          "target": "sdk",
+          "method": "getConversationManager",
+          "callbackKind": "none",
+          "args": []
+        },
+        {
+          "id": "sdk_get_chatroom_manager",
+          "title": "getChatroomManager",
+          "target": "sdk",
+          "method": "getChatroomManager",
+          "callbackKind": "none",
+          "args": []
+        },
+        {
+          "id": "sdk_get_user_manager",
+          "title": "getUserInfoManager",
+          "target": "sdk",
+          "method": "getUserInfoManager",
+          "callbackKind": "none",
+          "args": []
+        },
+        {
+          "id": "sdk_get_group_manager",
+          "title": "getGroupInfoManager",
+          "target": "sdk",
+          "method": "getGroupInfoManager",
+          "callbackKind": "none",
+          "args": []
+        },
+        {
+          "id": "sdk_get_moment_manager",
+          "title": "getMomentManager",
+          "target": "sdk",
+          "method": "getMomentManager",
+          "callbackKind": "none",
+          "args": []
+        },
+        {
+          "id": "sdk_get_msg_sync_manager",
+          "title": "getMsgSyncManager",
+          "target": "sdk",
+          "method": "getMsgSyncManager",
+          "callbackKind": "none",
+          "args": []
+        }
+      ]
+    },
+    {
+      "id": "connection",
+      "title": "Connection",
+      "description": "连接与推送参数",
+      "actions": [
+        {
+          "id": "conn_connect",
+          "title": "connect",
+          "target": "connection",
+          "method": "connect",
+          "callbackKind": "none",
+          "args": [
+            { "key": "token", "label": "token", "kind": "password", "sourceKey": "token" }
+          ]
+        },
+        {
+          "id": "conn_disconnect",
+          "title": "disconnect",
+          "target": "connection",
+          "method": "disconnect",
+          "callbackKind": "none",
+          "args": [
+            { "key": "receivePush", "label": "receivePush", "kind": "boolean", "defaultValue": "false" }
+          ]
+        },
+        {
+          "id": "conn_register_push_token",
+          "title": "registerPushToken",
+          "target": "connection",
+          "method": "registerPushToken",
+          "callbackKind": "common",
+          "args": [
+            { "key": "pushChannel", "label": "pushChannel", "kind": "number", "sourceKey": "pushChannel" },
+            { "key": "pushToken", "label": "pushToken", "kind": "text", "sourceKey": "pushToken" }
+          ]
+        },
+        {
+          "id": "conn_set_language",
+          "title": "setLanguage",
+          "target": "connection",
+          "method": "setLanguage",
+          "callbackKind": "none",
+          "args": [
+            { "key": "language", "label": "language", "kind": "text", "sourceKey": "language" }
+          ]
+        },
+        {
+          "id": "conn_get_language",
+          "title": "getLanguage",
+          "target": "connection",
+          "method": "getLanguage",
+          "callbackKind": "none",
+          "args": []
+        },
+        {
+          "id": "conn_get_status",
+          "title": "getConnectionStatus",
+          "target": "connection",
+          "method": "getConnectionStatus",
+          "callbackKind": "none",
+          "args": []
+        },
+        {
+          "id": "conn_push_switch",
+          "title": "pushSwitch",
+          "target": "connection",
+          "method": "pushSwitch",
+          "callbackKind": "none",
+          "args": [
+            { "key": "isBackground", "label": "isBackground", "kind": "boolean", "defaultValue": "false" }
+          ]
+        },
+        {
+          "id": "conn_set_connect_params",
+          "title": "setConnectParams(Map)",
+          "target": "connection",
+          "method": "setConnectParams",
+          "callbackKind": "none",
+          "args": [
+            { "key": "params", "label": "params", "kind": "map", "sourceKey": "paramsJson" }
+          ]
+        },
+        {
+          "id": "conn_set_connect_params_signed",
+          "title": "setConnectParams(signKey, headers)",
+          "target": "connection",
+          "method": "setConnectParams",
+          "callbackKind": "none",
+          "args": [
+            { "key": "signKey", "label": "signKey", "kind": "text", "sourceKey": "signKey" },
+            { "key": "headers", "label": "headers", "kind": "map", "sourceKey": "headersJson" }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "conversation",
+      "title": "Conversation",
+      "description": "会话和会话标签",
+      "actions": [
+        { "id": "conver_query_options", "title": "queryConversations(options)", "target": "conversation", "method": "queryConversations", "callbackKind": "conversations", "args": [ { "key": "options", "label": "options", "kind": "getConversationOptions", "sourceKey": "getConversationOptionsJson" } ] },
+        { "id": "conver_query_simple", "title": "queryConversations(count,start,isPositive)", "target": "conversation", "method": "queryConversations", "callbackKind": "conversations", "args": [ { "key": "count", "label": "count", "kind": "number", "sourceKey": "count" }, { "key": "startTime", "label": "startTime", "kind": "number", "sourceKey": "startTime" }, { "key": "isPositive", "label": "isPositive", "kind": "boolean", "sourceKey": "isPositive" } ] },
+        { "id": "conver_get", "title": "getConversation", "target": "conversation", "method": "getConversation", "callbackKind": "conversation", "args": [ { "key": "conversation", "label": "conversation", "kind": "conversation", "sourceKey": "conversationJson" } ] },
+        { "id": "conver_set_draft", "title": "setDraft", "target": "conversation", "method": "setDraft", "callbackKind": "none", "args": [ { "key": "conversation", "label": "conversation", "kind": "conversation", "sourceKey": "conversationJson" }, { "key": "draft", "label": "draft", "kind": "text", "defaultValue": "draft text" } ] },
+        { "id": "conver_clear_draft", "title": "clearDraft", "target": "conversation", "method": "clearDraft", "callbackKind": "none", "args": [ { "key": "conversation", "label": "conversation", "kind": "conversation", "sourceKey": "conversationJson" } ] },
+        { "id": "conver_insert", "title": "insertConversation", "target": "conversation", "method": "insertConversation", "callbackKind": "conversation", "args": [ { "key": "conversation", "label": "conversation", "kind": "conversation", "sourceKey": "conversationJson" } ] },
+        { "id": "conver_create_tag", "title": "createConversationTag", "target": "conversation", "method": "createConversationTag", "callbackKind": "common", "args": [ { "key": "tagId", "label": "tagId", "kind": "text", "sourceKey": "tagId" }, { "key": "tagName", "label": "tagName", "kind": "text", "sourceKey": "tagName" } ] },
+        { "id": "conver_destroy_tag", "title": "destroyConversationTag", "target": "conversation", "method": "destroyConversationTag", "callbackKind": "common", "args": [ { "key": "tagId", "label": "tagId", "kind": "text", "sourceKey": "tagId" } ] },
+        { "id": "conver_update_tag_name", "title": "updateConversationTagName", "target": "conversation", "method": "updateConversationTagName", "callbackKind": "common", "args": [ { "key": "tagId", "label": "tagId", "kind": "text", "sourceKey": "tagId" }, { "key": "tagName", "label": "tagName", "kind": "text", "sourceKey": "tagName" } ] },
+        { "id": "conver_get_cached_tag_list", "title": "getCachedConversationTagList", "target": "conversation", "method": "getCachedConversationTagList", "callbackKind": "none", "args": [] },
+        { "id": "conver_get_tag_list", "title": "getConversationTagList", "target": "conversation", "method": "getConversationTagList", "callbackKind": "conversationTagInfos", "args": [] },
+        { "id": "conver_get_tags_for_conversation", "title": "getTagsForConversation", "target": "conversation", "method": "getTagsForConversation", "callbackKind": "none", "args": [ { "key": "conversation", "label": "conversation", "kind": "conversation", "sourceKey": "conversationJson" } ] },
+        { "id": "conver_add_to_tag", "title": "addConversationsToTag", "target": "conversation", "method": "addConversationsToTag", "callbackKind": "common", "args": [ { "key": "convers", "label": "conversations", "kind": "conversationArray", "sourceKey": "conversationIdsJson" }, { "key": "tagId", "label": "tagId", "kind": "text", "sourceKey": "tagId" } ] },
+        { "id": "conver_remove_from_tag", "title": "removeConversationsFromTag", "target": "conversation", "method": "removeConversationsFromTag", "callbackKind": "common", "args": [ { "key": "convers", "label": "conversations", "kind": "conversationArray", "sourceKey": "conversationIdsJson" }, { "key": "tagId", "label": "tagId", "kind": "text", "sourceKey": "tagId" } ] },
+        { "id": "conver_add_tag", "title": "addConversationTag", "target": "conversation", "method": "addConversationTag", "callbackKind": "common", "args": [ { "key": "conversation", "label": "conversation", "kind": "conversation", "sourceKey": "conversationJson" }, { "key": "tagId", "label": "tagId", "kind": "text", "sourceKey": "tagId" } ] },
+        { "id": "conver_remove_tag", "title": "removeConversationTag", "target": "conversation", "method": "removeConversationTag", "callbackKind": "common", "args": [ { "key": "conversation", "label": "conversation", "kind": "conversation", "sourceKey": "conversationJson" }, { "key": "tagId", "label": "tagId", "kind": "text", "sourceKey": "tagId" } ] },
+        { "id": "conver_get_tags", "title": "getConversationTags", "target": "conversation", "method": "getConversationTags", "callbackKind": "conversationTags", "args": [ { "key": "conversation", "label": "conversation", "kind": "conversation", "sourceKey": "conversationJson" } ] },
+        { "id": "conver_set_unread", "title": "setUnread", "target": "conversation", "method": "setUnread", "callbackKind": "common", "args": [ { "key": "conversation", "label": "conversation", "kind": "conversation", "sourceKey": "conversationJson" } ] },
+        { "id": "conver_delete", "title": "delConversation", "target": "conversation", "method": "delConversation", "callbackKind": "common", "args": [ { "key": "conversation", "label": "conversation", "kind": "conversation", "sourceKey": "conversationJson" } ] },
+        { "id": "conver_set_top", "title": "setTop", "target": "conversation", "method": "setTop", "callbackKind": "common", "args": [ { "key": "conversation", "label": "conversation", "kind": "conversation", "sourceKey": "conversationJson" }, { "key": "isTop", "label": "isTop", "kind": "boolean", "defaultValue": "true" } ] },
+        { "id": "conver_set_top_order", "title": "setTopConversationsOrderType", "target": "conversation", "method": "setTopConversationsOrderType", "callbackKind": "none", "args": [ { "key": "sortType", "label": "sortType", "kind": "number", "defaultValue": "0" } ] },
+        { "id": "conver_get_top", "title": "getTopConversations", "target": "conversation", "method": "getTopConversations", "callbackKind": "conversations", "args": [ { "key": "sortType", "label": "sortType", "kind": "number", "defaultValue": "0" }, { "key": "start", "label": "start", "kind": "number", "defaultValue": "0" }, { "key": "isPositive", "label": "isPositive", "kind": "boolean", "sourceKey": "isPositive" } ] },
+        { "id": "conver_set_mute", "title": "setMute", "target": "conversation", "method": "setMute", "callbackKind": "common", "args": [ { "key": "conversation", "label": "conversation", "kind": "conversation", "sourceKey": "conversationJson" }, { "key": "isMute", "label": "isMute", "kind": "boolean", "defaultValue": "true" } ] },
+        { "id": "conver_total_unread", "title": "getTotalUnreadCount", "target": "conversation", "method": "getTotalUnreadCount", "callbackKind": "count", "args": [] },
+        { "id": "conver_unread_types", "title": "getUnreadCountWithTypes", "target": "conversation", "method": "getUnreadCountWithTypes", "callbackKind": "count", "args": [ { "key": "conversationTypes", "label": "conversationTypes", "kind": "numberArray", "sourceKey": "conversationTypesJson" } ] },
+        { "id": "conver_total_unread_by_tag", "title": "getTotalUnreadCountByTag", "target": "conversation", "method": "getTotalUnreadCountByTag", "callbackKind": "count", "args": [ { "key": "tagId", "label": "tagId", "kind": "text", "sourceKey": "tagId" } ] },
+        { "id": "conver_unread_by_tag", "title": "getUnreadCountWithTag", "target": "conversation", "method": "getUnreadCountWithTag", "callbackKind": "count", "args": [ { "key": "tagId", "label": "tagId", "kind": "text", "sourceKey": "tagId" } ] },
+        { "id": "conver_clear_total_unread", "title": "clearTotalUnreadCount", "target": "conversation", "method": "clearTotalUnreadCount", "callbackKind": "common", "args": [] },
+        { "id": "conver_clear_unread", "title": "clearUnreadCount", "target": "conversation", "method": "clearUnreadCount", "callbackKind": "common", "args": [ { "key": "conversation", "label": "conversation", "kind": "conversation", "sourceKey": "conversationJson" } ] }
+      ]
+    },
+    {
+      "id": "message",
+      "title": "Message",
+      "description": "消息发送、查询和操作",
+      "actions": [
+        { "id": "msg_register", "title": "registerMessage", "target": "message", "method": "registerMessage", "callbackKind": "none", "args": [ { "key": "msgType", "label": "msgType", "kind": "text", "sourceKey": "messageType" }, { "key": "constructor", "label": "constructor", "kind": "customMessageConstructor", "defaultValue": "jg:demo_custom" } ] },
+        { "id": "msg_upload_image", "title": "uploadImage", "target": "message", "method": "uploadImage", "callbackKinds": ["mediaUploadSuccess", "mediaUploadError"], "args": [ { "key": "path", "label": "path", "kind": "text", "sourceKey": "filePath" } ] },
+        { "id": "msg_add_reaction", "title": "addMessageReaction", "target": "message", "method": "addMessageReaction", "callbackKind": "common", "args": [ { "key": "messageId", "label": "messageId", "kind": "text", "sourceKey": "messageId" }, { "key": "reactionId", "label": "reactionId", "kind": "text", "sourceKey": "reactionId" } ] },
+        { "id": "msg_remove_reaction", "title": "removeMessageReaction", "target": "message", "method": "removeMessageReaction", "callbackKind": "common", "args": [ { "key": "messageId", "label": "messageId", "kind": "text", "sourceKey": "messageId" }, { "key": "reactionId", "label": "reactionId", "kind": "text", "sourceKey": "reactionId" } ] },
+        { "id": "msg_get_reaction", "title": "getMessagesReaction", "target": "message", "method": "getMessagesReaction", "callbackKind": "messageReactions", "args": [ { "key": "conversation", "label": "conversation", "kind": "conversation", "sourceKey": "conversationJson" }, { "key": "msgIds", "label": "msgIds", "kind": "stringArray", "sourceKey": "msgIdsJson" } ] },
+        { "id": "msg_add_favorite", "title": "addFavorite", "target": "message", "method": "addFavorite", "callbackKind": "common", "args": [ { "key": "msgIds", "label": "msgIds", "kind": "stringArray", "sourceKey": "msgIdsJson" } ] },
+        { "id": "msg_remove_favorite", "title": "removeFavorite", "target": "message", "method": "removeFavorite", "callbackKind": "common", "args": [ { "key": "msgIds", "label": "msgIds", "kind": "stringArray", "sourceKey": "msgIdsJson" } ] },
+        { "id": "msg_get_favorite", "title": "getFavorite", "target": "message", "method": "getFavorite", "callbackKind": "favoriteMessages", "args": [ { "key": "option", "label": "option", "kind": "getFavoriteOption", "sourceKey": "favoriteOptionJson" } ] },
+        { "id": "msg_broadcast", "title": "broadcastMessage", "target": "message", "method": "broadcastMessage", "callbackKind": "broadcast", "args": [ { "key": "msg", "label": "msg", "kind": "messageContent", "sourceKey": "contentJson" }, { "key": "convers", "label": "conversations", "kind": "conversationArray", "sourceKey": "conversationIdsJson" } ] },
+        { "id": "msg_set_mute", "title": "setMute", "target": "message", "method": "setMute", "callbackKind": "common", "args": [ { "key": "isMute", "label": "isMute", "kind": "boolean", "defaultValue": "true" }, { "key": "periods", "label": "periods", "kind": "timePeriods", "sourceKey": "periodsJson" } ] },
+        { "id": "msg_get_mute", "title": "getMuteStatus", "target": "message", "method": "getMuteStatus", "callbackKind": "mute", "args": [] },
+        { "id": "msg_set_top", "title": "setTop", "target": "message", "method": "setTop", "callbackKind": "common", "args": [ { "key": "messageId", "label": "messageId", "kind": "text", "sourceKey": "messageId" }, { "key": "conversation", "label": "conversation", "kind": "conversation", "sourceKey": "conversationJson" }, { "key": "isTop", "label": "isTop", "kind": "boolean", "defaultValue": "true" } ] },
+        { "id": "msg_get_top", "title": "getTopMessage", "target": "message", "method": "getTopMessage", "callbackKind": "topMessage", "args": [ { "key": "conversation", "label": "conversation", "kind": "conversation", "sourceKey": "conversationJson" } ] },
+        { "id": "msg_send", "title": "sendMessage", "target": "message", "method": "sendMessage", "callbackKind": "message", "args": [ { "key": "msg", "label": "messageContent", "kind": "messageContent", "sourceKey": "contentJson" }, { "key": "conversation", "label": "conversation", "kind": "conversation", "sourceKey": "conversationJson" } ] },
+        { "id": "msg_send_with_options", "title": "sendMessage(options)", "target": "message", "method": "sendMessage", "callbackKind": "message", "args": [ { "key": "msg", "label": "messageContent", "kind": "messageContent", "sourceKey": "contentJson" }, { "key": "conversation", "label": "conversation", "kind": "conversation", "sourceKey": "conversationJson" }, { "key": "options", "label": "messageOptions", "kind": "messageOptions", "sourceKey": "messageOptionsJson" } ] },
+        { "id": "msg_send_media", "title": "sendMediaMessage", "target": "message", "method": "sendMediaMessage", "callbackKind": "none", "args": [ { "key": "msg", "label": "messageContent", "kind": "messageContent", "sourceKey": "contentJson" }, { "key": "conversation", "label": "conversation", "kind": "conversation", "sourceKey": "conversationJson" } ] },
+        { "id": "msg_send_media_cb", "title": "sendMediaMessage(callback)", "target": "message", "method": "sendMediaMessage", "callbackKind": "message", "args": [ { "key": "msg", "label": "messageContent", "kind": "messageContent", "sourceKey": "contentJson" }, { "key": "conversation", "label": "conversation", "kind": "conversation", "sourceKey": "conversationJson" } ] },
+        { "id": "msg_resend", "title": "resendMessage", "target": "message", "method": "resendMessage", "callbackKind": "message", "args": [ { "key": "message", "label": "message", "kind": "messageFromClientMsgNo", "sourceKey": "clientMsgNo" } ] },
+        { "id": "msg_resend_media", "title": "resendMediaMessage", "target": "message", "method": "resendMediaMessage", "callbackKind": "message", "args": [ { "key": "message", "label": "message", "kind": "messageFromClientMsgNo", "sourceKey": "clientMsgNo" } ] },
+        { "id": "msg_download_media", "title": "downloadMediaMessage", "target": "message", "method": "downloadMediaMessage", "callbackKinds": ["downloadMediaProgress", "downloadMediaSuccess", "downloadMediaError", "downloadMediaCancel"], "args": [ { "key": "messageId", "label": "messageId", "kind": "text", "sourceKey": "messageId" } ] },
+        { "id": "msg_cancel_download", "title": "cancelDownloadMediaMessage", "target": "message", "method": "cancelDownloadMediaMessage", "callbackKind": "none", "args": [ { "key": "messageId", "label": "messageId", "kind": "text", "sourceKey": "messageId" } ] },
+        { "id": "msg_query_credential", "title": "queryUploadFileCredential", "target": "message", "method": "queryUploadFileCredential", "callbackKind": "queryUploadFileCredential", "args": [ { "key": "fileType", "label": "fileType", "kind": "number", "defaultValue": "4" }, { "key": "ext", "label": "ext", "kind": "text", "defaultValue": "png" } ] },
+        { "id": "msg_query_messages", "title": "queryMessages", "target": "message", "method": "queryMessages", "callbackKind": "qryMessages", "args": [ { "key": "conversation", "label": "conversation", "kind": "conversation", "sourceKey": "conversationJson" }, { "key": "options", "label": "options", "kind": "getMessageOptions", "sourceKey": "getMessageOptionsJson" } ] },
+        { "id": "msg_query_local_messages", "title": "queryLocalMessages", "target": "message", "method": "queryLocalMessages", "callbackKind": "qryMessages", "args": [ { "key": "conversation", "label": "conversation", "kind": "conversation", "sourceKey": "conversationJson" }, { "key": "options", "label": "options", "kind": "getMessageOptions", "sourceKey": "getMessageOptionsJson" } ] },
+        { "id": "msg_query_remote_messages", "title": "queryRemoteMessages", "target": "message", "method": "queryRemoteMessages", "callbackKind": "qryMessages", "args": [ { "key": "conversation", "label": "conversation", "kind": "conversation", "sourceKey": "conversationJson" }, { "key": "options", "label": "options", "kind": "getMessageOptions", "sourceKey": "getMessageOptionsJson" } ] },
+        { "id": "msg_get_local_remote", "title": "getLocalAndRemoteMessages", "target": "message", "method": "getLocalAndRemoteMessages", "callbackKind": "localAndRemote", "args": [ { "key": "conversation", "label": "conversation", "kind": "conversation", "sourceKey": "conversationJson" }, { "key": "count", "label": "count", "kind": "number", "sourceKey": "count" }, { "key": "startTime", "label": "startTime", "kind": "number", "sourceKey": "startTime" }, { "key": "direction", "label": "direction", "kind": "number", "sourceKey": "direction" } ] },
+        { "id": "msg_get_first_unread", "title": "getFirstUnreadMessage", "target": "message", "method": "getFirstUnreadMessage", "callbackKind": "messages", "args": [ { "key": "conversation", "label": "conversation", "kind": "conversation", "sourceKey": "conversationJson" } ] },
+        { "id": "msg_get_merged", "title": "getMergedMessageList", "target": "message", "method": "getMergedMessageList", "callbackKind": "messages", "args": [ { "key": "containerMsgId", "label": "containerMsgId", "kind": "text", "sourceKey": "messageId" } ] },
+        { "id": "msg_query_mention", "title": "queryMentionMessages", "target": "message", "method": "queryMentionMessages", "callbackKind": "qryMessages", "args": [ { "key": "conversation", "label": "conversation", "kind": "conversation", "sourceKey": "conversationJson" }, { "key": "count", "label": "count", "kind": "number", "sourceKey": "count" }, { "key": "startTime", "label": "startTime", "kind": "number", "sourceKey": "startTime" }, { "key": "isPositive", "label": "isPositive", "kind": "boolean", "sourceKey": "isPositive" } ] },
+        { "id": "msg_search_conver_content", "title": "searchConversationsWithMessageContent", "target": "message", "method": "searchConversationsWithMessageContent", "callbackKind": "searchConversationsWithMessageContent", "args": [ { "key": "options", "label": "options", "kind": "messageQueryOptions", "sourceKey": "messageQueryOptionsJson" } ] },
+        { "id": "msg_clear_messages", "title": "clearMessages", "target": "message", "method": "clearMessages", "callbackKind": "common", "args": [ { "key": "conversation", "label": "conversation", "kind": "conversation", "sourceKey": "conversationJson" }, { "key": "options", "label": "options", "kind": "clearMsgOptions", "sourceKey": "clearMsgOptionsJson" } ] },
+        { "id": "msg_del_messages", "title": "delMessages", "target": "message", "method": "delMessages", "callbackKind": "common", "args": [ { "key": "conversation", "label": "conversation", "kind": "conversation", "sourceKey": "conversationJson" }, { "key": "msgIds", "label": "msgIds", "kind": "stringArray", "sourceKey": "msgIdsJson" }, { "key": "delScope", "label": "delScope", "kind": "number", "defaultValue": "0" } ] },
+        { "id": "msg_get_by_client_msg_nos", "title": "getMessagesByClientMsgNos", "target": "message", "method": "getMessagesByClientMsgNos", "callbackKind": "none", "args": [ { "key": "clientMsgNos", "label": "clientMsgNos", "kind": "numberArray", "sourceKey": "clientMsgNosJson" } ] },
+        { "id": "msg_get_by_msg_ids", "title": "getMessagesByMessageIds", "target": "message", "method": "getMessagesByMessageIds", "callbackKind": "qryMessages", "args": [ { "key": "conversation", "label": "conversation", "kind": "conversation", "sourceKey": "conversationJson" }, { "key": "msgIds", "label": "msgIds", "kind": "stringArray", "sourceKey": "msgIdsJson" } ] },
+        { "id": "msg_get_by_ids", "title": "getMessagesByIds", "target": "message", "method": "getMessagesByIds", "callbackKind": "qryMessages", "args": [ { "key": "conversation", "label": "conversation", "kind": "conversation", "sourceKey": "conversationJson" }, { "key": "msgIds", "label": "msgIds", "kind": "stringArray", "sourceKey": "msgIdsJson" } ] },
+        { "id": "msg_save", "title": "saveMessage", "target": "message", "method": "saveMessage", "callbackKind": "none", "args": [ { "key": "msg", "label": "messageContent", "kind": "messageContent", "sourceKey": "contentJson" }, { "key": "conversation", "label": "conversation", "kind": "conversation", "sourceKey": "conversationJson" } ] },
+        { "id": "msg_save_with_options", "title": "saveMessage(options)", "target": "message", "method": "saveMessage", "callbackKind": "none", "args": [ { "key": "msg", "label": "messageContent", "kind": "messageContent", "sourceKey": "contentJson" }, { "key": "conversation", "label": "conversation", "kind": "conversation", "sourceKey": "conversationJson" }, { "key": "options", "label": "messageOptions", "kind": "messageOptions", "sourceKey": "messageOptionsJson" } ] },
+        { "id": "msg_set_state", "title": "setMessageState", "target": "message", "method": "setMessageState", "callbackKind": "none", "args": [ { "key": "clientMsgNo", "label": "clientMsgNo", "kind": "number", "sourceKey": "clientMsgNo" }, { "key": "state", "label": "state", "kind": "number", "defaultValue": "2" } ] },
+        { "id": "msg_update", "title": "updateMessage", "target": "message", "method": "updateMessage", "callbackKind": "message", "args": [ { "key": "messageId", "label": "messageId", "kind": "text", "sourceKey": "messageId" }, { "key": "msg", "label": "messageContent", "kind": "messageContent", "sourceKey": "contentJson" }, { "key": "conversation", "label": "conversation", "kind": "conversation", "sourceKey": "conversationJson" } ] },
+        { "id": "msg_modify", "title": "modifyMessage", "target": "message", "method": "modifyMessage", "callbackKind": "message", "args": [ { "key": "conversation", "label": "conversation", "kind": "conversation", "sourceKey": "conversationJson" }, { "key": "messageId", "label": "messageId", "kind": "text", "sourceKey": "messageId" }, { "key": "msg", "label": "messageContent", "kind": "messageContent", "sourceKey": "contentJson" } ] },
+        { "id": "msg_send_read_receipt", "title": "sendReadReceipt", "target": "message", "method": "sendReadReceipt", "callbackKind": "common", "args": [ { "key": "conversation", "label": "conversation", "kind": "conversation", "sourceKey": "conversationJson" }, { "key": "msgIds", "label": "msgIds", "kind": "stringArray", "sourceKey": "msgIdsJson" } ] },
+        { "id": "msg_group_read_detail", "title": "getGroupMessageReadInfoDetail", "target": "message", "method": "getGroupMessageReadInfoDetail", "callbackKind": "groupMessageReadInfoDetail", "args": [ { "key": "conversation", "label": "conversation", "kind": "conversation", "sourceKey": "conversationJson" }, { "key": "messageId", "label": "messageId", "kind": "text", "sourceKey": "messageId" } ] },
+        { "id": "msg_recall", "title": "recallMessage", "target": "message", "method": "recallMessage", "callbackKind": "message", "args": [ { "key": "conversation", "label": "conversation", "kind": "conversation", "sourceKey": "conversationJson" }, { "key": "messageId", "label": "messageId", "kind": "text", "sourceKey": "messageId" }, { "key": "extras", "label": "extras", "kind": "hashMap", "sourceKey": "mapJson" } ] },
+        { "id": "msg_search", "title": "searchMessages", "target": "message", "method": "searchMessages", "callbackKind": "qryMessages", "args": [ { "key": "params", "label": "params", "kind": "searchParams", "sourceKey": "searchParamsJson" } ] },
+        { "id": "msg_read_time", "title": "getMessageReadTime", "target": "message", "method": "getMessageReadTime", "callbackKind": "none", "args": [ { "key": "clientMsgNo", "label": "clientMsgNo", "kind": "number", "sourceKey": "clientMsgNo" } ] },
+        { "id": "msg_set_local_attr_by_msgid", "title": "setLocalAttribute(msgId)", "target": "message", "method": "setLocalAttribute", "callbackKind": "none", "args": [ { "key": "msgId", "label": "msgId", "kind": "text", "sourceKey": "messageId" }, { "key": "attribute", "label": "attribute", "kind": "text", "defaultValue": "local-attr" } ] },
+        { "id": "msg_set_local_attr_by_client", "title": "setLocalAttribute(clientMsgNo)", "target": "message", "method": "setLocalAttribute", "callbackKind": "none", "args": [ { "key": "clientMsgNo", "label": "clientMsgNo", "kind": "number", "sourceKey": "clientMsgNo" }, { "key": "attribute", "label": "attribute", "kind": "text", "defaultValue": "local-attr" } ] },
+        { "id": "msg_get_local_attr_by_msgid", "title": "getLocalAttribute(msgId)", "target": "message", "method": "getLocalAttribute", "callbackKind": "none", "args": [ { "key": "msgId", "label": "msgId", "kind": "text", "sourceKey": "messageId" } ] },
+        { "id": "msg_get_local_attr_by_client", "title": "getLocalAttribute(clientMsgNo)", "target": "message", "method": "getLocalAttribute", "callbackKind": "none", "args": [ { "key": "clientMsgNo", "label": "clientMsgNo", "kind": "number", "sourceKey": "clientMsgNo" } ] },
+        { "id": "msg_set_local_attr_alias", "title": "setLocalAttribue", "target": "message", "method": "setLocalAttribue", "callbackKind": "none", "args": [ { "key": "msgId", "label": "msgId", "kind": "text", "sourceKey": "messageId" }, { "key": "attribute", "label": "attribute", "kind": "text", "defaultValue": "local-attr" } ] }
+      ]
+    },
+    {
+      "id": "chatroom",
+      "title": "Chatroom",
+      "description": "聊天室",
+      "actions": [
+        { "id": "chat_join", "title": "joinChatroom", "target": "chatroom", "method": "joinChatroom", "callbackKind": "none", "args": [ { "key": "chatroomId", "label": "chatroomId", "kind": "text", "sourceKey": "chatroomId" } ] },
+        { "id": "chat_join_prev", "title": "joinChatroom(prevMessageCount)", "target": "chatroom", "method": "joinChatroom", "callbackKind": "none", "args": [ { "key": "chatroomId", "label": "chatroomId", "kind": "text", "sourceKey": "chatroomId" }, { "key": "prevMessageCount", "label": "prevMessageCount", "kind": "number", "sourceKey": "prevMessageCount" } ] },
+        { "id": "chat_join_auto", "title": "joinChatroom(autoCreate)", "target": "chatroom", "method": "joinChatroom", "callbackKind": "none", "args": [ { "key": "chatroomId", "label": "chatroomId", "kind": "text", "sourceKey": "chatroomId" }, { "key": "prevMessageCount", "label": "prevMessageCount", "kind": "number", "sourceKey": "prevMessageCount" }, { "key": "isAutoCreate", "label": "isAutoCreate", "kind": "boolean", "sourceKey": "isAutoCreate" } ] },
+        { "id": "chat_quit", "title": "quitChatroom", "target": "chatroom", "method": "quitChatroom", "callbackKind": "none", "args": [ { "key": "chatroomId", "label": "chatroomId", "kind": "text", "sourceKey": "chatroomId" } ] },
+        { "id": "chat_set_attrs", "title": "setAttributes", "target": "chatroom", "method": "setAttributes", "callbackKind": "chatroomAttributesUpdate", "args": [ { "key": "chatroomId", "label": "chatroomId", "kind": "text", "sourceKey": "chatroomId" }, { "key": "attributes", "label": "attributes", "kind": "map", "sourceKey": "mapJson" } ] },
+        { "id": "chat_remove_attrs", "title": "removeAttributes", "target": "chatroom", "method": "removeAttributes", "callbackKind": "chatroomAttributesUpdate", "args": [ { "key": "chatroomId", "label": "chatroomId", "kind": "text", "sourceKey": "chatroomId" }, { "key": "keys", "label": "keys", "kind": "stringArray", "sourceKey": "msgIdsJson" } ] },
+        { "id": "chat_get_attrs", "title": "getAllAttributes", "target": "chatroom", "method": "getAllAttributes", "callbackKind": "chatroomAttributes", "args": [ { "key": "chatroomId", "label": "chatroomId", "kind": "text", "sourceKey": "chatroomId" } ] }
+      ]
+    },
+    {
+      "id": "user_group",
+      "title": "User & Group",
+      "description": "用户和群组",
+      "actions": [
+        { "id": "user_save", "title": "saveUserInfo", "target": "user", "method": "saveUserInfo", "callbackKind": "none", "args": [ { "key": "userInfo", "label": "userInfo", "kind": "userInfo", "sourceKey": "userInfoJson" } ] },
+        { "id": "user_get_local", "title": "getLocalUserInfo", "target": "user", "method": "getLocalUserInfo", "callbackKind": "none", "args": [ { "key": "userId", "label": "userId", "kind": "text", "sourceKey": "userId" } ] },
+        { "id": "user_get_list", "title": "getUserInfoList", "target": "user", "method": "getUserInfoList", "callbackKind": "none", "args": [ { "key": "userIdList", "label": "userIdList", "kind": "stringArray", "sourceKey": "userIdsJson" } ] },
+        { "id": "user_get_group_list", "title": "getGroupInfoList", "target": "user", "method": "getGroupInfoList", "callbackKind": "none", "args": [ { "key": "groupIdList", "label": "groupIdList", "kind": "stringArray", "sourceKey": "groupIdsJson" } ] },
+        { "id": "user_get_friend_list", "title": "getFriendInfoList", "target": "user", "method": "getFriendInfoList", "callbackKind": "none", "args": [ { "key": "friendIdList", "label": "friendIdList", "kind": "stringArray", "sourceKey": "friendIdsJson" } ] },
+        { "id": "user_get_local_group", "title": "getLocalGroupInfo", "target": "user", "method": "getLocalGroupInfo", "callbackKind": "none", "args": [ { "key": "groupId", "label": "groupId", "kind": "text", "sourceKey": "groupId" } ] },
+        { "id": "user_get_group", "title": "getGroupInfo", "target": "user", "method": "getGroupInfo", "callbackKind": "none", "args": [ { "key": "groupId", "label": "groupId", "kind": "text", "sourceKey": "groupId" } ] },
+        { "id": "user_query_group", "title": "queryGroupInfo", "target": "user", "method": "queryGroupInfo", "callbackKind": "groupInfo", "args": [ { "key": "groupId", "label": "groupId", "kind": "text", "sourceKey": "groupId" } ] },
+        { "id": "user_get_local_group_member", "title": "getLocalGroupMember", "target": "user", "method": "getLocalGroupMember", "callbackKind": "none", "args": [ { "key": "groupId", "label": "groupId", "kind": "text", "sourceKey": "groupId" }, { "key": "memberId", "label": "memberId", "kind": "text", "sourceKey": "userId" } ] },
+        { "id": "user_get_group_member", "title": "getGroupMember", "target": "user", "method": "getGroupMember", "callbackKind": "none", "args": [ { "key": "groupId", "label": "groupId", "kind": "text", "sourceKey": "groupId" }, { "key": "memberId", "label": "memberId", "kind": "text", "sourceKey": "userId" } ] },
+        { "id": "user_query_group_member", "title": "queryGroupMember", "target": "user", "method": "queryGroupMember", "callbackKind": "groupMember", "args": [ { "key": "groupId", "label": "groupId", "kind": "text", "sourceKey": "groupId" }, { "key": "memberId", "label": "memberId", "kind": "text", "sourceKey": "userId" } ] },
+        { "id": "user_get_local_group_members", "title": "getLocalGroupMembers", "target": "user", "method": "getLocalGroupMembers", "callbackKind": "none", "args": [ { "key": "groupId", "label": "groupId", "kind": "text", "sourceKey": "groupId" } ] },
+        { "id": "user_query_group_members", "title": "queryGroupMembers", "target": "user", "method": "queryGroupMembers", "callbackKind": "groupMembers", "args": [ { "key": "groupId", "label": "groupId", "kind": "text", "sourceKey": "groupId" } ] },
+        { "id": "user_get_info", "title": "getUserInfo", "target": "user", "method": "getUserInfo", "callbackKind": "none", "args": [ { "key": "userId", "label": "userId", "kind": "text", "sourceKey": "userId" } ] },
+        { "id": "user_query_info", "title": "queryUserInfo", "target": "user", "method": "queryUserInfo", "callbackKind": "userInfo", "args": [ { "key": "userId", "label": "userId", "kind": "text", "sourceKey": "userId" } ] },
+        { "id": "user_remote_info", "title": "getRemoteUserInfo", "target": "user", "method": "getRemoteUserInfo", "callbackKind": "userInfo", "args": [ { "key": "userId", "label": "userId", "kind": "text", "sourceKey": "userId" } ] },
+        { "id": "user_fetch_info", "title": "fetchUserInfo", "target": "user", "method": "fetchUserInfo", "callbackKind": "userInfo", "args": [ { "key": "userId", "label": "userId", "kind": "text", "sourceKey": "userId" } ] },
+        { "id": "user_fetch_group_info", "title": "fetchGroupInfo", "target": "user", "method": "fetchGroupInfo", "callbackKind": "groupInfo", "args": [ { "key": "groupId", "label": "groupId", "kind": "text", "sourceKey": "groupId" } ] },
+        { "id": "user_save_friend", "title": "saveFriendInfo", "target": "user", "method": "saveFriendInfo", "callbackKind": "none", "args": [ { "key": "friendInfo", "label": "friendInfo", "kind": "friendInfo", "sourceKey": "friendInfoJson" } ] },
+        { "id": "user_get_local_friend", "title": "getLocalFriendInfo", "target": "user", "method": "getLocalFriendInfo", "callbackKind": "none", "args": [ { "key": "userId", "label": "userId", "kind": "text", "sourceKey": "userId" } ] },
+        { "id": "user_get_friend", "title": "getFriendInfo", "target": "user", "method": "getFriendInfo", "callbackKind": "none", "args": [ { "key": "userId", "label": "userId", "kind": "text", "sourceKey": "userId" } ] },
+        { "id": "user_query_friend", "title": "queryFriendInfo", "target": "user", "method": "queryFriendInfo", "callbackKind": "friendInfo", "args": [ { "key": "userId", "label": "userId", "kind": "text", "sourceKey": "userId" } ] },
+        { "id": "user_fetch_friend", "title": "fetchFriendInfo", "target": "user", "method": "fetchFriendInfo", "callbackKind": "none", "args": [ { "key": "userId", "label": "userId", "kind": "text", "sourceKey": "userId" } ] },
+        { "id": "user_check_friend", "title": "checkFriend", "target": "user", "method": "checkFriend", "callbackKind": "friendInfo", "args": [ { "key": "userId", "label": "userId", "kind": "text", "sourceKey": "userId" } ] },
+        { "id": "group_save", "title": "saveGroupInfo", "target": "group", "method": "saveGroupInfo", "callbackKind": "none", "args": [ { "key": "grpInfo", "label": "groupInfo", "kind": "groupInfo", "sourceKey": "groupInfoJson" } ] },
+        { "id": "group_get_local", "title": "getLocalGroupInfo", "target": "group", "method": "getLocalGroupInfo", "callbackKind": "none", "args": [ { "key": "groupId", "label": "groupId", "kind": "text", "sourceKey": "groupId" } ] },
+        { "id": "group_get_list", "title": "getGroupInfoList", "target": "group", "method": "getGroupInfoList", "callbackKind": "none", "args": [ { "key": "groupIdList", "label": "groupIdList", "kind": "stringArray", "sourceKey": "groupIdsJson" } ] },
+        { "id": "group_get", "title": "getGroupInfo", "target": "group", "method": "getGroupInfo", "callbackKind": "none", "args": [ { "key": "groupId", "label": "groupId", "kind": "text", "sourceKey": "groupId" } ] },
+        { "id": "group_query", "title": "queryGroupInfo", "target": "group", "method": "queryGroupInfo", "callbackKind": "groupInfo", "args": [ { "key": "groupId", "label": "groupId", "kind": "text", "sourceKey": "groupId" } ] },
+        { "id": "group_get_local_member", "title": "getLocalGroupMember", "target": "group", "method": "getLocalGroupMember", "callbackKind": "none", "args": [ { "key": "groupId", "label": "groupId", "kind": "text", "sourceKey": "groupId" }, { "key": "memberId", "label": "memberId", "kind": "text", "sourceKey": "userId" } ] },
+        { "id": "group_get_member", "title": "getGroupMember", "target": "group", "method": "getGroupMember", "callbackKind": "none", "args": [ { "key": "groupId", "label": "groupId", "kind": "text", "sourceKey": "groupId" }, { "key": "memberId", "label": "memberId", "kind": "text", "sourceKey": "userId" } ] },
+        { "id": "group_query_member", "title": "queryGroupMember", "target": "group", "method": "queryGroupMember", "callbackKind": "groupMember", "args": [ { "key": "groupId", "label": "groupId", "kind": "text", "sourceKey": "groupId" }, { "key": "memberId", "label": "memberId", "kind": "text", "sourceKey": "userId" } ] },
+        { "id": "group_get_local_members", "title": "getLocalGroupMembers", "target": "group", "method": "getLocalGroupMembers", "callbackKind": "none", "args": [ { "key": "groupId", "label": "groupId", "kind": "text", "sourceKey": "groupId" } ] },
+        { "id": "group_query_members", "title": "queryGroupMembers", "target": "group", "method": "queryGroupMembers", "callbackKind": "groupMembers", "args": [ { "key": "groupId", "label": "groupId", "kind": "text", "sourceKey": "groupId" } ] }
+      ]
+    },
+    {
+      "id": "moment",
+      "title": "Moment",
+      "description": "朋友圈",
+      "actions": [
+        { "id": "moment_add", "title": "addMoment", "target": "moment", "method": "addMoment", "callbackKind": "moment", "args": [ { "key": "content", "label": "content", "kind": "text", "defaultValue": "moment content" }, { "key": "mediaList", "label": "mediaList", "kind": "momentMediaArray", "sourceKey": "momentMediaJson" } ] },
+        { "id": "moment_remove", "title": "removeMoment", "target": "moment", "method": "removeMoment", "callbackKind": "common", "args": [ { "key": "momentId", "label": "momentId", "kind": "text", "sourceKey": "momentId" } ] },
+        { "id": "moment_get_cached", "title": "getCachedMomentList", "target": "moment", "method": "getCachedMomentList", "callbackKind": "none", "args": [ { "key": "option", "label": "option", "kind": "momentOption", "sourceKey": "momentOptionJson" } ] },
+        { "id": "moment_get_list", "title": "getMomentList", "target": "moment", "method": "getMomentList", "callbackKind": "moments", "args": [ { "key": "option", "label": "option", "kind": "momentOption", "sourceKey": "momentOptionJson" } ] },
+        { "id": "moment_get", "title": "getMoment", "target": "moment", "method": "getMoment", "callbackKind": "moment", "args": [ { "key": "momentId", "label": "momentId", "kind": "text", "sourceKey": "momentId" } ] },
+        { "id": "moment_add_comment", "title": "addComment", "target": "moment", "method": "addComment", "callbackKind": "momentComment", "args": [ { "key": "momentId", "label": "momentId", "kind": "text", "sourceKey": "momentId" }, { "key": "parentCommentId", "label": "parentCommentId", "kind": "text", "sourceKey": "parentCommentId" }, { "key": "content", "label": "content", "kind": "text", "defaultValue": "comment content" } ] },
+        { "id": "moment_remove_comment", "title": "removeComment", "target": "moment", "method": "removeComment", "callbackKind": "common", "args": [ { "key": "momentId", "label": "momentId", "kind": "text", "sourceKey": "momentId" }, { "key": "commentId", "label": "commentId", "kind": "text", "sourceKey": "commentId" } ] },
+        { "id": "moment_get_comments", "title": "getCommentList", "target": "moment", "method": "getCommentList", "callbackKind": "momentComments", "args": [ { "key": "option", "label": "option", "kind": "momentCommentOption", "sourceKey": "momentCommentOptionJson" } ] },
+        { "id": "moment_add_reaction", "title": "addReaction", "target": "moment", "method": "addReaction", "callbackKind": "common", "args": [ { "key": "momentId", "label": "momentId", "kind": "text", "sourceKey": "momentId" }, { "key": "key", "label": "key", "kind": "text", "sourceKey": "reactionId" } ] },
+        { "id": "moment_remove_reaction", "title": "removeReaction", "target": "moment", "method": "removeReaction", "callbackKind": "common", "args": [ { "key": "momentId", "label": "momentId", "kind": "text", "sourceKey": "momentId" }, { "key": "key", "label": "key", "kind": "text", "sourceKey": "reactionId" } ] },
+        { "id": "moment_get_reactions", "title": "getReactionList", "target": "moment", "method": "getReactionList", "callbackKind": "momentReactions", "args": [ { "key": "momentId", "label": "momentId", "kind": "text", "sourceKey": "momentId" } ] }
+      ]
+    }
+  ],
+  "listeners": [
+    { "id": "listener_conn_status", "title": "Connection Listener", "target": "connection", "method": "addConnectStatusListener", "listenerKind": "connection", "key": "conn-status" },
+    { "id": "listener_conn_observer", "title": "Connection Observer", "target": "connection", "method": "addConnectStatusListener", "listenerKind": "connectionObserver", "key": "conn-observer" },
+    { "id": "listener_conversation", "title": "Conversation Listener", "target": "conversation", "method": "addListener", "listenerKind": "conversation", "key": "conversation-listener" },
+    { "id": "listener_conversation_sync", "title": "Conversation Sync Listener", "target": "conversation", "method": "addSyncListener", "listenerKind": "conversationSync", "key": "conversation-sync" },
+    { "id": "listener_conversation_tag", "title": "Conversation Tag Listener", "target": "conversation", "method": "addTagListener", "listenerKind": "conversationTag", "key": "conversation-tag" },
+    { "id": "listener_msg_received", "title": "Message Received", "target": "message", "method": "addMsgReceivedListener", "listenerKind": "messageReceived" },
+    { "id": "listener_msg_recalled", "title": "Message Recalled", "target": "message", "method": "addMsgRecalledListener", "listenerKind": "messageRecalled" },
+    { "id": "listener_msg_modified", "title": "Message Modified", "target": "message", "method": "addMsgModifiedListener", "listenerKind": "messageModified" },
+    { "id": "listener_msg_read_receipt", "title": "Message Read Receipt", "target": "message", "method": "addReadReceiptListener", "listenerKind": "messageReadReceipt" },
+    { "id": "listener_msg_group_read", "title": "Group Read Receipt", "target": "message", "method": "addGroupReadReceiptListener", "listenerKind": "groupReadReceipt" },
+    { "id": "listener_msg_deleted", "title": "Message Deleted", "target": "message", "method": "addMsgDeletedListener", "listenerKind": "messageDeleted" },
+    { "id": "listener_msg_cleaned", "title": "Message Cleaned", "target": "message", "method": "addMsgCleanedListener", "listenerKind": "messageCleaned" },
+    { "id": "listener_msg_top", "title": "Message Top", "target": "message", "method": "addMsgTopChangedListener", "listenerKind": "messageTop" },
+    { "id": "listener_msg_destroy_time", "title": "Message Destroy Time", "target": "message", "method": "addMsgDestroyTimeUpdateListener", "listenerKind": "messageDestroyTime" },
+    { "id": "listener_chatroom", "title": "Chatroom Listener", "target": "chatroom", "method": "addListener", "listenerKind": "chatroom", "key": "chatroom-listener" },
+    { "id": "listener_chatroom_attrs", "title": "Chatroom Attributes", "target": "chatroom", "method": "addAttributesListener", "listenerKind": "chatroomAttributes", "key": "chatroom-attributes" }
+  ]
+}

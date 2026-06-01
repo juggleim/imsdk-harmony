@@ -20,47 +20,46 @@ import { MsgFlagTool } from "../improto/msgflag"
  * ```
  */
 export class MsgHandler{
-  private static msgTypeMap:Map<string,Function> = new Map()
+  private static msgTypeMap:Map<string, () => MessageContent> = new Map()
 
   static init() {
     //regist inner msg type
-    MsgHandler.registerMessage(JimMsgType.Text,TextMessage)
-    MsgHandler.registerMessage(JimMsgType.Merge,MergeMessage)
-    MsgHandler.registerMessage(JimMsgType.Voice,VoiceMessage)
-    MsgHandler.registerMessage(JimMsgType.Image,ImageMessage)
-    MsgHandler.registerMessage(JimMsgType.File,FileMessage)
-    MsgHandler.registerMessage(JimMsgType.Video,VideoMessage)
-    MsgHandler.registerMessage(JimMsgType.RecallInfo,RecallInfoMessage)
+    MsgHandler.registerMessage(JimMsgType.Text, ()=> new TextMessage())
+    MsgHandler.registerMessage(JimMsgType.Merge, ()=> new MergeMessage())
+    MsgHandler.registerMessage(JimMsgType.Voice, ()=> new VoiceMessage())
+    MsgHandler.registerMessage(JimMsgType.Image, ()=> new ImageMessage())
+    MsgHandler.registerMessage(JimMsgType.File, ()=> new FileMessage())
+    MsgHandler.registerMessage(JimMsgType.Video, ()=> new VideoMessage())
+    MsgHandler.registerMessage(JimMsgType.RecallInfo, ()=> new RecallInfoMessage())
     //cmd msg
-    MsgHandler.registerMessage(JimMsgType.RecallCmd,RecallCmdMessage)
-    MsgHandler.registerMessage(JimMsgType.ReadNtf,ReadNtfMessage)
-    MsgHandler.registerMessage(JimMsgType.GroupReadNtf,GroupReadNtfMessage)
-    MsgHandler.registerMessage(JimMsgType.ClearUnread,ClearUnreadMessage)
-    MsgHandler.registerMessage(JimMsgType.ModifyMsg,ModifyMessage)
-    MsgHandler.registerMessage(JimMsgType.MsgExSet,MsgExSetMessage)
-    MsgHandler.registerMessage(JimMsgType.TopMsg,TopMsgMessage)
+    MsgHandler.registerMessage(JimMsgType.RecallCmd, ()=> new RecallCmdMessage())
+    MsgHandler.registerMessage(JimMsgType.ReadNtf, ()=> new ReadNtfMessage())
+    MsgHandler.registerMessage(JimMsgType.GroupReadNtf, ()=> new GroupReadNtfMessage())
+    MsgHandler.registerMessage(JimMsgType.ClearUnread, ()=> new ClearUnreadMessage())
+    MsgHandler.registerMessage(JimMsgType.ModifyMsg, ()=> new ModifyMessage())
+    MsgHandler.registerMessage(JimMsgType.MsgExSet, ()=> new MsgExSetMessage())
+    MsgHandler.registerMessage(JimMsgType.TopMsg, ()=> new TopMsgMessage())
 
   }
 
-  static registerMessage(msgType:string,constructor:Function){
-    MsgHandler.msgTypeMap.set(msgType,constructor)
+  static registerMessage(msgType:string, factory:() => MessageContent){
+    MsgHandler.msgTypeMap.set(msgType,factory)
   }
 
   static constructByMsgType(msgType:string,data:Uint8Array):MessageContent{
     if(MsgHandler.msgTypeMap.has(msgType)){
       let f = MsgHandler.msgTypeMap.get(msgType)
-      let obj  = MsgHandler.createObj(f as FunctionConstructor)
-      let msgContent = obj as MessageContent
+      if (f == undefined) {
+        console.warn(`jimsdk_unknown_msg_type: ${msgType}`)
+        return new MessageContent()
+      }
+      let msgContent = f()
       msgContent.decode(data)
       return msgContent
     }else{
       console.warn(`jimsdk_unknown_msg_type: ${msgType}`)
       return new MessageContent()
     }
-  }
-
-  private static createObj(constructor:FunctionConstructor):Object{
-    return new constructor()
   }
 
   static downMsg2Message(downMsg:immessage.IDownMsg):Message{

@@ -1,0 +1,13 @@
+{
+  "name": "api-demo",
+  "version": "1.0.0",
+  "description": "API demo module.",
+  "main": "",
+  "author": "",
+  "license": "",
+  "dependencies": {
+    "juggleim": "file:../juggleim"
+  },
+  "devDependencies": {},
+  "dynamicDependencies": {}
+}

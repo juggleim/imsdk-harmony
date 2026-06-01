@@ -1,0 +1,71 @@
+{
+  "module": {
+    "name": "apiDemo",
+    "type": "entry",
+    "description": "$string:module_desc",
+    "mainElement": "ApiDemoAbility",
+    "deviceTypes": [
+      "phone",
+      "tablet",
+      "2in1",
+      "car"
+    ],
+    "deliveryWithInstall": true,
+    "installationFree": false,
+    "pages": "$profile:main_pages",
+    "abilities": [
+      {
+        "name": "ApiDemoAbility",
+        "srcEntry": "./ets/ability/ApiDemoAbility.ets",
+        "description": "$string:ability_desc",
+        "icon": "$media:api_demo",
+        "label": "$string:ability_label",
+        "startWindowIcon": "$media:api_demo",
+        "startWindowBackground": "$color:start_window_background",
+        "exported": true,
+        "skills": [
+          {
+            "entities": [
+              "entity.system.home"
+            ],
+            "actions": [
+              "action.system.home"
+            ]
+          }
+        ]
+      }
+    ],
+    "requestPermissions": [
+      {
+        "name": "ohos.permission.INTERNET",
+        "reason": "$string:permission_reason",
+        "usedScene": {
+          "abilities": [
+            "ApiDemoAbility"
+          ],
+          "when": "always"
+        }
+      },
+      {
+        "name": "ohos.permission.GET_NETWORK_INFO",
+        "reason": "$string:permission_reason",
+        "usedScene": {
+          "abilities": [
+            "ApiDemoAbility"
+          ],
+          "when": "always"
+        }
+      },
+      {
+        "name": "ohos.permission.MICROPHONE",
+        "reason": "$string:permission_reason",
+        "usedScene": {
+          "abilities": [
+            "ApiDemoAbility"
+          ],
+          "when": "inuse"
+        }
+      }
+    ]
+  }
+}

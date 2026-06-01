@@ -205,8 +205,8 @@ export class MessageManager implements IMessageManager{
     this.msgSyncMgr.removeMsgDestroyTimeUpdateListener(listener)
   }
 
-  public registerMessage(msgType:string, constructor:Function){
-    MsgHandler.registerMessage(msgType, constructor)
+  public registerMessage(msgType:string, factory:() => MessageContent){
+    MsgHandler.registerMessage(msgType, factory)
   }
 
   setMessageUploadProvider(provider:IMessageUploadProvider | null):void{
@@ -393,8 +393,7 @@ export class MessageManager implements IMessageManager{
         console.log(`${TOP_TRACE_TAG} global_mute_get_ack: code=${code}, isMute=${isMute}, timezone=${timezone}, periods=${JSON.stringify(periods)}`)
         callback(0, isMute, timezone, periods)
       }catch (error) {
-        let err = error as Error
-        console.error(`${TOP_TRACE_TAG} global_mute_get_decode_fail: ${err.message}`)
+        console.error(`${TOP_TRACE_TAG} global_mute_get_decode_fail: ${error}`)
         callback(-1, false, '', [])
       }
     })
@@ -1102,7 +1101,7 @@ export class MessageManager implements IMessageManager{
         this.persistRemoteMessages(messages)
         callback(0, messages)
       }catch (e){
-        console.error(`jimsdk_get_first_unread_decode_fail: ${(e as Error).message}`)
+        console.error(`jimsdk_get_first_unread_decode_fail: ${e}`)
         callback(-1, [])
       }
     })
@@ -1133,7 +1132,7 @@ export class MessageManager implements IMessageManager{
         this.persistRemoteMessages(messages)
         callback(0, messages)
       }catch (e){
-        console.error(`jimsdk_get_merged_decode_fail: ${(e as Error).message}`)
+        console.error(`jimsdk_get_merged_decode_fail: ${e}`)
         callback(-1, [])
       }
     })
@@ -1322,8 +1321,7 @@ export class MessageManager implements IMessageManager{
         }
         callback(0, credential)
       }catch (e) {
-        let err = e as Error
-        console.error(`jimsdk_qry_file_cred_decode_fail:${err.message}`)
+        console.error(`jimsdk_qry_file_cred_decode_fail:${e}`)
         callback(-1, null)
       }
     })

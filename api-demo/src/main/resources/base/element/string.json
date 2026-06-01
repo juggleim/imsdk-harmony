@@ -1,0 +1,20 @@
+{
+  "string": [
+    {
+      "name": "module_desc",
+      "value": "API demo module"
+    },
+    {
+      "name": "ability_desc",
+      "value": "API demo ability"
+    },
+    {
+      "name": "ability_label",
+      "value": "ApiDemo"
+    },
+    {
+      "name": "permission_reason",
+      "value": "API demo needs network and microphone access for SDK testing"
+    }
+  ]
+}

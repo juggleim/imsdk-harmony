@@ -1,4 +1,5 @@
 export { JuggleIm, JimConfig } from './src/main/ets/juggleim'
+export { JimUtil } from './src/main/ets/commons/jimutil'
 
 export { ConnectionStatusListener, ConnectionStatusListenerValue, ConnectionStatusObserver, IConnectionManager } from './src/main/ets/interfaces/iconnectionmanager'
 export { IChatroomManager } from './src/main/ets/interfaces/ichatroommanager'
@@ -55,6 +56,8 @@ export {
   GetFavoriteMessageOption,
   GetMessageDirection,
   GetMessageOptions,
+  IGetLocalAndRemoteMessagesCallback,
+  IGetMessagesCallback,
   GroupMessageReadInfoDetailCallback,
   MessageCallback,
   MessageReactionsCallback,
@@ -68,6 +71,7 @@ export {
   MsgReceivedListener,
   MsgRecalledListener,
   MsgTopChangedListener,
+  ISearchConversationWithMessageContentCallback,
   QryMessagesCallback,
   QueryMsgOptions,
   SearchParams,
@@ -105,6 +109,7 @@ export {
   RecallInfoMessage
 } from './src/main/ets/entries/message'
 export { MessageOptions, MessageMentionInfo, MentionType, PushData } from './src/main/ets/entries/messageoptions'
+export { MessageQueryOptions } from './src/main/ets/entries/messagequeryoptions'
 export { JimMsgType } from './src/main/ets/entries/msgtypes'
 export {
   GetMomentCommentOption,
@@ -116,5 +121,6 @@ export {
   MomentMediaType,
   MomentReaction
 } from './src/main/ets/entries/moment'
+export { SearchConversationsResult } from './src/main/ets/entries/searchconversationresult'
 export { FriendInfo, UserInfo } from './src/main/ets/entries/user'
 export { GroupInfo, GroupMember, GroupMessageMemberReadDetail, GroupMessageReadInfo, GroupMessageReadInfoDetail } from './src/main/ets/entries/group'

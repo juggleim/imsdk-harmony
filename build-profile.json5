@@ -38,6 +38,18 @@
       ]
     },
     {
+      "name": "apiDemo",
+      "srcPath": "./api-demo",
+      "targets": [
+        {
+          "name": "default",
+          "applyToProducts": [
+            "default"
+          ]
+        }
+      ]
+    },
+    {
       "name": "base",
       "srcPath": "./jugglechat/base",
     },

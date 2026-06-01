@@ -71,7 +71,7 @@ export interface IMessageManager {
   removeMsgTopChangedListener(listener: MsgTopChangedListener): void
   addMsgDestroyTimeUpdateListener(listener: MsgDestroyTimeUpdateListener): void
   removeMsgDestroyTimeUpdateListener(listener: MsgDestroyTimeUpdateListener): void
-  registerMessage(msgType: string, constructor: Function): void
+  registerMessage(msgType: string, factory: () => MessageContent): void
   setMessageUploadProvider(provider: IMessageUploadProvider | null): void
   getMessageUploadProvider(): IMessageUploadProvider | null
   uploadImage(path: string, onSuccess: MediaUploadSuccessCallback, onError?: MediaUploadErrorCallback): void
