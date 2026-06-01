@@ -1,6 +1,7 @@
 import { JimUtil, StringMapItem } from '../commons/jimutil'
 import { MsgFlag, MsgFlagTool } from '../improto/msgflag'
 import { Conversation } from './conversation'
+import { GroupMessageReadInfo } from './group'
 import { JimMsgType } from './msgtypes'
 import { MessageMentionInfo, PushData } from './messageoptions'
 
@@ -108,8 +109,16 @@ export class MessageContent{
     return this.msgType
   }
 
+  getContentType():string{
+    return this.getMsgType()
+  }
+
   protected setMsgType(msgType:string){
     this.msgType = msgType
+  }
+
+  setContentType(contentType:string){
+    this.setMsgType(contentType)
   }
 
   protected setMsgFlag(msgFlag:MsgFlag){
@@ -124,11 +133,23 @@ export class MessageContent{
     return MsgFlagTool.toFlag(this.msgFlag)
   }
 
+  getFlags():number{
+    return this.getFlagNumber()
+  }
+
   encode():Uint8Array{
     return JimUtil.stringToUint8Array('')
   }
 
   decode(data:Uint8Array){
+  }
+
+  conversationDigest():string{
+    return ''
+  }
+
+  getSearchContent():string{
+    return ''
   }
 }
 
@@ -173,6 +194,22 @@ export class MediaMessageContent extends MessageContent{
   setUploadState(uploadState:number, uploadProgress:number = this.uploadProgress):void{
     this.uploadState = uploadState
     this.uploadProgress = uploadProgress
+  }
+
+  getLocalPath():string{
+    return this.localPath
+  }
+
+  setLocalPath(localPath:string):void{
+    this.localPath = localPath
+  }
+
+  getUrl():string{
+    return this.url
+  }
+
+  setUrl(url:string):void{
+    this.url = url
   }
 
   protected encodeMediaPayload(payload:MediaMessagePayload):Uint8Array{
@@ -267,6 +304,152 @@ export class Message{
   state:number = MessageSentState.none
 
   constructor() {
+  }
+
+  getConversation():Conversation{
+    return this.conversation
+  }
+
+  setConversation(conversation:Conversation):void{
+    this.conversation = conversation
+  }
+
+  getContentType():string{
+    return this.msgContent != null ? this.msgContent.getContentType() : ''
+  }
+
+  setContentType(contentType:string):void{
+    if(this.msgContent != null){
+      this.msgContent.setContentType(contentType)
+    }
+  }
+
+  getClientMsgNo():number{
+    return this.clientMsgNo
+  }
+
+  setClientMsgNo(clientMsgNo:number):void{
+    this.clientMsgNo = clientMsgNo
+  }
+
+  getMessageId():string{
+    return this.messageId
+  }
+
+  setMessageId(messageId:string):void{
+    this.messageId = messageId
+  }
+
+  getDirection():number{
+    return this.direction
+  }
+
+  setDirection(direction:number):void{
+    this.direction = direction
+  }
+
+  getState():number{
+    return this.state
+  }
+
+  setState(state:number):void{
+    this.state = state
+  }
+
+  isHasRead():boolean{
+    return this.hasRead
+  }
+
+  setHasRead(hasRead:boolean):void{
+    this.hasRead = hasRead
+  }
+
+  getTimestamp():number{
+    return this.sentTime
+  }
+
+  setTimestamp(timestamp:number):void{
+    this.sentTime = timestamp
+  }
+
+  getSenderUserId():string{
+    return this.senderId
+  }
+
+  setSenderUserId(senderUserId:string):void{
+    this.senderId = senderUserId
+  }
+
+  getContent():MessageContent{
+    return this.msgContent
+  }
+
+  setContent(content:MessageContent):void{
+    this.msgContent = content
+  }
+
+  getGroupMessageReadInfo():GroupMessageReadInfo{
+    let info = new GroupMessageReadInfo()
+    info.readCount = this.readCount
+    info.memberCount = this.memberCount
+    return info
+  }
+
+  setGroupMessageReadInfo(groupMessageReadInfo:GroupMessageReadInfo):void{
+    this.readCount = groupMessageReadInfo.readCount
+    this.memberCount = groupMessageReadInfo.memberCount
+  }
+
+  getReferredMessage():Message | null{
+    return this.referredMessage
+  }
+
+  setReferredMessage(referredMessage:Message | null):void{
+    this.referredMessage = referredMessage
+  }
+
+  getMentionInfo():MessageMentionInfo | undefined{
+    return this.mentionInfo
+  }
+
+  setMentionInfo(mentionInfo:MessageMentionInfo | undefined):void{
+    this.mentionInfo = mentionInfo
+  }
+
+  getLocalAttribute():string{
+    return this.localAttribute
+  }
+
+  setLocalAttribute(localAttribute:string):void{
+    this.localAttribute = localAttribute
+  }
+
+  isDelete():boolean{
+    return this.isDeleted
+  }
+
+  setDelete(isDeleted:boolean):void{
+    this.isDeleted = isDeleted
+  }
+
+  setEdit(isEdit:boolean):void{
+    this.isEdit = isEdit
+  }
+
+  getDestroyTime():number{
+    return this.destroyTime
+  }
+
+  setDestroyTime(destroyTime:number):void{
+    this.destroyTime = destroyTime
+  }
+
+  getLifeTimeAfterRead():number{
+    return this.lifeTimeAfterRead
+  }
+
+  setLifeTimeAfterRead(lifeTimeAfterRead:number):void{
+    this.lifeTimeAfterRead = lifeTimeAfterRead
   }
 }
 

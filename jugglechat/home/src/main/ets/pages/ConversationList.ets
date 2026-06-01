@@ -137,13 +137,13 @@ export struct ConversationList {
     this.resetConverTimes()
     this.conversationList = new ObservedArray<ConversationViewItem>([])
 
-    if(JuggleIm.instance.getConnStatus() == ConnStatus.connecting || JuggleIm.instance.getConnStatus() == ConnStatus.waiting){
-      JuggleIm.instance.getConnectionManager().addConnectStatusListener(RECONNECT_RELOAD_LISTENER_KEY, (status, _code, _userId) => {
-        if(status==ConnStatus.connected){
-          this.reloadConversations()
-        }
-      })
-    } else if (JuggleIm.instance.getConnStatus() == ConnStatus.connected) {
+    JuggleIm.instance.getConnectionManager().addConnectStatusListener(RECONNECT_RELOAD_LISTENER_KEY, (status, _code, _userId) => {
+      if(status == ConnStatus.connected){
+        this.reloadConversations()
+      }
+    })
+
+    if (JuggleIm.instance.getConnStatus() == ConnStatus.connected) {
       this.reloadConversations()
     }
 

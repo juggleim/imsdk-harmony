@@ -123,7 +123,7 @@ export type MediaUploadCredentialCallback = (code: number, credential: MediaUplo
  *
  * Example:
  * ```ts
- * class MyProvider implements IMessageUploadProvider { /* ... */ }
+ * class MyProvider implements IMessageUploadProvider {}
  * ```
  */
 export interface IMessageUploadProvider {

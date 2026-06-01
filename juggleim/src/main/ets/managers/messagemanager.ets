@@ -233,10 +233,10 @@ export class MessageManager implements IMessageManager{
       image,
       ()=>{
       },
-      (result)=>{
+      (result:MediaUploadResult)=>{
         onSuccess(result)
       },
-      (code, message)=>{
+      (code:number, message:string)=>{
         onError?.(code, message)
       },
       ()=>{
@@ -612,19 +612,19 @@ export class MessageManager implements IMessageManager{
     this.updateLocalMediaMessage(msgDbId, resendMessage)
     this.messageUploadProvider.uploadMediaMessage(
       mediaMsg,
-      (progress)=>{
+      (progress:number)=>{
         mediaMsg.setUploadState(MediaMessageUploadState.uploading, progress)
         resendMessage.state = MessageSentState.uploading
         this.updateLocalMediaMessage(msgDbId, resendMessage)
       },
-      (result)=>{
+      (result:MediaUploadResult)=>{
         this.applyMediaUploadResult(mediaMsg, result)
         mediaMsg.setUploadState(MediaMessageUploadState.success, 100)
         resendMessage.state = MessageSentState.sending
         this.updateLocalMediaMessage(msgDbId, resendMessage)
         this.publishOutgoingMessage(resendMessage, msgDbId, this.resolveReferencedMessage(resendMessage), callback)
       },
-      (code, uploadMessage)=>{
+      (code:number, uploadMessage:string)=>{
         console.error(`jimsdk_media_resend_upload_fail. code:${code}, message:${uploadMessage}`)
         mediaMsg.setUploadState(MediaMessageUploadState.failed)
         resendMessage.state = MessageSentState.failed
@@ -1587,19 +1587,19 @@ export class MessageManager implements IMessageManager{
     this.msgSyncMgr.notifyMessageModified(localMessage)
     this.messageUploadProvider.uploadMediaMessage(
       mediaMsg,
-      (progress)=>{
+      (progress:number)=>{
         mediaMsg.setUploadState(MediaMessageUploadState.uploading, progress)
         localMessage.state = MessageSentState.uploading
         this.updateLocalMediaMessage(msgDbId, localMessage)
       },
-      (result)=>{
+      (result:MediaUploadResult)=>{
         this.applyMediaUploadResult(mediaMsg, result)
         mediaMsg.setUploadState(MediaMessageUploadState.success, 100)
         localMessage.state = MessageSentState.sending
         this.updateLocalMediaMessage(msgDbId, localMessage)
         this.publishOutgoingMessage(localMessage, msgDbId, undefined, completed)
       },
-      (code, message)=>{
+      (code:number, message:string)=>{
         console.error(`jimsdk_media_upload_fail. code:${code}, message:${message}`)
         mediaMsg.setUploadState(MediaMessageUploadState.failed)
         localMessage.state = MessageSentState.failed
