@@ -84,20 +84,16 @@ export class ImClient{
     if(JimUtil.isEmpty(JuggleIm.instance.config.address ?? '')||
     JimUtil.isEmpty(JuggleIm.instance.config.appkey ?? '')||
     JimUtil.isEmpty(token ?? '')){
-      console.log(`CONNTRACE client_connect_skip: address=${JuggleIm.instance.config.address}, appkey=${JuggleIm.instance.config.appkey}, tokenLength=${token?.length ?? 0}`)
       return
     }
     this.token = token
     this.suppressReconnect = false
     this.networkReconnectPending = false
     this.clearReconnectTimer()
-    console.log(`CONNTRACE client_connect_before_refresh: status=${this.status}, networkAvailable=${this.networkAvailable}, pending=${this.networkReconnectPending}, tokenLength=${token.length}`)
     this.refreshNetworkState()
-    console.log(`CONNTRACE client_connect_after_refresh: status=${this.status}, networkAvailable=${this.networkAvailable}, pending=${this.networkReconnectPending}`)
     if(!this.networkAvailable){
       this.networkReconnectPending = true
       this.status = ConnStatus.waiting
-      console.log(`CONNTRACE client_connect_wait_network: status=${this.status}, pending=${this.networkReconnectPending}`)
       this.setConnectStatus(this.status, -3, JuggleIm.instance.userId)
       return
     }
@@ -105,13 +101,10 @@ export class ImClient{
       return
     }
     this.status = ConnStatus.connecting
-    console.log(`CONNTRACE client_connect_begin: address=${JuggleIm.instance.config.address}, tokenLength=${token.length}, appkey=${JuggleIm.instance.config.appkey}, userId=${JuggleIm.instance.userId}`)
     this.setConnectStatus(this.status,0,"")
 
     this.wsSocket = webSocket.createWebSocket()
     this.wsSocket.on('open',(err,value)=>{
-      console.log(`CONNTRACE ws_open: err=${JSON.stringify(err)}, value=${JSON.stringify(value)}`)
-      console.log(`PUSHTRACE connect_payload_prepare: pushChannel=${JuggleIm.instance.config.pushChannel}, pushTokenLength=${JuggleIm.instance.config.pushToken.length}, packageName=${JuggleIm.instance.config.packageName}`)
       let networkInfo = this.buildConnectNetworkInfo()
       let wsMsg = newConnectMessage(imconnect.ConnectMsgBody.create({
         "sdkVersion":JuggleIm.instance.config.sdkVersion,
@@ -135,14 +128,10 @@ export class ImClient{
       this.writeImWsMessage(wsMsg)
     })
     this.wsSocket.on('error',(err)=>{
-      console.log(`CONNTRACE ws_error: ${JSON.stringify(err)}`)
-      console.log("jimsdk_connect_error:",JSON.stringify(err))
       this.handleSocketFailure(-1, JSON.stringify(err))
     })
 
     this.wsSocket.on('close',(_err,value)=>{
-      console.log(`CONNTRACE ws_close: err=${JSON.stringify(_err)}, value=${JSON.stringify(value)}, suppressReconnect=${this.suppressReconnect}`)
-      console.log("jimsdk_socket_close:",JSON.stringify(value))
       if(this.suppressReconnect){
         this.suppressReconnect = false
         this.resetSocketAfterClose()
@@ -154,27 +143,20 @@ export class ImClient{
     })
 
     this.wsSocket.on('message',(err,value)=>{
-      console.log(`CONNTRACE ws_message: err=${JSON.stringify(err)}, isString=${typeof value === 'string'}`)
       if (typeof value === 'string'){
 
       }else{
         let msg = imconnect.ImWebsocketMsg.decode(JimUtil.arrayBufferToUint8Array(value))
-        console.log(`CONNTRACE ws_message_cmd: cmd=${msg.cmd}`)
-        console.log("jimsdk_receive:",msg.cmd)
         this.onReceive(msg)
       }
     })
     let requestOptions: webSocket.WebSocketRequestOptions = {
       header: this.buildConnectRequestHeader(token)
     }
-    console.log(`CONNTRACE ws_connect_request: headerKeys=${Object.keys(requestOptions.header as Object).join(',')}`)
     this.wsSocket.connect(JuggleIm.instance.config.address, requestOptions)
       .then((value)=>{
-        console.log(`CONNTRACE ws_connect_promise_ok: ${JSON.stringify(value)}`)
-        console.log("jimsdk_connect_succ:",JSON.stringify(value))
       })
       .catch((err:BusinessError)=>{
-        console.error(`CONNTRACE ws_connect_promise_fail: ${JSON.stringify(err)}`)
         console.error("jimsdk_connect_fail:",JSON.stringify(err))
         this.closeSocket(true)
         this.status = ConnStatus.waiting
@@ -194,7 +176,6 @@ export class ImClient{
   }
 
   reconnect(){
-    console.log(`CONNTRACE client_reconnect_call: tokenLength=${this.token.length}, status=${this.status}`)
     this.clearReconnectTimer()
     this.networkReconnectPending = false
     this.closeSocket(true)
@@ -203,7 +184,6 @@ export class ImClient{
   }
 
   disconnect(receivePush:boolean){
-    console.log(`CONNTRACE client_disconnect_call: receivePush=${receivePush}, status=${this.status}, hasSocket=${this.wsSocket != undefined}`)
     this.suppressReconnect = true
     this.networkReconnectPending = false
     this.clearReconnectTimer()
@@ -214,7 +194,6 @@ export class ImClient{
     }
     if(this.status === ConnStatus.connected && this.wsSocket != undefined){
       let ext = receivePush ? 'receivePush=true' : 'receivePush=false'
-      console.log(`CONNTRACE client_disconnect_send: ext=${ext}, userId=${this.userId}`)
       let wsMsg = newDisconnectMessage(imconnect.DisconnectMsgBody.create({
         code: 0,
         ext: ext
@@ -232,21 +211,17 @@ export class ImClient{
   private sendDisconnectThenClose(wsMsg:imconnect.ImWebsocketMsg):void{
     let socket = this.wsSocket
     if(socket == undefined){
-      console.log(`CONNTRACE client_disconnect_socket_missing`)
       this.closeSocket(true)
       return
     }
-    console.log(`CONNTRACE client_disconnect_send_begin: cmd=${wsMsg.cmd}`)
     let data = imconnect.ImWebsocketMsg.encode(wsMsg).finish()
     socket.send(data.buffer)
       .then(()=>{
-        console.log(`CONNTRACE client_disconnect_send_ok`)
         setTimeout(()=>{
           this.closeSocket(true, socket)
         }, 100)
       })
       .catch((err:BusinessError)=>{
-        console.error(`CONNTRACE client_disconnect_send_fail: ${JSON.stringify(err)}`)
         console.error("jimsdk_disconnect_send_fail:",JSON.stringify(err))
         this.closeSocket(true, socket)
       })
@@ -255,11 +230,9 @@ export class ImClient{
   private closeSocket(clearCache:boolean, targetSocket?:webSocket.WebSocket){
     let socket = targetSocket ?? this.wsSocket
     if(socket == undefined){
-      console.log(`CONNTRACE client_close_socket_skip: socketMissing=true`)
       return
     }
     let isCurrentSocket = targetSocket == undefined || this.wsSocket == socket
-    console.log(`CONNTRACE client_close_socket: clearCache=${clearCache}, isCurrentSocket=${isCurrentSocket}, hasCurrentSocket=${this.wsSocket != undefined}`)
     if(isCurrentSocket){
       if(this.connectTimeoutId > 0){
         clearTimeout(this.connectTimeoutId)
@@ -281,7 +254,6 @@ export class ImClient{
       if(isCurrentSocket && this.wsSocket == socket){
         this.wsSocket = undefined
       }
-      console.log(`CONNTRACE client_close_socket_done: hasSocket=${this.wsSocket != undefined}`)
     })
   }
 
@@ -307,7 +279,6 @@ export class ImClient{
     if(this.reconnectTimerId > 0){
       return
     }
-    console.log(`jimsdk_socket_failure: code=${code}, reason=${reason}`)
     this.resetSocketAfterClose()
     this.status = ConnStatus.waiting
     this.setConnectStatus(this.status, code, JuggleIm.instance.userId)
@@ -323,7 +294,6 @@ export class ImClient{
       this.clearReconnectTimer()
       this.status = ConnStatus.waiting
       this.setConnectStatus(this.status, reasonCode, JuggleIm.instance.userId)
-      console.log(`jimsdk_reconnect_deferred: reasonCode=${reasonCode}, networkAvailable=${this.networkAvailable}`)
       return
     }
     this.clearReconnectTimer()
@@ -340,7 +310,6 @@ export class ImClient{
       }
       this.connect(this.token)
     }, delay)
-    console.log(`jimsdk_reconnect_scheduled: delay=${delay}, reasonCode=${reasonCode}, attempt=${this.reconnectAttempt}`)
   }
 
   private clearReconnectTimer():void{
@@ -361,25 +330,20 @@ export class ImClient{
       }
     })
     this.netConnection.on('netAvailable', (netHandle)=>{
-      console.log(`CONNTRACE net_available_event: netId=${netHandle.netId}, status=${this.status}, pending=${this.networkReconnectPending}, suppressReconnect=${this.suppressReconnect}, tokenLength=${this.token.length}`)
       this.networkAvailable = true
       this.updateConnectNetworkState(netHandle)
-      console.log(`jimsdk_network_available: netId=${netHandle.netId}, pending=${this.networkReconnectPending}, status=${this.status}`)
       if(this.networkReconnectPending && !this.suppressReconnect && !JimUtil.isEmpty(this.token ?? '') && this.status !== ConnStatus.connected && this.status !== ConnStatus.connecting){
         this.networkReconnectPending = false
         this.clearReconnectTimer()
-        console.log(`CONNTRACE net_available_trigger_connect: netId=${netHandle.netId}, tokenLength=${this.token.length}`)
         this.connect(this.token)
       }
     })
     this.netConnection.on('netLost', (_netHandle)=>{
-      console.log(`CONNTRACE net_lost_event: status=${this.status}, pending=${this.networkReconnectPending}, suppressReconnect=${this.suppressReconnect}`)
       this.onNetworkUnavailable('netLost')
     })
   }
 
   private onNetworkUnavailable(reason:string):void{
-    console.log(`CONNTRACE network_unavailable_enter: reason=${reason}, status=${this.status}, networkAvailable=${this.networkAvailable}, pending=${this.networkReconnectPending}, tokenLength=${this.token.length}`)
     this.networkAvailable = false
     if(this.suppressReconnect){
       return
@@ -387,47 +351,36 @@ export class ImClient{
     this.networkReconnectPending = !JimUtil.isEmpty(this.token ?? '')
     this.clearReconnectTimer()
     if(this.status === ConnStatus.connected || this.status === ConnStatus.connecting){
-      console.log(`jimsdk_network_unavailable: reason=${reason}, status=${this.status}, pending=${this.networkReconnectPending}`)
       this.closeSocket(true)
       this.resetSocketAfterClose()
       this.status = ConnStatus.waiting
       this.setConnectStatus(this.status, -3, JuggleIm.instance.userId)
       return
     }
-    console.log(`jimsdk_network_unavailable: reason=${reason}, status=${this.status}, pending=${this.networkReconnectPending}`)
   }
 
   private refreshNetworkState():void{
     try{
       let previousAvailable = this.networkAvailable
-      console.log(`CONNTRACE refresh_network_state_begin: status=${this.status}, networkAvailable=${previousAvailable}, pending=${this.networkReconnectPending}`)
       let netHandle = connection.getDefaultNetSync()
-      console.log(`CONNTRACE refresh_network_state_handle: netId=${netHandle.netId}`)
       let probedAvailable = netHandle.netId != 0
       if(probedAvailable){
         this.networkAvailable = true
         this.updateConnectNetworkState(netHandle)
       }else if(!previousAvailable){
         this.networkAvailable = false
-      }else{
-        console.log(`CONNTRACE refresh_network_state_preserve: previousAvailable=${previousAvailable}, probedAvailable=${probedAvailable}`)
       }
-      console.log(`CONNTRACE refresh_network_state_end: networkAvailable=${this.networkAvailable}, status=${this.status}`)
     }catch(err){
       console.error(`jimsdk_refresh_network_state_fail: ${JSON.stringify(err)}`)
-      console.log(`CONNTRACE refresh_network_state_preserve_on_error: networkAvailable=${this.networkAvailable}, status=${this.status}`)
     }
   }
 
   private updateConnectNetworkState(netHandle:connection.NetHandle):void{
     if(netHandle.netId == 0){
-      console.log(`CONNTRACE update_network_state_skip: netId=0`)
       return
     }
     try{
-      console.log(`CONNTRACE update_network_state_begin: netId=${netHandle.netId}`)
       this.buildConnectNetworkInfo(netHandle)
-      console.log(`CONNTRACE update_network_state_end: netId=${netHandle.netId}`)
     }catch(err){
       console.error(`jimsdk_update_network_state_fail: ${JSON.stringify(err)}`)
     }
@@ -441,7 +394,6 @@ export class ImClient{
         currentNetHandle = connection.getDefaultNetSync()
       }
       if(currentNetHandle.netId == 0){
-        console.log(`CONNTRACE build_connect_network_info_skip: netId=0`)
         return connectNetworkInfo
       }
       let netCapabilities = connection.getNetCapabilitiesSync(currentNetHandle)
@@ -451,7 +403,6 @@ export class ImClient{
         let linkAddress = connectionProperties.linkAddresses[0]
         connectNetworkInfo.clientIp = linkAddress.address.address
       }
-      console.log(`CONNTRACE build_connect_network_info_done: netId=${currentNetHandle.netId}, networkId=${connectNetworkInfo.networkId}, clientIp=${connectNetworkInfo.clientIp}`)
     }catch(err){
       console.error(`jimsdk_build_connect_network_info_fail: ${JSON.stringify(err)}`)
     }
@@ -481,7 +432,6 @@ export class ImClient{
     addHeader('X-Signature', this.createSignature(nonce, timestamp, signKey))
 
     let headerJson = `{${headerPairs.join(',')}}`
-    console.log(`CONNTRACE connect_header_built: headerCount=${headerPairs.length}, signKeyLength=${signKey.length}, connectExtLength=${JuggleIm.instance.config.connectExt.length}, headerKeys=${headerPairs.map((item)=>item.split(':')[0].replaceAll('"', '')).join(',')}`)
     return JSON.parse(headerJson) as Object
   }
 
@@ -554,11 +504,9 @@ export class ImClient{
   }
 
   writeImWsMessage(wsMsg:imconnect.ImWebsocketMsg){
-    console.log("jimsdk_begin_send")
     let data = imconnect.ImWebsocketMsg.encode(wsMsg).finish()
     this.wsSocket?.send(data.buffer)
       .then((value)=>{
-        console.log("jimsdk_send_succ:",JSON.stringify(value))
       })
       .catch((err:BusinessError)=>{
         console.error("jimsdk_send_fail:",JSON.stringify(err))
@@ -570,8 +518,6 @@ export class ImClient{
       clearTimeout(this.connectTimeoutId)
       this.connectTimeoutId = 0
       let code = wsMsg.ConnectAckMsgBody?.code
-      console.log(`CONNTRACE connect_ack_received: code=${code}, userId=${wsMsg.ConnectAckMsgBody?.userId ?? ''}, session=${wsMsg.ConnectAckMsgBody?.session ?? ''}, ext=${wsMsg.ConnectAckMsgBody?.ext ?? ''}`)
-      console.log("jimsdk_connectAck:",code)
       if(typeof code == 'number'){
         if (code === 0){
           this.status = ConnStatus.connected
@@ -583,7 +529,6 @@ export class ImClient{
           JuggleIm.instance.userId = uid
           this.userId = uid
           PreferenceUtil.setUserIdByToken(JuggleIm.instance.config.appkey,this.token,uid)
-          console.log(`CONNTRACE connect_ack_success: userId=${uid}, reconnectAttempt=${this.reconnectAttempt}, pushTokenLength=${JuggleIm.instance.config.pushToken.length}`)
           //start ping
           this.pingTaskId = setInterval(()=>{
             this.ping()
@@ -595,7 +540,6 @@ export class ImClient{
       }
     }else if (wsMsg.cmd == Cmd.disconnect){
       let code = wsMsg.disconnectMsgBody?.code
-      console.log(`CONNTRACE disconnect_frame_received: code=${code}, userId=${JuggleIm.instance.userId}`)
       if(typeof  code == 'number'){
         this.closeSocket(true)
         this.resetSocketAfterClose()
@@ -605,14 +549,12 @@ export class ImClient{
     }else if(wsMsg.cmd == Cmd.publish){
       let body = wsMsg.publishMsgBody
       if(body!=null&&body!=undefined){
-        console.log("jimsdk_onpublish",body)
         this.triggerPublish(body)
       }
     }else if(wsMsg.cmd == Cmd.publishAck){
       let body = wsMsg.pubAckMsgBody
       if (body!=null&&body!=undefined){
         let code = body.code
-        console.log("jimsdk_puback code:",code)
         let index = body.index
         if (this.publishCache.hasKey(index)){
           if(typeof code == 'number'){
@@ -626,7 +568,6 @@ export class ImClient{
       let body = wsMsg.qryAckMsgBody
       if(body!=null&&body!=undefined){
         let code = body.code
-        console.log("jimsdk_qryack code:",code)
         let index = body.index
         if(this.queryCache.hasKey(index)){
           if(typeof code == 'number'){
@@ -638,7 +579,6 @@ export class ImClient{
       }
     }else if(wsMsg.cmd == Cmd.pong){
       this.latestPongTime = systemDateTime.getTime(false)
-      console.log("jimsdk_pong:",this.latestPongTime)
     }
   }
 
@@ -649,7 +589,6 @@ export class ImClient{
 
   addConnectStatusListener(l:ConnStatusListener){
     this.connectStatusListeners.push(l)
-    console.log("jimsdk_initlis_size:",this.connectStatusListeners.length)
   }
 
   removeConnectStatusListener(l:ConnStatusListener){
@@ -662,9 +601,7 @@ export class ImClient{
   }
 
   private setConnectStatus(status:number,reasonCode:number,userId:string){
-    console.log("jinsdk_initlis_trisize:",this.connectStatusListeners.length)
     this.connectStatusListeners.forEach((listener)=>{
-      console.log("jimsdk_initlis_trigger:",status,reasonCode,userId)
       listener(status,reasonCode,userId)
     })
   }
@@ -683,7 +620,6 @@ export class ImClient{
       let listener = this.publishListenerMap.get(topic)
       listener(pubBody.index as number,pubBody.data as Uint8Array)
     }else{
-      console.log("un support topic:",topic)
     }
   }
 
@@ -740,7 +676,6 @@ export class ImClient{
       "switch": switchValue
     })).finish()
     this.query('push_switch', JuggleIm.instance.userId, data, (code, _qryAck)=>{
-      console.log(`jimsdk_push_switch_ack: code=${code}, isBackground=${isBackground}, userId=${JuggleIm.instance.userId}`)
     })
   }
 
@@ -758,7 +693,6 @@ export class ImClient{
       this.latestPingTime = systemDateTime.getTime(false)
       let wsMsg = newPingMessag()
       this.writeImWsMessage(wsMsg)
-      console.log("jimsdk_ping:",this.latestPingTime)
     }
   }
 }

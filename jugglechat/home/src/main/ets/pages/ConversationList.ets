@@ -31,7 +31,6 @@ import {
 } from 'juggleim'
 import { toConverViewItem } from '../viewmodel/ConversationViewModel'
 
-const TOP_TRACE_TAG:string = 'TOPTRACE'
 const RECONNECT_RELOAD_LISTENER_KEY:string = 'conversation_list_reconnect_reload'
 
 @Component
@@ -102,10 +101,6 @@ export struct ConversationList {
     this.conversationList = new ObservedArray<ConversationViewItem>(
       this.conversationList.slice().sort((a,b)=>this.compareConversation(a, b))
     )
-    let order = this.conversationList.map((item)=>{
-      return `${item.getKey()}[top=${item.isTop},topTime=${item.topTime},converTime=${item.converTime}]`
-    })
-    console.log(`${TOP_TRACE_TAG} conversation_list_sorted: count=${order.length}, order=${JSON.stringify(order)}`)
   }
 
   private isConversationActive(item:ConversationViewItem):boolean{
@@ -139,19 +134,16 @@ export struct ConversationList {
   }
 
   aboutToAppear(): void {
-    console.log(`${TOP_TRACE_TAG} conversation_list_about_to_appear: connStatus=${JuggleIm.instance.getConnStatus()}, userId=${JuggleIm.instance.userId}, pageDepth=${this.pageInfo.size()}`)
     this.resetConverTimes()
     this.conversationList = new ObservedArray<ConversationViewItem>([])
 
     if(JuggleIm.instance.getConnStatus() == ConnStatus.connecting || JuggleIm.instance.getConnStatus() == ConnStatus.waiting){
       JuggleIm.instance.getConnectionManager().addConnectStatusListener(RECONNECT_RELOAD_LISTENER_KEY, (status, _code, _userId) => {
-        console.log(`${TOP_TRACE_TAG} conversation_list_reconnect_listener: status=${status}, userId=${_userId}`)
         if(status==ConnStatus.connected){
           this.reloadConversations()
         }
       })
     } else if (JuggleIm.instance.getConnStatus() == ConnStatus.connected) {
-      console.log(`${TOP_TRACE_TAG} conversation_list_initial_reload`)
       this.reloadConversations()
     }
 
@@ -224,20 +216,14 @@ export struct ConversationList {
         this.conversationList = new ObservedArray<ConversationViewItem>([])
       }
       let options = this.buildConversationQueryOptions(direction, time)
-      console.log(`${TOP_TRACE_TAG} conversation_list_query_request: direction=${options.direction}, time=${options.time}, count=${options.count}, types=${JSON.stringify(options.conversationTypes)}, tagId=${options.tagId}, reset=${reset}`)
       JuggleIm.instance.getConversationManager()
         .queryConversations(options, (code, convers) => {
-          console.log(`${TOP_TRACE_TAG} conversation_list_query_response: code=${code}, count=${convers.length}`)
           convers.forEach((conver) => {
-            console.log(`${TOP_TRACE_TAG} conversation_list_query_item: converId=${conver.conversation.conversationId}, converType=${conver.conversation.conversationType}, isTop=${conver.isTop}, topTime=${conver.topTime}, converTime=${conver.converTime}, tags=${JSON.stringify(conver.tags.map((tag)=>tag.tagId))}`)
             this.mergeConversationViewItem(toConverViewItem(conver))
           })
           this.sortConversationList()
           this.rebuildConverTimes()
         })
-    }
-    else{
-      console.log(`${TOP_TRACE_TAG} conversation_list_query_skip: connStatus=${JuggleIm.instance.getConnStatus()}, reset=${reset}, time=${time}`)
     }
   }
 
@@ -273,9 +259,7 @@ export struct ConversationList {
         }, (item: ConversationViewItem) => item.getKey())
       }
       .onReachEnd(()=>{
-        console.log("jimsdk_end, load more")
         this.loadMoreConvers()
-        console.log("jimsdk_reload_onend:",this.conversationList.length)
       })
       .padding({
         bottom: deviceInfo.deviceType !== BaseConstants.DEVICE_2IN1 &&

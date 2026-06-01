@@ -12,9 +12,7 @@ import { JimUtil } from '../commons/jimutil'
 import { JSON } from '@kit.ArkTS'
 import { BusinessError } from '@kit.BasicServicesKit'
 
-const PUSH_TRACE_TAG:string = 'PUSHTRACE'
 const PUSH_PLATFORM_ANDROID:number = 1
-const CONN_TRACE_TAG:string = 'CONNTRACE'
 
 class ConnectionDbLifecycleListener implements DbLifecycleListener {
   private onDbOpenCallback:() => void
@@ -68,21 +66,18 @@ export class ConnectionManager implements IConnectionManager {
     if(this.connectInitPending){
       return
     }
-    console.log(`${CONN_TRACE_TAG} manager_connect_call: tokenLength=${token.length}, dbInit=${JimDbManager.instance.hasInit}, userId=${JuggleIm.instance.userId}, status=${this.imclient.status}`)
     JuggleIm.instance.config.authToken = token
     if(!JimDbManager.instance.hasInit){
       let userId = PreferenceUtil.getUserIdByToken(JuggleIm.instance.config.appkey,token)
       if(userId!=''){
         this.connectInitPending = true
         let initSeq = ++this.connectInitSeq
-        console.log(`${CONN_TRACE_TAG} manager_connect_init_db: seq=${initSeq}, userId=${userId}`)
         JuggleIm.instance.initDb(userId)
           .then(()=>{
             if(initSeq != this.connectInitSeq || !this.connectInitPending){
               return
             }
             this.connectInitPending = false
-            console.log(`${CONN_TRACE_TAG} manager_connect_init_db_ok: seq=${initSeq}, userId=${userId}`)
             this.imclient.connect(token)
           })
           .catch((err:BusinessError)=>{
@@ -96,14 +91,12 @@ export class ConnectionManager implements IConnectionManager {
         return
       }
     }
-    console.log(`${CONN_TRACE_TAG} manager_connect_direct`)
     this.imclient.connect(token)
   }
 
   disconnect(receivePush:boolean = false){
     this.connectInitSeq++
     this.connectInitPending = false;
-    console.log(`${CONN_TRACE_TAG} manager_disconnect_call: receivePush=${receivePush}, status=${this.imclient.status}, userId=${JuggleIm.instance.userId}`)
     ;(JuggleIm.instance.getChatroomManager() as ChatroomManager).userDisconnect()
     JimDbManager.instance.closeDb()
     this.imclient.disconnect(receivePush)
@@ -116,13 +109,11 @@ export class ConnectionManager implements IConnectionManager {
     this.pushToken = normalizedToken
     JuggleIm.instance.config.pushChannel = pushChannelToConnectName(channel)
     JuggleIm.instance.config.pushToken = normalizedToken
-    console.log(`${PUSH_TRACE_TAG} sdk_register_push_token_call: channel=${pushChannelToDisplayName(channel)}, tokenLength=${normalizedToken.length}, packageName=${packageName}, connStatus=${this.imclient.status}, userId=${JuggleIm.instance.userId}`)
     if(normalizedToken == ''){
       callback?.(new JimErrorCode().InvalidParam)
       return
     }
     if(this.imclient.status != ConnStatus.connected || JuggleIm.instance.userId == ''){
-      console.log(`${PUSH_TRACE_TAG} sdk_register_push_token_deferred: channel=${pushChannelToDisplayName(channel)}, tokenLength=${normalizedToken.length}`)
       callback?.(new JimErrorCode().ConnectionUnavaliable)
       return
     }
@@ -134,7 +125,6 @@ export class ConnectionManager implements IConnectionManager {
       packageName: packageName
     })).finish()
     this.imclient.query('reg_push_token', JuggleIm.instance.userId, data, (code, _qryAck)=>{
-      console.log(`${PUSH_TRACE_TAG} sdk_register_push_token_ack: channel=${pushChannelToDisplayName(channel)}, code=${code}, userId=${JuggleIm.instance.userId}`)
       callback?.(code)
     })
   }
@@ -152,7 +142,6 @@ export class ConnectionManager implements IConnectionManager {
   }
 
   pushSwitch(isBackground:boolean):void{
-    console.log(`jimsdk_push_switch_call: isBackground=${isBackground}, connStatus=${this.imclient.status}, userId=${JuggleIm.instance.userId}`)
     this.imclient.pushSwitch(isBackground)
   }
 
@@ -245,6 +234,5 @@ export class ConnectionManager implements IConnectionManager {
     }else{
       JuggleIm.instance.config.connectExt = ''
     }
-    console.log(`${CONN_TRACE_TAG} connect_ext_refresh: paramsSize=${params.size}, extLength=${JuggleIm.instance.config.connectExt.length}`)
   }
 }

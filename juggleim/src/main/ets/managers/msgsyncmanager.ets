@@ -861,15 +861,12 @@ export class MsgSyncManager{
   }
 
   public async syncAfterConnect(status:number,reasonCode:number,userId:string){
-    console.log(`MSGSYNC sync_after_connect: status=${status}, reasonCode=${reasonCode}, userId=${userId}, hasInit=${JimDbManager.instance.hasInit}`)
     if(status === ConnStatus.connected) {
       if (!JimDbManager.instance.hasInit) {
-        console.log(`MSGSYNC sync_after_connect_init_db: userId=${userId}`)
         await JuggleIm.instance.initDb(userId)
       }
       JuggleIm.instance.getMsgSyncManager().resetCompleteFirstSync()
       let isContinue:boolean = true
-      console.log(`MSGSYNC sync_after_connect_begin_convers: userId=${userId}`)
       //sync convers
       for(;isContinue;) {
         await promiseSyncConvers(JuggleIm.instance.getMsgSyncManager()).then((isFinish)=>{
@@ -879,7 +876,6 @@ export class MsgSyncManager{
         })
       }
       isContinue = true
-      console.log(`MSGSYNC sync_after_connect_begin_msgs: userId=${userId}`)
       //sync msgs
       for(;isContinue;){
         await promiseSyncMsgs(JuggleIm.instance.getMsgSyncManager()).then((isFinish)=>{
@@ -888,7 +884,6 @@ export class MsgSyncManager{
           }
         })
       }
-      console.log(`MSGSYNC sync_after_connect_done: userId=${userId}`)
       JuggleIm.instance.getMsgSyncManager().completeFirstSync()
     }
   }
