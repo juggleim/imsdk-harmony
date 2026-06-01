@@ -11,6 +11,7 @@ import { PushChannel, pushChannelToConnectName, pushChannelToDisplayName } from 
 import { JimUtil } from '../commons/jimutil'
 import { StringMapItem } from '../commons/jimutil'
 import { JSON } from '@kit.ArkTS'
+import { BusinessError } from '@kit.BasicServicesKit'
 
 const PUSH_TRACE_TAG:string = 'PUSHTRACE'
 const PUSH_PLATFORM_ANDROID:number = 1
@@ -19,6 +20,24 @@ class ConnectExtParams {
   signKey:string = ''
   headers:StringMapItem[] = []
   params:StringMapItem[] = []
+}
+
+class ConnectionDbLifecycleListener implements DbLifecycleListener {
+  private onDbOpenCallback:() => void
+  private onDbCloseCallback:() => void
+
+  constructor(onDbOpenCallback:() => void, onDbCloseCallback:() => void) {
+    this.onDbOpenCallback = onDbOpenCallback
+    this.onDbCloseCallback = onDbCloseCallback
+  }
+
+  onDbOpen():void{
+    this.onDbOpenCallback()
+  }
+
+  onDbClose():void{
+    this.onDbCloseCallback()
+  }
 }
 
 class ConnectStatusListenerRecord {
@@ -38,17 +57,15 @@ export class ConnectionManager implements IConnectionManager {
   private connectInitPending:boolean = false
   private connectInitSeq:number = 0
   private connectStatusListeners:ConnectStatusListenerRecord[] = []
-  private dbLifecycleListener:DbLifecycleListener = {
-    onDbOpen: ()=>{
-      this.notifyDbOpen()
-    },
-    onDbClose: ()=>{
-      this.notifyDbClose()
-    }
-  }
+  private dbLifecycleListener:DbLifecycleListener
 
   constructor(imclient:ImClient) {
     this.imclient = imclient
+    this.dbLifecycleListener = new ConnectionDbLifecycleListener(()=>{
+      this.notifyDbOpen()
+    }, ()=>{
+      this.notifyDbClose()
+    })
     this.imclient.addConnectStatusListener(this.onConnectStatusChanged)
     JimDbManager.instance.addDbLifecycleListener(this.dbLifecycleListener)
   }
@@ -71,7 +88,7 @@ export class ConnectionManager implements IConnectionManager {
             this.connectInitPending = false
             this.imclient.connect(token)
           })
-          .catch((err)=>{
+          .catch((err:BusinessError)=>{
             if(initSeq != this.connectInitSeq){
               return
             }
@@ -87,7 +104,7 @@ export class ConnectionManager implements IConnectionManager {
 
   disconnect(receivePush:boolean = false){
     this.connectInitSeq++
-    this.connectInitPending = false
+    this.connectInitPending = false;
     (JuggleIm.instance.getChatroomManager() as ChatroomManager).userDisconnect()
     JimDbManager.instance.closeDb()
     this.imclient.disconnect(receivePush)

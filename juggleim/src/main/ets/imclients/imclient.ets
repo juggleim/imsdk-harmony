@@ -113,7 +113,7 @@ export class ImClient{
         "platform":JuggleIm.instance.config.platform,
         "deviceId":JuggleIm.instance.config.deviceId,
         "networkId":networkInfo.networkId,
-        "isp_num":'',
+        "ispNum":'',
         "clientIp":networkInfo.clientIp,
         "pushToken":JuggleIm.instance.config.pushToken,
         "packageName":JuggleIm.instance.config.packageName,
