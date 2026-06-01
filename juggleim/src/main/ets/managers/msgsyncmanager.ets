@@ -558,13 +558,10 @@ export class MsgSyncManager{
   }
 
   public syncMsgs(ntfTime:number,callback:(isFinish:boolean)=>void){
-    console.log(`MSGSYNC sync_msgs_call: ntfTime=${ntfTime}, latestInbox=${this.getLatestInboxMsgTime()}, latestSendbox=${this.getLatestSendboxMsgTime()}, userId=${JuggleIm.instance.userId}`)
     if(ntfTime>0&&ntfTime<=this.getLatestInboxMsgTime()){
-      console.log(`MSGSYNC sync_msgs_skip: ntfTime=${ntfTime}`)
       callback(true)
       return
     }
-    console.log("jimsdk_direct_syncmsg:",ntfTime,this.getLatestInboxMsgTime(),this.getLatestSendboxMsgTime())
     let syncReq = immessage.SyncMsgReq.create({
       "syncTime":this.getLatestInboxMsgTime(),
       "containsSendBox":true,
@@ -572,11 +569,9 @@ export class MsgSyncManager{
     })
     let data = immessage.SyncMsgReq.encode(syncReq).finish()
     this.imclient.query("sync_msgs",JuggleIm.instance.userInfo.userId,data,(code,qryAck)=>{
-      console.log(`MSGSYNC sync_msgs_response: code=${code}, queryUserId=${JuggleIm.instance.userInfo.userId}`)
       if(code==0){
         let data = qryAck.data as Uint8Array
         let downMsgs = immessage.DownMsgSet.decode(data)
-        console.log(`MSGSYNC sync_msgs_payload: count=${downMsgs.msgs.length}, isFinished=${downMsgs.isFinished}`)
         downMsgs.msgs.forEach((downMsg)=>{
           this.handleMsg(downMsg,(isFinish)=>{})
         })
@@ -683,7 +678,6 @@ export class MsgSyncManager{
     converInfo.conversation = msg.conversation.clone()
     converInfo.lastMessage = msg
     converInfo.converTime = this.isSenderBroadcastMessage(msg) ? 0 : msg.sentTime
-    console.log("jimsdk_syncmsg_conver:",JSON.stringify(converInfo))
     return converInfo
   }
 
@@ -704,19 +698,16 @@ export class MsgSyncManager{
   }
 
   public syncConvers(callback:(isFinish:boolean)=>void){
-    console.log(`MSGSYNC sync_convers_call: latestConverSync=${this.getLatestConverSyncTime()}, userId=${JuggleIm.instance.userId}`)
     let req = immessage.SyncConversationsReq.create({
       startTime:this.getLatestConverSyncTime(),
       count:100
     })
     let data = immessage.SyncConversationsReq.encode(req).finish()
     this.imclient.query("sync_convers",JuggleIm.instance.userId,data,(code,qryAck)=>{
-      console.log(`MSGSYNC sync_convers_response: code=${code}, queryUserId=${JuggleIm.instance.userId}`)
       if(code==0){
         let d = qryAck.data as Uint8Array
         let resp = immessage.QryConversationsResp.decode(d)
         let l = resp.conversations.length
-        console.log(`MSGSYNC sync_convers_payload: count=${l}`)
         let lastSyncTime = 0
         let addConvers:ConversationInfo[] = []
         let updateConvers:ConversationInfo[] = []
@@ -768,7 +759,6 @@ export class MsgSyncManager{
         if(addConvers.length>0 || updateConvers.length>0 || delConvers.length>0){
           this.notifyTotalUnreadCountChange()
         }
-        console.log("jimsdk_syncconvers_len:",l,this.latestConverSyncTime)
         if(resp.isFinished){
           callback(true)
         }else{

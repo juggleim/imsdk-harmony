@@ -149,9 +149,7 @@ export struct ConversationList {
 
     //conver add
     this.converAddListener = (convers)=>{
-      console.log(`${TOP_TRACE_TAG} conversation_list_add_listener: count=${convers.length}`)
       convers.forEach((conver)=>{
-        console.log(`${TOP_TRACE_TAG} conversation_list_add_item: converId=${conver.conversation.conversationId}, converType=${conver.conversation.conversationType}, isTop=${conver.isTop}, topTime=${conver.topTime}, converTime=${conver.converTime}`)
         this.mergeConversationViewItem(toConverViewItem(conver))
       })
       this.sortConversationList()
@@ -161,11 +159,9 @@ export struct ConversationList {
 
     //conver update
     this.converUpdListener = (convers)=>{
-      console.log(`${TOP_TRACE_TAG} conversation_list_update_listener: count=${convers.length}`)
       let updatedConverList:ConversationViewItem[] = new Array()
       let updatedConverKeys:Map<string,boolean> = new Map()
       convers.forEach((conver)=>{
-        console.log(`${TOP_TRACE_TAG} conversation_list_update_item: converId=${conver.conversation.conversationId}, converType=${conver.conversation.conversationType}, isTop=${conver.isTop}, topTime=${conver.topTime}, converTime=${conver.converTime}`)
         let converViewItem = toConverViewItem(conver)
         updatedConverList.push(converViewItem)
         let key:string = converViewItem.getKey()
@@ -189,10 +185,8 @@ export struct ConversationList {
 
     //conver del
     this.converDelListener = (convers)=>{
-      console.log(`${TOP_TRACE_TAG} conversation_list_delete_listener: count=${convers.length}`)
       let delConverKeys:Map<string,boolean> = new Map()
       convers.forEach((conver)=>{
-        console.log(`${TOP_TRACE_TAG} conversation_list_delete_item: converId=${conver.conversation.conversationId}, converType=${conver.conversation.conversationType}`)
         let key:string = `${conver.conversation.conversationType}_${conver.conversation.conversationId}_${conver.conversation.subChannel}`
         delConverKeys.set(key,true)
       })

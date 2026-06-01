@@ -7,7 +7,7 @@ import { ChatroomManager } from './chatroommanager'
 import { CommonCallback } from '../interfaces/commoncallback'
 import { pushtoken } from '../improto/pushtoken.js'
 import { JimErrorCode } from '../entries/errcode'
-import { PushChannel, pushChannelToConnectName, pushChannelToDisplayName } from '../entries/push'
+import { PushChannel, pushChannelToConnectName } from '../entries/push'
 import { JimUtil } from '../commons/jimutil'
 import { JSON } from '@kit.ArkTS'
 import { BusinessError } from '@kit.BasicServicesKit'
@@ -85,7 +85,7 @@ export class ConnectionManager implements IConnectionManager {
               return
             }
             this.connectInitPending = false
-            console.error(`${CONN_TRACE_TAG} manager_connect_init_db_fail: seq=${initSeq}, userId=${userId}, err=${JSON.stringify(err)}`)
+            console.error(`manager_connect_init_db_fail: seq=${initSeq}, userId=${userId}, err=${JSON.stringify(err)}`)
             this.imclient.connect(token)
           })
         return
