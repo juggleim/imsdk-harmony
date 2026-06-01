@@ -139,16 +139,19 @@ export struct ConversationList {
   }
 
   aboutToAppear(): void {
+    console.log(`${TOP_TRACE_TAG} conversation_list_about_to_appear: connStatus=${JuggleIm.instance.getConnStatus()}, userId=${JuggleIm.instance.userId}, pageDepth=${this.pageInfo.size()}`)
     this.resetConverTimes()
     this.conversationList = new ObservedArray<ConversationViewItem>([])
 
     if(JuggleIm.instance.getConnStatus() == ConnStatus.connecting || JuggleIm.instance.getConnStatus() == ConnStatus.waiting){
       JuggleIm.instance.getConnectionManager().addConnectStatusListener(RECONNECT_RELOAD_LISTENER_KEY, (status, _code, _userId) => {
+        console.log(`${TOP_TRACE_TAG} conversation_list_reconnect_listener: status=${status}, userId=${_userId}`)
         if(status==ConnStatus.connected){
           this.reloadConversations()
         }
       })
     } else if (JuggleIm.instance.getConnStatus() == ConnStatus.connected) {
+      console.log(`${TOP_TRACE_TAG} conversation_list_initial_reload`)
       this.reloadConversations()
     }
 
@@ -232,6 +235,9 @@ export struct ConversationList {
           this.sortConversationList()
           this.rebuildConverTimes()
         })
+    }
+    else{
+      console.log(`${TOP_TRACE_TAG} conversation_list_query_skip: connStatus=${JuggleIm.instance.getConnStatus()}, reset=${reset}, time=${time}`)
     }
   }
 

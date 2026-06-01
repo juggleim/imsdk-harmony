@@ -9,7 +9,15 @@ import { ConnStatus, ImClient } from "../imclients/imclient";
 import { immessage } from "../improto/immessage";
 import { MsgFlag, MsgFlagTool } from "../improto/msgflag";
 import Long from 'long'
-import { ConversationAddListener,ConversationUpdateListener,ConversationDeleteListener,TotalUnreadCountUpdateListener } from "./conversationmanager";
+import {
+  ConversationAddListener,
+  ConversationDeleteListener,
+  ConversationListener,
+  ConversationSyncListener,
+  ConversationTagListener,
+  ConversationUpdateListener,
+  TotalUnreadCountUpdateListener
+} from "./conversationmanager";
 import { JuggleIm } from "../juggleim";
 import { ChatroomManager } from "./chatroommanager";
 import {
@@ -77,6 +85,9 @@ export class MsgSyncManager{
   private converUpdateListeners:ConversationUpdateListener[] = new Array()
   private converDeleteListeners:ConversationDeleteListener[] = new Array()
   private totalUnreadCountUpdateListeners:TotalUnreadCountUpdateListener[] = new Array()
+  private converListeners:Map<string, ConversationListener> = new Map()
+  private syncListeners:Map<string, ConversationSyncListener> = new Map()
+  private tagListeners:Map<string, ConversationTagListener> = new Map()
 
   //message
   private msgReceivedListeners:MsgReceivedListener[] = new Array()
@@ -117,6 +128,7 @@ export class MsgSyncManager{
     this.converAddListeners.forEach((listener)=>{
       listener(convers)
     })
+    this.triggerConversationListenersAdd(convers)
   }
 
   public notifyConversationAdd(convers:ConversationInfo[]){
@@ -140,6 +152,7 @@ export class MsgSyncManager{
     this.converUpdateListeners.forEach((listener)=>{
       listener(convers)
     })
+    this.triggerConversationListenersUpdate(convers)
   }
 
   public notifyConversationUpdate(convers:ConversationInfo[]){
@@ -163,10 +176,71 @@ export class MsgSyncManager{
     this.converDeleteListeners.forEach((listener)=>{
       listener(convers)
     })
+    this.triggerConversationListenersDelete(convers)
   }
 
   public notifyConversationDelete(convers:ConversationInfo[]){
     this.triggerConversationDelete(convers)
+  }
+
+  private triggerConversationSyncComplete():void{
+    this.syncListeners.forEach((listener)=>{
+      listener.onConversationSyncComplete()
+    })
+  }
+
+  private triggerConversationListenersAdd(convers:ConversationInfo[]):void{
+    this.converListeners.forEach((listener)=>{
+      listener.onConversationInfoAdd(convers)
+    })
+  }
+
+  private triggerConversationListenersUpdate(convers:ConversationInfo[]):void{
+    this.converListeners.forEach((listener)=>{
+      listener.onConversationInfoUpdate(convers)
+    })
+  }
+
+  private triggerConversationListenersDelete(convers:ConversationInfo[]):void{
+    this.converListeners.forEach((listener)=>{
+      listener.onConversationInfoDelete(convers)
+    })
+  }
+
+  private triggerConversationListenersTotalUnreadCountUpdate(count:number):void{
+    this.converListeners.forEach((listener)=>{
+      listener.onTotalUnreadMessageCountUpdate(count)
+    })
+  }
+
+  public notifyTagCreate(tagInfo:ConversationTagInfo):void{
+    this.tagListeners.forEach((listener)=>{
+      listener.onTagCreate(tagInfo)
+    })
+  }
+
+  public notifyTagDestroy(tagId:string):void{
+    this.tagListeners.forEach((listener)=>{
+      listener.onTagDestroy(tagId)
+    })
+  }
+
+  public notifyTagNameUpdate(tagId:string, tagName:string):void{
+    this.tagListeners.forEach((listener)=>{
+      listener.onTagNameUpdate(tagId, tagName)
+    })
+  }
+
+  public notifyConversationsAddToTag(tagId:string, conversations:Conversation[]):void{
+    this.tagListeners.forEach((listener)=>{
+      listener.onConversationsAddToTag(tagId, conversations)
+    })
+  }
+
+  public notifyConversationsRemoveFromTag(tagId:string, conversations:Conversation[]):void{
+    this.tagListeners.forEach((listener)=>{
+      listener.onConversationsRemoveFromTag(tagId, conversations)
+    })
   }
 
   addTotalUnreadCountUpdateListener(listener:TotalUnreadCountUpdateListener){
@@ -180,6 +254,38 @@ export class MsgSyncManager{
         break
       }
     }
+  }
+
+  public notifyTotalUnreadCountChange():void{
+    let count = JimDbManager.instance.getConversationDao().queryTotalUnreadCount()
+    this.totalUnreadCountUpdateListeners.forEach((listener)=>{
+      listener(count)
+    })
+    this.triggerConversationListenersTotalUnreadCountUpdate(count)
+  }
+
+  addListener(key:string, listener:ConversationListener):void {
+    this.converListeners.set(key, listener)
+  }
+
+  removeListener(key:string):void {
+    this.converListeners.delete(key)
+  }
+
+  addSyncListener(key:string, listener:ConversationSyncListener):void {
+    this.syncListeners.set(key, listener)
+  }
+
+  removeSyncListener(key:string):void {
+    this.syncListeners.delete(key)
+  }
+
+  addTagListener(key:string, listener:ConversationTagListener):void {
+    this.tagListeners.set(key, listener)
+  }
+
+  removeTagListener(key:string):void {
+    this.tagListeners.delete(key)
   }
 
   addMsgReceivedListener(listener:MsgReceivedListener){
@@ -402,6 +508,7 @@ export class MsgSyncManager{
 
   private completeFirstSync(){
     this.afterFirstSync = true
+    this.triggerConversationSyncComplete()
   }
 
   private handleMsgNtf(task:MsgNtfTask){
@@ -451,7 +558,9 @@ export class MsgSyncManager{
   }
 
   public syncMsgs(ntfTime:number,callback:(isFinish:boolean)=>void){
+    console.log(`MSGSYNC sync_msgs_call: ntfTime=${ntfTime}, latestInbox=${this.getLatestInboxMsgTime()}, latestSendbox=${this.getLatestSendboxMsgTime()}, userId=${JuggleIm.instance.userId}`)
     if(ntfTime>0&&ntfTime<=this.getLatestInboxMsgTime()){
+      console.log(`MSGSYNC sync_msgs_skip: ntfTime=${ntfTime}`)
       callback(true)
       return
     }
@@ -463,9 +572,11 @@ export class MsgSyncManager{
     })
     let data = immessage.SyncMsgReq.encode(syncReq).finish()
     this.imclient.query("sync_msgs",JuggleIm.instance.userInfo.userId,data,(code,qryAck)=>{
+      console.log(`MSGSYNC sync_msgs_response: code=${code}, queryUserId=${JuggleIm.instance.userInfo.userId}`)
       if(code==0){
         let data = qryAck.data as Uint8Array
         let downMsgs = immessage.DownMsgSet.decode(data)
+        console.log(`MSGSYNC sync_msgs_payload: count=${downMsgs.msgs.length}, isFinished=${downMsgs.isFinished}`)
         downMsgs.msgs.forEach((downMsg)=>{
           this.handleMsg(downMsg,(isFinish)=>{})
         })
@@ -550,6 +661,9 @@ export class MsgSyncManager{
             }
           }
           this.triggerMsgReceive(msg)
+          if(aff > 0){
+            this.notifyTotalUnreadCountChange()
+          }
         }
       }
     }
@@ -590,16 +704,19 @@ export class MsgSyncManager{
   }
 
   public syncConvers(callback:(isFinish:boolean)=>void){
+    console.log(`MSGSYNC sync_convers_call: latestConverSync=${this.getLatestConverSyncTime()}, userId=${JuggleIm.instance.userId}`)
     let req = immessage.SyncConversationsReq.create({
       startTime:this.getLatestConverSyncTime(),
       count:100
     })
     let data = immessage.SyncConversationsReq.encode(req).finish()
     this.imclient.query("sync_convers",JuggleIm.instance.userId,data,(code,qryAck)=>{
+      console.log(`MSGSYNC sync_convers_response: code=${code}, queryUserId=${JuggleIm.instance.userId}`)
       if(code==0){
         let d = qryAck.data as Uint8Array
         let resp = immessage.QryConversationsResp.decode(d)
         let l = resp.conversations.length
+        console.log(`MSGSYNC sync_convers_payload: count=${l}`)
         let lastSyncTime = 0
         let addConvers:ConversationInfo[] = []
         let updateConvers:ConversationInfo[] = []
@@ -647,6 +764,9 @@ export class MsgSyncManager{
         }
         if(delConvers.length>0){
           this.triggerConversationDelete(delConvers)
+        }
+        if(addConvers.length>0 || updateConvers.length>0 || delConvers.length>0){
+          this.notifyTotalUnreadCountChange()
         }
         console.log("jimsdk_syncconvers_len:",l,this.latestConverSyncTime)
         if(resp.isFinished){
@@ -741,12 +861,15 @@ export class MsgSyncManager{
   }
 
   public async syncAfterConnect(status:number,reasonCode:number,userId:string){
+    console.log(`MSGSYNC sync_after_connect: status=${status}, reasonCode=${reasonCode}, userId=${userId}, hasInit=${JimDbManager.instance.hasInit}`)
     if(status === ConnStatus.connected) {
       if (!JimDbManager.instance.hasInit) {
+        console.log(`MSGSYNC sync_after_connect_init_db: userId=${userId}`)
         await JuggleIm.instance.initDb(userId)
       }
       JuggleIm.instance.getMsgSyncManager().resetCompleteFirstSync()
       let isContinue:boolean = true
+      console.log(`MSGSYNC sync_after_connect_begin_convers: userId=${userId}`)
       //sync convers
       for(;isContinue;) {
         await promiseSyncConvers(JuggleIm.instance.getMsgSyncManager()).then((isFinish)=>{
@@ -756,6 +879,7 @@ export class MsgSyncManager{
         })
       }
       isContinue = true
+      console.log(`MSGSYNC sync_after_connect_begin_msgs: userId=${userId}`)
       //sync msgs
       for(;isContinue;){
         await promiseSyncMsgs(JuggleIm.instance.getMsgSyncManager()).then((isFinish)=>{
@@ -764,6 +888,7 @@ export class MsgSyncManager{
           }
         })
       }
+      console.log(`MSGSYNC sync_after_connect_done: userId=${userId}`)
       JuggleIm.instance.getMsgSyncManager().completeFirstSync()
     }
   }

@@ -5,8 +5,11 @@ import {
   ConversationCallback,
   ConversationDeleteListener,
   ConversationInsertCallback,
+  ConversationListener,
   ConversationTagInfosCallback,
   ConversationTagsCallback,
+  ConversationSyncListener,
+  ConversationTagListener,
   ConversationsCallback,
   ConversationUpdateListener,
   GetConversationOptions,
@@ -50,6 +53,13 @@ export interface IConversationManager {
   getTotalUnreadCount(callback: TotalUnreadCountCallback): void
   getUnreadCountWithTypes(conversationTypes: number[], callback: TotalUnreadCountCallback): void
   getTotalUnreadCountByTag(tagId: string, callback: TotalUnreadCountCallback): void
+  getUnreadCountWithTag(tagId: string, callback: TotalUnreadCountCallback): void
   clearTotalUnreadCount(callback: CommonCallback): void
   clearUnreadCount(conver: Conversation, callback: CommonCallback): void
+  addListener(key: string, listener: ConversationListener): void
+  removeListener(key: string): void
+  addSyncListener(key: string, listener: ConversationSyncListener): void
+  removeSyncListener(key: string): void
+  addTagListener(key: string, listener: ConversationTagListener): void
+  removeTagListener(key: string): void
 }

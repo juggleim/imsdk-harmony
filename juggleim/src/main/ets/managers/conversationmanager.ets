@@ -15,8 +15,11 @@ import {
   ConversationCallback,
   ConversationDeleteListener,
   ConversationInsertCallback,
+  ConversationListener,
   ConversationTagInfosCallback,
   ConversationTagsCallback,
+  ConversationSyncListener,
+  ConversationTagListener,
   ConversationsCallback,
   ConversationUpdateListener,
   GetConversationOptions,
@@ -32,8 +35,11 @@ export {
   ConversationCallback,
   ConversationDeleteListener,
   ConversationInsertCallback,
+  ConversationListener,
   ConversationTagInfosCallback,
   ConversationTagsCallback,
+  ConversationSyncListener,
+  ConversationTagListener,
   ConversationsCallback,
   ConversationUpdateListener,
   GetConversationOptions,
@@ -80,6 +86,30 @@ export class ConversationManager implements IConversationManager{
   }
   removeTotalUnreadCountUpdateListener(listener:TotalUnreadCountUpdateListener){
     this.msgSyncMgr.removeTotalUnreadCountUpdateListener(listener)
+  }
+
+  addListener(key:string, listener:ConversationListener):void {
+    this.msgSyncMgr.addListener(key, listener)
+  }
+
+  removeListener(key:string):void {
+    this.msgSyncMgr.removeListener(key)
+  }
+
+  addSyncListener(key:string, listener:ConversationSyncListener):void {
+    this.msgSyncMgr.addSyncListener(key, listener)
+  }
+
+  removeSyncListener(key:string):void {
+    this.msgSyncMgr.removeSyncListener(key)
+  }
+
+  addTagListener(key:string, listener:ConversationTagListener):void {
+    this.msgSyncMgr.addTagListener(key, listener)
+  }
+
+  removeTagListener(key:string):void {
+    this.msgSyncMgr.removeTagListener(key)
   }
 
   queryConversations(options:GetConversationOptions,callback:ConversationsCallback): void
@@ -220,6 +250,7 @@ export class ConversationManager implements IConversationManager{
         JimDbManager.instance.getConversationTagInfoDao().upsert(tagInfo)
         this.recordCommandSyncTime(qryAck.timestamp != undefined && qryAck.timestamp != null ?
           JimUtil.toNumber(qryAck.timestamp as number) : 0)
+        this.msgSyncMgr.notifyTagCreate(tagInfo)
       }
       callback(code)
     })
@@ -242,6 +273,7 @@ export class ConversationManager implements IConversationManager{
         JimDbManager.instance.getConversationTagInfoDao().remove(normalizedTagId)
         this.recordCommandSyncTime(qryAck.timestamp != undefined && qryAck.timestamp != null ?
           JimUtil.toNumber(qryAck.timestamp as number) : 0)
+        this.msgSyncMgr.notifyTagDestroy(normalizedTagId)
       }
       callback(code)
     })
@@ -267,6 +299,7 @@ export class ConversationManager implements IConversationManager{
         JimDbManager.instance.getConversationTagInfoDao().updateName(normalizedTagId, normalizedTagName)
         this.recordCommandSyncTime(qryAck.timestamp != undefined && qryAck.timestamp != null ?
           JimUtil.toNumber(qryAck.timestamp as number) : 0)
+        this.msgSyncMgr.notifyTagNameUpdate(normalizedTagId, normalizedTagName)
       }
       callback(code)
     })
@@ -365,6 +398,11 @@ export class ConversationManager implements IConversationManager{
         this.recordCommandSyncTime(qryAck.timestamp != undefined && qryAck.timestamp != null ?
           JimUtil.toNumber(qryAck.timestamp as number) : 0)
         this.notifyConversationTagUpdate(normalizedConvers)
+        if(isAdd){
+          this.msgSyncMgr.notifyConversationsAddToTag(normalizedTagId, normalizedConvers)
+        }else{
+          this.msgSyncMgr.notifyConversationsRemoveFromTag(normalizedTagId, normalizedConvers)
+        }
       }
       callback(code)
     })
@@ -375,6 +413,13 @@ export class ConversationManager implements IConversationManager{
     req.conversations = [this.buildProtoConversation(conver)]
     let data = immessage.ConversationsReq.encode(req).finish()
     this.imclient.query("mark_unread",JuggleIm.instance.userInfo.userId,data,(code,qryAck)=>{
+      if(code == 0){
+        let localConver = JimDbManager.instance.getConversationDao().setUnread(conver, true)
+        if(localConver != undefined){
+          this.msgSyncMgr.notifyConversationUpdate([localConver])
+        }
+        this.msgSyncMgr.notifyTotalUnreadCountChange()
+      }
       callback(code)
     })
   }
@@ -528,11 +573,20 @@ export class ConversationManager implements IConversationManager{
     callback(0, JimDbManager.instance.getConversationDao().queryUnreadCountByTag(normalizedTagId))
   }
 
+  getUnreadCountWithTag(tagId:string,callback:TotalUnreadCountCallback){
+    this.getTotalUnreadCountByTag(tagId, callback)
+  }
+
   clearTotalUnreadCount(callback:CommonCallback){
     let req = immessage.QryTotalUnreadCountReq.create({})
     req.time = 0
     let data = immessage.QryTotalUnreadCountReq.encode(req).finish()
     this.imclient.query("clear_total_unread",JuggleIm.instance.userId,data,(code)=>{
+      if(code == 0){
+        JimDbManager.instance.getConversationDao().clearTotalUnreadCount()
+        JimDbManager.instance.getConversationDao().clearUnreadTag()
+        this.msgSyncMgr.notifyTotalUnreadCountChange()
+      }
       callback(code)
     })
   }
@@ -561,6 +615,7 @@ export class ConversationManager implements IConversationManager{
         localConver.lastReadMsgIndex = latestReadIndex
         JimDbManager.instance.getConversationDao().upsert(localConver)
         this.msgSyncMgr.notifyConversationUpdate([localConver])
+        this.msgSyncMgr.notifyTotalUnreadCountChange()
       }
       callback(code)
     })

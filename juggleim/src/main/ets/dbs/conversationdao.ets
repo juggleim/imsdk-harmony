@@ -259,6 +259,62 @@ export class ConversationDao{
     return 0
   }
 
+  queryTotalUnreadCount():number{
+    let sql = `SELECT SUM(CASE
+        WHEN last_msg_index = last_read_msg_index AND unread_tag = 1 THEN 1
+        WHEN last_msg_index > last_read_msg_index THEN last_msg_index - last_read_msg_index
+        ELSE 0
+      END) AS unread_count
+      FROM ${this.tableName}`
+    let resultSet:relationalStore.ResultSet|undefined
+    try{
+      resultSet = JimDbManager.instance.getDb()?.querySqlSync(sql)
+      if(resultSet?.goToNextRow()){
+        return JimDbUtil.toNumber(resultSet,'unread_count')
+      }
+    }catch (e) {
+      console.error(`jimsdk_db_fail. [${this.tableName}] err:${e.message}`)
+    }finally {
+      resultSet?.close()
+    }
+    return 0
+  }
+
+  setUnread(conver:Conversation, isUnread:boolean):ConversationInfo|undefined{
+    let sql = `UPDATE ${this.tableName} SET unread_tag=? WHERE conver_type=? AND conver_id=? AND subchannel=?`
+    let args:Array<relationalStore.ValueType> = [
+      isUnread ? 1 : 0,
+      conver.conversationType,
+      conver.conversationId,
+      Conversation.normalizeSubChannel(conver.subChannel)
+    ]
+    try{
+      JimDbManager.instance.getDb()?.executeSync(sql,args)
+      return this.getConver(conver)
+    }catch (e) {
+      console.error(`jimsdk_db_fail. [${this.tableName}] err:${e.message}`)
+      return this.getConver(conver)
+    }
+  }
+
+  clearUnreadTag():void{
+    let sql = `UPDATE ${this.tableName} SET unread_tag=0`
+    try{
+      JimDbManager.instance.getDb()?.executeSync(sql)
+    }catch (e) {
+      console.error(`jimsdk_db_fail. [${this.tableName}] err:${e.message}`)
+    }
+  }
+
+  clearTotalUnreadCount():void{
+    let sql = `UPDATE ${this.tableName} SET last_read_msg_index=last_msg_index`
+    try{
+      JimDbManager.instance.getDb()?.executeSync(sql)
+    }catch (e) {
+      console.error(`jimsdk_db_fail. [${this.tableName}] err:${e.message}`)
+    }
+  }
+
   getTopConversationsOrderType():TopConverSortType{
     return JimDbManager.instance.getConfDao().getTopConverSortType()
   }

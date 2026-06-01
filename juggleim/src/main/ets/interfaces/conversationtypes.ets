@@ -32,3 +32,22 @@ export type ConversationAddListener = (convers: ConversationInfo[]) => void
 export type ConversationUpdateListener = (convers: ConversationInfo[]) => void
 export type ConversationDeleteListener = (convers: ConversationInfo[]) => void
 export type TotalUnreadCountUpdateListener = (count: number) => void
+
+export interface ConversationListener {
+  onConversationInfoAdd(conversationInfoList: ConversationInfo[]): void
+  onConversationInfoUpdate(conversationInfoList: ConversationInfo[]): void
+  onConversationInfoDelete(conversationInfoList: ConversationInfo[]): void
+  onTotalUnreadMessageCountUpdate(count: number): void
+}
+
+export interface ConversationSyncListener {
+  onConversationSyncComplete(): void
+}
+
+export interface ConversationTagListener {
+  onTagCreate(tagInfo: ConversationTagInfo): void
+  onTagDestroy(tagId: string): void
+  onTagNameUpdate(tagId: string, tagName: string): void
+  onConversationsAddToTag(tagId: string, conversations: Conversation[]): void
+  onConversationsRemoveFromTag(tagId: string, conversations: Conversation[]): void
+}

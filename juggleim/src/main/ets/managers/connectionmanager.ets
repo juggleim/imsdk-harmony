@@ -9,18 +9,12 @@ import { pushtoken } from '../improto/pushtoken.js'
 import { JimErrorCode } from '../entries/errcode'
 import { PushChannel, pushChannelToConnectName, pushChannelToDisplayName } from '../entries/push'
 import { JimUtil } from '../commons/jimutil'
-import { StringMapItem } from '../commons/jimutil'
 import { JSON } from '@kit.ArkTS'
 import { BusinessError } from '@kit.BasicServicesKit'
 
 const PUSH_TRACE_TAG:string = 'PUSHTRACE'
 const PUSH_PLATFORM_ANDROID:number = 1
-
-class ConnectExtParams {
-  signKey:string = ''
-  headers:StringMapItem[] = []
-  params:StringMapItem[] = []
-}
+const CONN_TRACE_TAG:string = 'CONNTRACE'
 
 class ConnectionDbLifecycleListener implements DbLifecycleListener {
   private onDbOpenCallback:() => void
@@ -74,18 +68,21 @@ export class ConnectionManager implements IConnectionManager {
     if(this.connectInitPending){
       return
     }
+    console.log(`${CONN_TRACE_TAG} manager_connect_call: tokenLength=${token.length}, dbInit=${JimDbManager.instance.hasInit}, userId=${JuggleIm.instance.userId}, status=${this.imclient.status}`)
     JuggleIm.instance.config.authToken = token
     if(!JimDbManager.instance.hasInit){
       let userId = PreferenceUtil.getUserIdByToken(JuggleIm.instance.config.appkey,token)
       if(userId!=''){
         this.connectInitPending = true
         let initSeq = ++this.connectInitSeq
+        console.log(`${CONN_TRACE_TAG} manager_connect_init_db: seq=${initSeq}, userId=${userId}`)
         JuggleIm.instance.initDb(userId)
           .then(()=>{
             if(initSeq != this.connectInitSeq || !this.connectInitPending){
               return
             }
             this.connectInitPending = false
+            console.log(`${CONN_TRACE_TAG} manager_connect_init_db_ok: seq=${initSeq}, userId=${userId}`)
             this.imclient.connect(token)
           })
           .catch((err:BusinessError)=>{
@@ -93,19 +90,21 @@ export class ConnectionManager implements IConnectionManager {
               return
             }
             this.connectInitPending = false
-            console.error(`jimsdk_init_db_fail: ${JSON.stringify(err)}`)
+            console.error(`${CONN_TRACE_TAG} manager_connect_init_db_fail: seq=${initSeq}, userId=${userId}, err=${JSON.stringify(err)}`)
             this.imclient.connect(token)
           })
         return
       }
     }
+    console.log(`${CONN_TRACE_TAG} manager_connect_direct`)
     this.imclient.connect(token)
   }
 
   disconnect(receivePush:boolean = false){
     this.connectInitSeq++
     this.connectInitPending = false;
-    (JuggleIm.instance.getChatroomManager() as ChatroomManager).userDisconnect()
+    console.log(`${CONN_TRACE_TAG} manager_disconnect_call: receivePush=${receivePush}, status=${this.imclient.status}, userId=${JuggleIm.instance.userId}`)
+    ;(JuggleIm.instance.getChatroomManager() as ChatroomManager).userDisconnect()
     JimDbManager.instance.closeDb()
     this.imclient.disconnect(receivePush)
   }
@@ -240,21 +239,12 @@ export class ConnectionManager implements IConnectionManager {
   }
 
   private refreshConnectExt():void{
-    let signKey = JuggleIm.instance.config.connectSignKey.trim()
-    let headers = JuggleIm.instance.config.connectHeaders
     let params = JuggleIm.instance.config.connectParams
-    if(signKey == '' && headers.size == 0){
-      JuggleIm.instance.config.connectExt = params.size > 0 ? JSON.stringify(JimUtil.map2Obj(params)) : ''
-      return
-    }
-    let payload = new ConnectExtParams()
-    payload.signKey = signKey
-    if(headers.size > 0){
-      payload.headers = JimUtil.map2Obj(headers)
-    }
     if(params.size > 0){
-      payload.params = JimUtil.map2Obj(params)
+      JuggleIm.instance.config.connectExt = JSON.stringify(JimUtil.map2Obj(params))
+    }else{
+      JuggleIm.instance.config.connectExt = ''
     }
-    JuggleIm.instance.config.connectExt = JSON.stringify(payload)
+    console.log(`${CONN_TRACE_TAG} connect_ext_refresh: paramsSize=${params.size}, extLength=${JuggleIm.instance.config.connectExt.length}`)
   }
 }
