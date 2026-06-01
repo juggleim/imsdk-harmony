@@ -4,6 +4,14 @@ import { Conversation } from './conversation'
 import { JimMsgType } from './msgtypes'
 import { MessageMentionInfo, PushData } from './messageoptions'
 
+/**
+ * Represents Message Sent State.
+ *
+ * Example:
+ * ```ts
+ * const state = MessageSentState.success
+ * ```
+ */
 export class MessageSentState{
   static none:number = 0
   static sending:number = 1
@@ -12,6 +20,14 @@ export class MessageSentState{
   static uploading:number = 4
 }
 
+/**
+ * Represents Media Message Upload State.
+ *
+ * Example:
+ * ```ts
+ * const state = MediaMessageUploadState.success
+ * ```
+ */
 export class MediaMessageUploadState{
   static none:number = 0
   static pending:number = 1
@@ -21,6 +37,14 @@ export class MediaMessageUploadState{
   static canceled:number = 5
 }
 
+/**
+ * Represents Message Reaction.
+ *
+ * Example:
+ * ```ts
+ * const value = new MessageReaction()
+ * ```
+ */
 export class MessageReaction{
   reactionId:string = ''
   userIds:string[] = []
@@ -31,6 +55,14 @@ export class MessageReaction{
   }
 }
 
+/**
+ * Represents Message Reaction Result.
+ *
+ * Example:
+ * ```ts
+ * const value = new MessageReactionResult()
+ * ```
+ */
 export class MessageReactionResult{
   messageId:string = ''
   clientId:string = ''
@@ -40,6 +72,14 @@ export class MessageReactionResult{
   }
 }
 
+/**
+ * Represents Favorite Message.
+ *
+ * Example:
+ * ```ts
+ * const value = new FavoriteMessage()
+ * ```
+ */
 export class FavoriteMessage{
   message:Message | null = null
   createdTime:number = 0
@@ -48,6 +88,14 @@ export class FavoriteMessage{
   }
 }
 
+/**
+ * Represents Message Content.
+ *
+ * Example:
+ * ```ts
+ * const value = new MessageContent()
+ * ```
+ */
 export class MessageContent{
   private msgType:string
   private msgFlag:MsgFlag
@@ -103,6 +151,14 @@ class MediaMessagePayload{
   }
 }
 
+/**
+ * Represents Media Message Content.
+ *
+ * Example:
+ * ```ts
+ * const value = new MediaMessageContent()
+ * ```
+ */
 export class MediaMessageContent extends MessageContent{
   public localPath:string = ''
   public url:string = ''
@@ -170,6 +226,14 @@ export class MediaMessageContent extends MessageContent{
   }
 }
 
+/**
+ * Represents Message.
+ *
+ * Example:
+ * ```ts
+ * const value = new Message()
+ * ```
+ */
 export class Message{
   clientMsgNo:number = 0
   conversation:Conversation = new Conversation('',0,'')
@@ -211,6 +275,14 @@ interface ITextMessage{
   extra:string
 }
 
+/**
+ * Represents Text Message.
+ *
+ * Example:
+ * ```ts
+ * const value = new TextMessage()
+ * ```
+ */
 export class TextMessage extends MessageContent{
   public content:string = ''
   public extra:string = ''
@@ -236,6 +308,14 @@ export class TextMessage extends MessageContent{
   }
 }
 
+/**
+ * Represents Preview Unit.
+ *
+ * Example:
+ * ```ts
+ * const value = new PreviewUnit()
+ * ```
+ */
 export class PreviewUnit{
   public content:string
   public senderName:string
@@ -256,6 +336,14 @@ interface IMergeMessage{
   extra:string
 }
 
+/**
+ * Represents Merge Message.
+ *
+ * Example:
+ * ```ts
+ * const value = new MergeMessage()
+ * ```
+ */
 export class MergeMessage extends  MessageContent{
   public title:string = ''
   public containerMsgId:string = ''
@@ -307,6 +395,14 @@ interface IVoiceMessage{
   type:string
   duration:number
 }
+/**
+ * Represents Voice Message.
+ *
+ * Example:
+ * ```ts
+ * const value = new VoiceMessage()
+ * ```
+ */
 export class VoiceMessage extends MediaMessageContent{
   public type:string = ''
   public duration:number = 0
@@ -337,6 +433,14 @@ interface IImageMessage{
   size:number
 }
 
+/**
+ * Represents Image Message.
+ *
+ * Example:
+ * ```ts
+ * const value = new ImageMessage()
+ * ```
+ */
 export class ImageMessage extends MediaMessageContent{
   thumbnail:string=''
   height:number=0
@@ -372,6 +476,14 @@ interface IFileMessage{
   type:string
 }
 
+/**
+ * Represents File Message.
+ *
+ * Example:
+ * ```ts
+ * const value = new FileMessage()
+ * ```
+ */
 export class FileMessage extends MediaMessageContent{
   name:string=''
   size:number=0
@@ -406,6 +518,14 @@ interface IVideoMessage{
   duration:number
 }
 
+/**
+ * Represents Video Message.
+ *
+ * Example:
+ * ```ts
+ * const value = new VideoMessage()
+ * ```
+ */
 export class VideoMessage extends MediaMessageContent{
   poster:string=''
   height:number=0
@@ -442,6 +562,14 @@ interface IRecallInfoMessage{
   exts:StringMapItem[]
 }
 
+/**
+ * Represents Recall Info Message.
+ *
+ * Example:
+ * ```ts
+ * const value = new RecallInfoMessage()
+ * ```
+ */
 export class RecallInfoMessage extends MessageContent{
   exts:Map<string,string> = new Map()
   constructor() {

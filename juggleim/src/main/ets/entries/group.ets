@@ -1,3 +1,11 @@
+/**
+ * Represents Group Info.
+ *
+ * Example:
+ * ```ts
+ * const value = new GroupInfo()
+ * ```
+ */
 export class GroupInfo{
   groupId:string = ''
   groupName:string = ''
@@ -7,6 +15,14 @@ export class GroupInfo{
   }
 }
 
+/**
+ * Represents Group Member.
+ *
+ * Example:
+ * ```ts
+ * const value = new GroupMember()
+ * ```
+ */
 export class GroupMember{
   groupId:string=''
   memberId:string=''
@@ -15,6 +31,14 @@ export class GroupMember{
   }
 }
 
+/**
+ * Represents Group Message Read Info.
+ *
+ * Example:
+ * ```ts
+ * const value = new GroupMessageReadInfo()
+ * ```
+ */
 export class GroupMessageReadInfo{
   readCount:number = 0
   memberCount:number = 0
@@ -22,6 +46,14 @@ export class GroupMessageReadInfo{
   }
 }
 
+/**
+ * Represents Group Message Member Read Detail.
+ *
+ * Example:
+ * ```ts
+ * const value = new GroupMessageMemberReadDetail()
+ * ```
+ */
 export class GroupMessageMemberReadDetail{
   userId:string = ''
   nickname:string = ''
@@ -31,6 +63,14 @@ export class GroupMessageMemberReadDetail{
   }
 }
 
+/**
+ * Represents Group Message Read Info Detail.
+ *
+ * Example:
+ * ```ts
+ * const value = new GroupMessageReadInfoDetail()
+ * ```
+ */
 export class GroupMessageReadInfoDetail{
   readCount:number = 0
   memberCount:number = 0

@@ -1,15 +1,39 @@
 import { UserInfo } from './user'
 
+/**
+ * Defines the Get Moment Direction constants.
+ *
+ * Example:
+ * ```ts
+ * const direction = GetMomentDirection.Backward
+ * ```
+ */
 export enum GetMomentDirection {
   Backward = 0,
   Forward = 1
 }
 
+/**
+ * Defines the Moment Media Type constants.
+ *
+ * Example:
+ * ```ts
+ * const mediaType = MomentMediaType.IMAGE
+ * ```
+ */
 export enum MomentMediaType {
   IMAGE = 0,
   VIDEO = 1
 }
 
+/**
+ * Represents Get Moment Option.
+ *
+ * Example:
+ * ```ts
+ * const value = new GetMomentOption()
+ * ```
+ */
 export class GetMomentOption {
   startTime:number = 0
   count:number = 20
@@ -17,6 +41,14 @@ export class GetMomentOption {
   userId:string = ''
 }
 
+/**
+ * Represents Get Moment Comment Option.
+ *
+ * Example:
+ * ```ts
+ * const value = new GetMomentCommentOption()
+ * ```
+ */
 export class GetMomentCommentOption {
   momentId:string = ''
   startTime:number = 0
@@ -24,6 +56,14 @@ export class GetMomentCommentOption {
   direction:GetMomentDirection = GetMomentDirection.Backward
 }
 
+/**
+ * Represents Moment Media.
+ *
+ * Example:
+ * ```ts
+ * const value = new MomentMedia()
+ * ```
+ */
 export class MomentMedia {
   url:string = ''
   type:MomentMediaType = MomentMediaType.IMAGE
@@ -33,11 +73,27 @@ export class MomentMedia {
   duration:number = 0
 }
 
+/**
+ * Represents Moment Reaction.
+ *
+ * Example:
+ * ```ts
+ * const value = new MomentReaction()
+ * ```
+ */
 export class MomentReaction {
   key:string = ''
   userList:UserInfo[] = []
 }
 
+/**
+ * Represents Moment Comment.
+ *
+ * Example:
+ * ```ts
+ * const value = new MomentComment()
+ * ```
+ */
 export class MomentComment {
   commentId:string = ''
   momentId:string = ''
@@ -48,6 +104,14 @@ export class MomentComment {
   createTime:number = 0
 }
 
+/**
+ * Represents Moment.
+ *
+ * Example:
+ * ```ts
+ * const value = new Moment()
+ * ```
+ */
 export class Moment {
   momentId:string = ''
   content:string = ''

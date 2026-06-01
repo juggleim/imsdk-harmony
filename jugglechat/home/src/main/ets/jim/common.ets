@@ -1,5 +1,13 @@
 
 @Observed
+/**
+ * Represents Observed Array.
+ *
+ * Example:
+ * ```ts
+ * const items = new ObservedArray<string>([])
+ * ```
+ */
 export class ObservedArray<T> extends Array<T>{
   constructor(args: T[]) {
     if (args instanceof Array) {
@@ -10,6 +18,14 @@ export class ObservedArray<T> extends Array<T>{
   }
 }
 
+/**
+ * Represents Common Util.
+ *
+ * Example:
+ * ```ts
+ * const timeLabel = CommonUtil.getTimeToYYYYDDMMHHMMSS(Date.now())
+ * ```
+ */
 export class CommonUtil{
   static getTimeToYYYYDDMMHHMMSS(time: number): string {
     let timeStr: string = "";

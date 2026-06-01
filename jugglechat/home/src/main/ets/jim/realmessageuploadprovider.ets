@@ -22,6 +22,14 @@ class UploadRequestHeaders {
   }
 }
 
+/**
+ * Represents Real Message Upload Provider.
+ *
+ * Example:
+ * ```ts
+ * const provider = new RealMessageUploadProvider()
+ * ```
+ */
 export class RealMessageUploadProvider implements IMessageUploadProvider {
   uploadMediaMessage(
     msg: MediaMessageContent,

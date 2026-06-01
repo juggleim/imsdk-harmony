@@ -1,3 +1,11 @@
+/**
+ * Represents User Info.
+ *
+ * Example:
+ * ```ts
+ * const value = new UserInfo()
+ * ```
+ */
 export class UserInfo{
   userId:string = ''
   nickname:string = ''
@@ -8,6 +16,14 @@ export class UserInfo{
   }
 }
 
+/**
+ * Represents Friend Info.
+ *
+ * Example:
+ * ```ts
+ * const value = new FriendInfo()
+ * ```
+ */
 export class FriendInfo{
   userId:string = ''
   isFriend:boolean = false

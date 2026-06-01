@@ -5,6 +5,14 @@ import {
   ChatroomListener
 } from './chatroomtypes'
 
+/**
+ * Declares the contract for I Chatroom Manager.
+ *
+ * Example:
+ * ```ts
+ * const manager = JuggleIm.instance.getChatroomManager()
+ * ```
+ */
 export interface IChatroomManager {
   joinChatroom(chatroomId: string): void
   joinChatroom(chatroomId: string, prevMessageCount: number): void

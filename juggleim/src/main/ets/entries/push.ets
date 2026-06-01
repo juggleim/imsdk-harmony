@@ -1,3 +1,11 @@
+/**
+ * Defines the Push Channel constants.
+ *
+ * Example:
+ * ```ts
+ * const channel = PushChannel.Huawei
+ * ```
+ */
 export enum PushChannel {
   DefaultChannel = 0,
   Apple = 1,
@@ -9,6 +17,14 @@ export enum PushChannel {
   JPush = 7
 }
 
+/**
+ * Provides the push Channel To Connect Name helper.
+ *
+ * Example:
+ * ```ts
+ * const connectName = pushChannelToConnectName(PushChannel.Huawei)
+ * ```
+ */
 export function pushChannelToConnectName(channel: PushChannel): string {
   switch (channel) {
     case PushChannel.Huawei:
@@ -28,6 +44,14 @@ export function pushChannelToConnectName(channel: PushChannel): string {
   }
 }
 
+/**
+ * Provides the push Channel To Display Name helper.
+ *
+ * Example:
+ * ```ts
+ * const displayName = pushChannelToDisplayName(PushChannel.Huawei)
+ * ```
+ */
 export function pushChannelToDisplayName(channel: PushChannel): string {
   switch (channel) {
     case PushChannel.Apple:

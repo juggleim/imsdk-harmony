@@ -11,6 +11,14 @@ import { JimMsgType } from "./msgtypes"
 import { MessageOptionUtil } from "../commons/messageoptionutil"
 import { MsgFlagTool } from "../improto/msgflag"
 
+/**
+ * Represents Msg Handler.
+ *
+ * Example:
+ * ```ts
+ * const value = new MsgHandler()
+ * ```
+ */
 export class MsgHandler{
   private static msgTypeMap:Map<string,Function> = new Map()
 

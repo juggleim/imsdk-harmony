@@ -3,8 +3,24 @@ import { doHttp } from "./httputil";
 import http from "@ohos.net.http";
 import { JimServerConfig } from "./jimserver";
 
+/**
+ * Defines the Friends Callback alias.
+ *
+ * Example:
+ * ```ts
+ * const callback: FriendsCallback = (users) => {}
+ * ```
+ */
 export type FriendsCallback = (users:Users)=>void
 
+/**
+ * Represents Friend Manager.
+ *
+ * Example:
+ * ```ts
+ * const manager = new FriendManager(new JimServerConfig())
+ * ```
+ */
 export class FriendManager{
   private config:JimServerConfig
   constructor(config:JimServerConfig) {

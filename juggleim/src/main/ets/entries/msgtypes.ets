@@ -1,4 +1,12 @@
 
+/**
+ * Represents Jim Msg Type.
+ *
+ * Example:
+ * ```ts
+ * const value = new JimMsgType()
+ * ```
+ */
 export class JimMsgType{
   static Unknown:string = 'jg:unknown'
 

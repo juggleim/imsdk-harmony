@@ -21,6 +21,14 @@ import { IGroupInfoManager } from './interfaces/igroupinfomanager'
 import { IMomentManager } from './interfaces/imomentmanager'
 import { MomentManager } from './managers/momentmanager'
 
+/**
+ * Represents Jim Config.
+ *
+ * Example:
+ * ```ts
+ * const config = new JimConfig()
+ * ```
+ */
 export class JimConfig{
   address:string = ''
   healthCheckAddress:string = ''
@@ -43,6 +51,14 @@ export class JimConfig{
   connectHeaders:Map<string, string> = new Map<string, string>()
 }
 
+/**
+ * Represents Juggle Im.
+ *
+ * Example:
+ * ```ts
+ * const sdk = JuggleIm.instance
+ * ```
+ */
 export class JuggleIm{
   static instance = new JuggleIm();
 

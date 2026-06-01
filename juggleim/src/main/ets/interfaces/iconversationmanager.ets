@@ -18,6 +18,14 @@ import {
   TotalUnreadCountUpdateListener
 } from './conversationtypes'
 
+/**
+ * Declares the contract for I Conversation Manager.
+ *
+ * Example:
+ * ```ts
+ * const manager = JuggleIm.instance.getConversationManager()
+ * ```
+ */
 export interface IConversationManager {
   addConversationAddListener(listener: ConversationAddListener): void
   removeConversationAddListener(listener: ConversationAddListener): void

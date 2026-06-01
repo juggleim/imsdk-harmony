@@ -1,6 +1,14 @@
 import { Message } from "./message"
 import { faceDetector } from "@kit.CoreVisionKit"
 
+/**
+ * Represents Conversation.
+ *
+ * Example:
+ * ```ts
+ * const value = new Conversation()
+ * ```
+ */
 export class Conversation{
   conversationId:string
   conversationType:number
@@ -31,6 +39,14 @@ export class Conversation{
   }
 }
 
+/**
+ * Represents Conversation Info.
+ *
+ * Example:
+ * ```ts
+ * const value = new ConversationInfo()
+ * ```
+ */
 export class ConversationInfo{
   id:number = 0
   conversation:Conversation = new Conversation("",0,'')
@@ -48,6 +64,14 @@ export class ConversationInfo{
   }
 }
 
+/**
+ * Represents Conversation Tag.
+ *
+ * Example:
+ * ```ts
+ * const value = new ConversationTag()
+ * ```
+ */
 export class ConversationTag{
   conversation:Conversation = new Conversation("",0,'')
   tagId:string = ''
@@ -55,6 +79,14 @@ export class ConversationTag{
   }
 }
 
+/**
+ * Represents Conversation Tag Info.
+ *
+ * Example:
+ * ```ts
+ * const value = new ConversationTagInfo()
+ * ```
+ */
 export class ConversationTagInfo{
   tagId:string = ''
   tagName:string = ''

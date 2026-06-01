@@ -44,6 +44,14 @@ import {
   TopMessageCallback
 } from './messagetypes'
 
+/**
+ * Declares the contract for I Message Manager.
+ *
+ * Example:
+ * ```ts
+ * const manager = JuggleIm.instance.getMessageManager()
+ * ```
+ */
 export interface IMessageManager {
   addMsgReceivedListener(listener: MsgReceivedListener): void
   removeMsgReceivedListener(listener: MsgReceivedListener): void

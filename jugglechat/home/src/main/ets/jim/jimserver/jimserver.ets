@@ -5,8 +5,24 @@ import { doHttp, JimServerHeaders } from "./httputil";
 import { PreferenceUtil } from "../preferenceutil";
 import { FriendManager } from "./friendmanager";
 
+/**
+ * Defines the Login Callback alias.
+ *
+ * Example:
+ * ```ts
+ * const callback: LoginCallback = (code, resp, msg) => {}
+ * ```
+ */
 export type LoginCallback = (code:number,resp:LoginResp,msg?:string)=>void
 
+/**
+ * Represents Jim Server Config.
+ *
+ * Example:
+ * ```ts
+ * const config = new JimServerConfig()
+ * ```
+ */
 export class JimServerConfig{
   serverUrl:string
   appkey:string
@@ -51,6 +67,14 @@ export class JimServerConfig{
 }
 
 
+/**
+ * Represents Jim Server.
+ *
+ * Example:
+ * ```ts
+ * const server = JimServer.instance
+ * ```
+ */
 export class JimServer{
   static instance = new JimServer()
 

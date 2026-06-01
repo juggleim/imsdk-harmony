@@ -3,6 +3,14 @@ import { FriendInfo, UserInfo } from '../entries/user'
 import { GroupInfoCallback, GroupMemberCallback, GroupMembersCallback } from './igroupinfomanager'
 import { FriendInfoCallback, UserInfoCallback } from './userinfotypes'
 
+/**
+ * Declares the contract for I User Info Manager.
+ *
+ * Example:
+ * ```ts
+ * const manager = JuggleIm.instance.getUserInfoManager()
+ * ```
+ */
 export interface IUserInfoManager {
   saveUserInfo(userInfo: UserInfo): void
   getLocalUserInfo(userid: string): UserInfo | null

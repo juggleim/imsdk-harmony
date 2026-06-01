@@ -11,6 +11,14 @@ interface IRecallCmdMessage{
   exts:StringMapItem[]
 }
 
+/**
+ * Represents Recall Cmd Message.
+ *
+ * Example:
+ * ```ts
+ * const value = new RecallCmdMessage()
+ * ```
+ */
 export class RecallCmdMessage extends MessageContent{
   msgId:string = ''
   msgTime:number = 0
@@ -39,11 +47,27 @@ export class RecallCmdMessage extends MessageContent{
   }
 }
 
+/**
+ * Declares the contract for I Read Msg.
+ *
+ * Example:
+ * ```ts
+ * const listener: IReadMsg = {} as IReadMsg
+ * ```
+ */
 export interface IReadMsg{
   msg_id:string
   msg_index:number
 }
 
+/**
+ * Declares the contract for I Index Scope.
+ *
+ * Example:
+ * ```ts
+ * const listener: IIndexScope = {} as IIndexScope
+ * ```
+ */
 export interface  IIndexScope{
   start_index:number
   end_index:number
@@ -54,6 +78,14 @@ interface IReadNtfMessage{
   index_scopes:IIndexScope[]
 }
 
+/**
+ * Represents Read Ntf Message.
+ *
+ * Example:
+ * ```ts
+ * const value = new ReadNtfMessage()
+ * ```
+ */
 export class ReadNtfMessage extends MessageContent{
   msgs:IReadMsg[] = []
   indexScopes:IIndexScope[] = []
@@ -89,6 +121,14 @@ interface IGroupReadNtfMessage{
   msgs:IGroupReadNtfMsg[]
 }
 
+/**
+ * Represents Group Read Ntf Message.
+ *
+ * Example:
+ * ```ts
+ * const value = new GroupReadNtfMessage()
+ * ```
+ */
 export class GroupReadNtfMessage extends MessageContent{
   messages:Map<string, GroupMessageReadInfo> = new Map()
   constructor() {
@@ -129,6 +169,14 @@ export class GroupReadNtfMessage extends MessageContent{
   }
 }
 
+/**
+ * Declares the contract for I Clear Unread Conver.
+ *
+ * Example:
+ * ```ts
+ * const listener: IClearUnreadConver = {} as IClearUnreadConver
+ * ```
+ */
 export interface IClearUnreadConver{
   target_id:string
   channel_type:number
@@ -147,6 +195,14 @@ interface IClearUnreadMessage{
   conversations:IClearUnreadConver[]
 }
 
+/**
+ * Represents Clear Unread Message.
+ *
+ * Example:
+ * ```ts
+ * const value = new ClearUnreadMessage()
+ * ```
+ */
 export class ClearUnreadMessage extends  MessageContent{
   conversations:IClearUnreadConver[] = []
   constructor() {
@@ -194,6 +250,14 @@ interface IModifyMessage{
   msg_content:Uint8Array
 }
 
+/**
+ * Represents Modify Message.
+ *
+ * Example:
+ * ```ts
+ * const value = new ModifyMessage()
+ * ```
+ */
 export class ModifyMessage extends MessageContent{
   newMsgType:string = ''
   msgId:string = ''
@@ -249,6 +313,14 @@ interface ITopMsgPayload{
   msg_id:string
 }
 
+/**
+ * Represents Top Msg Message.
+ *
+ * Example:
+ * ```ts
+ * const value = new TopMsgMessage()
+ * ```
+ */
 export class TopMsgMessage extends MessageContent{
   isTop:boolean = false
   msgId:string = ''
@@ -271,6 +343,14 @@ export class TopMsgMessage extends MessageContent{
   }
 }
 
+/**
+ * Represents Msg Ex Set Message.
+ *
+ * Example:
+ * ```ts
+ * const value = new MsgExSetMessage()
+ * ```
+ */
 export class MsgExSetMessage extends MessageContent{
   originalMessageId:string = ''
   addReactions:MessageReaction[] = []

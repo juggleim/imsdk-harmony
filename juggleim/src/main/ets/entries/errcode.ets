@@ -1,3 +1,11 @@
+/**
+ * Represents Jim Error Code.
+ *
+ * Example:
+ * ```ts
+ * const value = new JimErrorCode()
+ * ```
+ */
 export class JimErrorCode{
   Success:number = 0
   NotChatroomMember:number = 14001

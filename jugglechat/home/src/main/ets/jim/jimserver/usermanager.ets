@@ -3,8 +3,24 @@ import { User } from "./entries/user";
 import { doHttp } from "./httputil";
 import http from "@ohos.net.http";
 
+/**
+ * Defines the User Callback alias.
+ *
+ * Example:
+ * ```ts
+ * const callback: UserCallback = (user) => {}
+ * ```
+ */
 export type UserCallback = (user:User|null)=>void
 
+/**
+ * Represents User Manager.
+ *
+ * Example:
+ * ```ts
+ * const manager = new UserManager(new JimServerConfig())
+ * ```
+ */
 export class UserManager{
   private config:JimServerConfig
   constructor(config:JimServerConfig) {

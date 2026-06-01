@@ -1,5 +1,13 @@
 import http from "@ohos.net.http";
 
+/**
+ * Declares the contract for Jim Server Headers.
+ *
+ * Example:
+ * ```ts
+ * const headers: JimServerHeaders = { AppKey: "", Authorization: "" }
+ * ```
+ */
 export interface JimServerHeaders{
   AppKey?:string
   appkey?:string
@@ -8,8 +16,24 @@ export interface JimServerHeaders{
   'x-amz-acl'?:string
 }
 
+/**
+ * Defines the Http Callback alias.
+ *
+ * Example:
+ * ```ts
+ * const callback: HttpCallback = (code, data, msg) => {}
+ * ```
+ */
 export type HttpCallback = (code:number,data?:Object,msg?:string)=>void
 
+/**
+ * Provides the do Http helper.
+ *
+ * Example:
+ * ```ts
+ * doHttp("https://example.com", http.RequestMethod.GET)
+ * ```
+ */
 export function doHttp(url:string,method:http.RequestMethod,header?:JimServerHeaders,data?:string,callback?:HttpCallback) {
   let httpRequest = http.createHttp()
   console.log("jim_http_request:", url, JSON.stringify(header ?? {}), data ?? '')

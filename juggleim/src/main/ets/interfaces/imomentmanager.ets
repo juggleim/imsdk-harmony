@@ -13,6 +13,14 @@ import {
   MomentsCallback
 } from './momenttypes'
 
+/**
+ * Declares the contract for I Moment Manager.
+ *
+ * Example:
+ * ```ts
+ * const manager = JuggleIm.instance.getMomentManager()
+ * ```
+ */
 export interface IMomentManager {
   addMoment(content: string, mediaList: MomentMedia[], callback: MomentCallback): void
   removeMoment(momentId: string, callback: CommonCallback): void

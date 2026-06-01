@@ -15,6 +15,14 @@ import {Cmd,newConnectMessage, newUserPublishMessage,newQueryMessage, newUserPub
   newPingMessag, newDisconnectMessage} from '../improto/connectmsg'
 import { PreferenceUtil } from '../commons/preferenceutil';
 
+/**
+ * Represents Conn Status.
+ *
+ * Example:
+ * ```ts
+ * const status = ConnStatus.connected
+ * ```
+ */
 export class ConnStatus{
   static readonly unknown = 0
   static readonly connecting = 1
@@ -24,9 +32,41 @@ export class ConnStatus{
   static readonly waiting = 5
 }
 
+/**
+ * Defines the Conn Status Listener alias.
+ *
+ * Example:
+ * ```ts
+ * const callback: ConnStatusListener = (...args: unknown[]) => {}
+ * ```
+ */
 export type ConnStatusListener = (status:number,reasonCode:number,userId:string)=>void
+/**
+ * Defines the Publish Callback alias.
+ *
+ * Example:
+ * ```ts
+ * const callback: PublishCallback = (...args: unknown[]) => {}
+ * ```
+ */
 export type PublishCallback = (code:number,pubAck:imconnect.IPublishAckMsgBody)=>void
+/**
+ * Defines the Query Callback alias.
+ *
+ * Example:
+ * ```ts
+ * const callback: QueryCallback = (...args: unknown[]) => {}
+ * ```
+ */
 export type QueryCallback = (code:number,qryAck:imconnect.IQueryAckMsgBody)=>void
+/**
+ * Defines the Publish Listener alias.
+ *
+ * Example:
+ * ```ts
+ * const callback: PublishListener = (...args: unknown[]) => {}
+ * ```
+ */
 export type PublishListener = (index:number,data:Uint8Array)=>void
 
 
@@ -53,6 +93,14 @@ class ConnectNetworkInfo{
   clientIp:string = ''
 }
 
+/**
+ * Represents Im Client.
+ *
+ * Example:
+ * ```ts
+ * const value = new ImClient()
+ * ```
+ */
 export class ImClient{
   index:number = 0
   status:number = ConnStatus.unknown

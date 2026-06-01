@@ -10,17 +10,41 @@ let defaultAppServer = 'https://ws.juggleim.com'
 let defaultImServer = 'ws://ws.juggleim.com'
 let defaultAppkey = 'nsw3sue72begyv7y'
 
+/**
+ * Declares the contract for Cache Auth.
+ *
+ * Example:
+ * ```ts
+ * const auth: CacheAuth = { user_id: "", server_auth: "", im_token: "" }
+ * ```
+ */
 export interface CacheAuth{
   user_id:string
   server_auth:string
   im_token:string
 }
 
+/**
+ * Declares the contract for Login Profile.
+ *
+ * Example:
+ * ```ts
+ * const profile: LoginProfile = { organization: "", username: "" }
+ * ```
+ */
 export interface LoginProfile{
   organization:string
   username:string
 }
 
+/**
+ * Declares the contract for Server Config.
+ *
+ * Example:
+ * ```ts
+ * const config: ServerConfig = { organization: "", appServer: "", imServer: "", appkey: "" }
+ * ```
+ */
 export interface ServerConfig{
   organization:string
   appServer:string
@@ -35,6 +59,14 @@ function trimRightSlash(url:string):string{
   return url
 }
 
+/**
+ * Represents Preference Util.
+ *
+ * Example:
+ * ```ts
+ * const appKey = PreferenceUtil.getAppkey()
+ * ```
+ */
 export class PreferenceUtil{
   static getJChatServer():string{
     let config = PreferenceUtil.getServerConfig()

@@ -26,6 +26,16 @@ class HomeConnectStatusListener {
   }
 }
 
+/**
+ * Initializes the SDK and restores cached auth if available.
+ *
+ * Example:
+ * ```ts
+ * await initJuggleIm((status, code) => {
+ *   console.log(status, code)
+ * })
+ * ```
+ */
 export async function initJuggleIm(connectCallback:(status:number,code:number)=>void){
   JuggleIm.instance.init(PreferenceUtil.getJImServer(),PreferenceUtil.getAppkey())
   JuggleIm.instance.setAppServerUrl(PreferenceUtil.getJChatServer())

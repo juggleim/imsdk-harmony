@@ -1,5 +1,13 @@
 import { Conversation } from './conversation'
 
+/**
+ * Represents Message Query Options.
+ *
+ * Example:
+ * ```ts
+ * const value = new MessageQueryOptions()
+ * ```
+ */
 export class MessageQueryOptions {
   searchContent: string = ''
   senderUserIds: string[] = []
