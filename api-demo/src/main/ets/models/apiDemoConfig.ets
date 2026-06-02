@@ -6,8 +6,8 @@ export function loadApiDemoConfig(): ApiDemoConfig {
     const raw: Uint8Array = getContext().resourceManager.getRawFileContentSync('api_demo_config.json')
     const text: string = JimUtil.uint8ArrayToString(raw)
     return JSON.parse(text) as ApiDemoConfig
-  } catch (error) {
-    console.error(`api_demo_load_config_fail: ${error}`)
+  } catch {
+    console.error('api_demo_load_config_fail')
     return new ApiDemoConfig()
   }
 }

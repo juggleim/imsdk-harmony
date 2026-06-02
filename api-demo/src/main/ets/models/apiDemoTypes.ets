@@ -52,7 +52,8 @@ export enum ApiFieldKind {
   Number = 'number',
   Boolean = 'boolean',
   Json = 'json',
-  Password = 'password'
+  Password = 'password',
+  MediaMessage = 'mediaMessage'
 }
 
 export class ApiFieldConfig {
@@ -116,6 +117,22 @@ export class ApiFieldViewState {
   value: string = ''
   placeholder: string = ''
   help: string = ''
+}
+
+export class ApiMediaMessageValue {
+  contentKind: string = 'text'
+  content: string = 'Hello'
+  extra: string = ''
+  localPath: string = ''
+  url: string = ''
+  thumbnail: string = ''
+  poster: string = ''
+  name: string = ''
+  type: string = ''
+  size: number = 0
+  width: number = 0
+  height: number = 0
+  duration: number = 0
 }
 
 export class ApiLogItem {

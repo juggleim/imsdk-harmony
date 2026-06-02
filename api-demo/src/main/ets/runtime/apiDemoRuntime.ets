@@ -46,18 +46,12 @@ import {
   IMomentManager,
   IUserInfoManager,
   IGroupInfoManager,
-  IMessageUploadProvider,
   JimMsgType,
   JuggleIm,
-  MediaMessageContent,
-  MediaMessageUploadState,
   MediaUploadCredential,
-  MediaUploadCredentialCallback,
-  MediaUploadErrorCallback,
-  MediaUploadResult,
-  MediaUploadSuccessCallback,
   Message,
   MessageContent,
+  MediaMessageContent,
   MessageMentionInfo,
   MessageOptions,
   MessageQueryOptions,
@@ -115,12 +109,8 @@ import { HashMap } from '@kit.ArkTS'
 import { ApiActionConfig, ApiDemoCommonDefaults, ApiDemoInvokeContext, ApiFieldConfig, ApiFieldViewState, ApiListenerConfig, ApiLogItem } from '../models/apiDemoTypes'
 
 type ApiLogSink = (title: string, content: string) => void
-type ApiValue = Object | null
+type ApiValue = Object | string | number | boolean | undefined
 type ApiMethod = (...args: ApiValue[]) => ApiValue
-
-interface ApiJsonRecord {
-  [key: string]: ApiValue
-}
 
 class DemoCustomMessage extends MessageContent {
   static registeredType: string = 'jg:demo_custom'
@@ -137,34 +127,9 @@ class DemoCustomMessage extends MessageContent {
 
   decode(data: Uint8Array): void {
     const text: string = JimUtil.uint8ArrayToString(data)
-    const obj: ApiJsonRecord = JSON.parse(text) as ApiJsonRecord
-    this.content = obj.content == null ? '' : `${obj.content}`
-  }
-}
-
-class MockUploadProvider implements IMessageUploadProvider {
-  private logSink: ApiLogSink
-
-  constructor(logSink: ApiLogSink) {
-    this.logSink = logSink
-  }
-
-  uploadMediaMessage(
-    msg: MediaMessageContent,
-    onProgress: (progress: number) => void,
-    onSuccess: MediaUploadSuccessCallback,
-    onError: MediaUploadErrorCallback,
-    onCancel: () => void
-  ): void {
-    this.logSink('uploadProvider', `mock upload start: ${msg.getContentType()}`)
-    onProgress(30)
-    onProgress(100)
-    const result: MediaUploadResult = new MediaUploadResult()
-    result.url = msg.url != '' ? msg.url : `mock://${msg.getContentType()}`
-    result.name = 'mock'
-    onSuccess(result)
-    void onError
-    void onCancel
+    const obj: Object = JSON.parse(text) as Object
+    const content: ApiValue = Reflect.get(obj, 'content') as ApiValue
+    this.content = content == undefined ? '' : `${content}`
   }
 }
 
@@ -355,35 +320,37 @@ class ChatroomAttributesListenerImpl implements ChatroomAttributesListener {
 export class ApiDemoRuntime {
   private logSink: ApiLogSink
   private listenerMap: Map<string, ApiValue> = new Map()
-  private mockUploadProvider: MockUploadProvider
 
   constructor(logSink: ApiLogSink) {
     this.logSink = logSink
-    this.mockUploadProvider = new MockUploadProvider(logSink)
   }
 
-  initSdk(context: ApiDemoInvokeContext): void {
+  hasMessageUploadProvider(): boolean {
+    return JuggleIm.instance.getMessageManager().getMessageUploadProvider() != null
+  }
+
+  initSdk(context: ApiDemoInvokeContext, listeners: ApiListenerConfig[] = [], logTitle: string = 'init'): void {
     const address: string = context.address.trim()
     const appkey: string = context.appkey.trim()
     if (address == '' || appkey == '') {
       this.logSink('init', 'address/appkey cannot be empty')
       return
     }
-    JuggleIm.instance.init(address, appkey)
-    JuggleIm.instance.setPackageName(context.packageName.trim())
-    JuggleIm.instance.getConnectionManager().setLanguage(context.language.trim())
-    JuggleIm.instance.getMessageManager().setMessageUploadProvider(this.mockUploadProvider)
-    this.logSink('init', `sdk initialized: address=${address}, appkey=${appkey}`)
-  }
-
-  useMockUploadProvider(): void {
-    JuggleIm.instance.getMessageManager().setMessageUploadProvider(this.mockUploadProvider)
-    this.logSink('uploadProvider', 'mock provider enabled')
-  }
-
-  useRealUploadProvider(): void {
-    JuggleIm.instance.getMessageManager().setMessageUploadProvider(null)
-    this.logSink('uploadProvider', 'upload provider cleared')
+    Promise.resolve(JuggleIm.instance.init(address, appkey))
+      .then(() => {
+        JuggleIm.instance.setPackageName(context.packageName.trim())
+        JuggleIm.instance.getConnectionManager().setLanguage(context.language.trim())
+        if (listeners.length > 0) {
+          this.registerListeners(listeners, context)
+        }
+        this.logSink(
+          logTitle,
+          `sdk initialized: address=${address}, appkey=${appkey}, uploadProvider=${JuggleIm.instance.getMessageManager().getMessageUploadProvider() == null ? 'null' : 'set'}`
+        )
+      })
+      .catch((err: Object) => {
+        this.logSink(logTitle, `sdk init error: ${this.describeError(err)}`)
+      })
   }
 
   registerListeners(listeners: ApiListenerConfig[], context: ApiDemoInvokeContext): void {
@@ -398,20 +365,22 @@ export class ApiDemoRuntime {
     })
   }
 
-  invoke(action: ApiActionConfig, fields: ApiFieldViewState[], context: ApiDemoInvokeContext): void {
+  invoke(action: ApiActionConfig, fields: ApiFieldViewState[], context: ApiDemoInvokeContext): Promise<void> {
     const target: object = this.resolveTarget(action.target)
     const rawMethod: ApiValue = Reflect.get(target, action.method) as ApiValue
     if (typeof rawMethod !== 'function') {
       this.logSink(action.id, `method not found: ${action.method}`)
-      return
+      return Promise.resolve()
     }
-    const method: ApiMethod = rawMethod as ApiMethod
+    const method: ApiMethod = (rawMethod as Function).bind(target) as ApiMethod
     const fieldMap: Map<string, string> = this.buildFieldMap(fields)
     const args: ApiValue[] = []
     action.args.forEach((field) => {
       args.push(this.buildValue(field, fieldMap, context))
     })
-    const callbackKinds: string[] = action.callbackKinds.length > 0 ? action.callbackKinds : (action.callbackKind == 'none' ? [] : [action.callbackKind])
+    const callbackKinds: string[] = Array.isArray(action.callbackKinds) && action.callbackKinds.length > 0
+      ? action.callbackKinds
+      : (action.callbackKind == 'none' ? [] : [action.callbackKind])
     callbackKinds.forEach((kind) => {
       const callback: ApiValue | null = this.buildCallback(kind, action, context)
       if (callback != null) {
@@ -419,16 +388,28 @@ export class ApiDemoRuntime {
       }
     })
     try {
-      const result: ApiValue = method(...args)
-      Promise.resolve(result).then((value: ApiValue) => {
-        if (value != undefined) {
-          this.logSink(action.id, `result: ${this.describeValue(value)}`)
-        } else if (action.callbackKind == 'none') {
-          this.logSink(action.id, 'invoked')
+      if (action.target == 'message' && action.method == 'sendMediaMessage') {
+        const mediaMsg: MediaMessageContent | null = args.length > 0 && args[0] instanceof MediaMessageContent ? args[0] as MediaMessageContent : null
+        if (mediaMsg != null && mediaMsg.url.trim() == '' && JuggleIm.instance.getMessageManager().getMessageUploadProvider() == null) {
+          this.logSink(action.id, 'sendMediaMessage requires message upload provider for local media')
+          return Promise.resolve()
         }
-      })
-    } catch (error) {
-      this.logSink(action.id, `error: ${error}`)
+      }
+      const result: ApiValue = method(...args)
+      return Promise.resolve(result)
+        .then((value: ApiValue) => {
+          if (value != undefined) {
+            this.logSink(action.id, `result: ${this.describeValue(value)}`)
+          } else if (action.callbackKind == 'none') {
+            this.logSink(action.id, 'invoked')
+          }
+        })
+        .catch((err: Object) => {
+          this.logSink(action.id, `error: ${this.describeError(err)}`)
+        })
+    } catch (err) {
+      this.logSink(action.id, `error: ${this.describeError(err)}`)
+      return Promise.resolve()
     }
   }
 
@@ -442,18 +423,19 @@ export class ApiDemoRuntime {
       this.logSink(listener.id, `listener method not found: ${listener.method}`)
       return
     }
-    const method: ApiMethod = rawMethod as ApiMethod
+    const method: ApiMethod = (rawMethod as Function).bind(target) as ApiMethod
     const callback: ApiValue = this.buildListener(listener, context)
-    this.listenerMap.set(listener.id, callback)
+    const normalizedKey: string = listener.key == undefined ? '' : listener.key.trim()
     try {
-      if (listener.key.trim() != '') {
-        method(listener.key.trim(), callback)
+      if (normalizedKey != '') {
+        method(normalizedKey, callback)
       } else {
         method(callback)
       }
+      this.listenerMap.set(listener.id, callback)
       this.logSink(listener.id, 'listener registered')
-    } catch (error) {
-      this.logSink(listener.id, `listener register error: ${error}`)
+    } catch (err) {
+      this.logSink(listener.id, `listener register error: ${this.describeError(err)}`)
     }
   }
 
@@ -465,17 +447,18 @@ export class ApiDemoRuntime {
     const target: object = this.resolveTarget(listener.target)
     const methodName: string = listener.method.replace('add', 'remove')
     const rawMethod: ApiValue = Reflect.get(target, methodName) as ApiValue
+    const normalizedKey: string = listener.key == undefined ? '' : listener.key.trim()
     if (typeof rawMethod === 'function') {
-      const method: ApiMethod = rawMethod as ApiMethod
+      const method: ApiMethod = (rawMethod as Function).bind(target) as ApiMethod
       try {
-        if (listener.key.trim() != '') {
-          method(listener.key.trim())
+        if (normalizedKey != '') {
+          method(normalizedKey)
         } else {
           method(callback)
         }
         this.logSink(listener.id, 'listener removed')
-      } catch (error) {
-        this.logSink(listener.id, `listener remove error: ${error}`)
+      } catch (err) {
+        this.logSink(listener.id, `listener remove error: ${this.describeError(err)}`)
       }
     }
     this.listenerMap.delete(listener.id)
@@ -534,6 +517,7 @@ export class ApiDemoRuntime {
       case 'conversationArray':
         return this.parseConversationArray(raw, context)
       case 'messageContent':
+      case 'mediaMessage':
         return this.parseMessageContent(raw, context)
       case 'messageOptions':
         return this.parseMessageOptions(raw, context)
@@ -558,9 +542,9 @@ export class ApiDemoRuntime {
       case 'momentMediaArray':
         return this.parseMomentMediaArray(raw)
       case 'pushData':
-        return this.parsePushData(raw, context)
+        return this.parsePushData(raw)
       case 'messageMentionInfo':
-        return this.parseMessageMentionInfo(raw, context)
+        return this.parseMessageMentionInfo(raw)
       case 'userInfo':
         return this.parseUserInfo(raw)
       case 'groupInfo':
@@ -609,8 +593,8 @@ export class ApiDemoRuntime {
       default:
         break
     }
-    const advanced: ApiJsonRecord = this.parseJson(context.advancedJson) as ApiJsonRecord
-    const value: ApiValue = advanced[key]
+    const advanced: Object = this.parseJson(context.advancedJson)
+    const value: ApiValue = this.readJsonValue(advanced, key)
     if (value == undefined || value == null) {
       return ''
     }
@@ -666,10 +650,6 @@ export class ApiDemoRuntime {
         return (resultList: SearchConversationsResult[]) => this.logSink(action.id, this.describeValue(resultList))
       case 'queryUploadFileCredential':
         return (code: number, credential: MediaUploadCredential | null) => this.logSink(action.id, `code=${code}, credential=${this.describeValue(credential)}`)
-      case 'mediaUploadSuccess':
-        return (result: MediaUploadResult) => this.logSink(action.id, `result=${this.describeValue(result)}`)
-      case 'mediaUploadError':
-        return (code: number, message: string) => this.logSink(action.id, `code=${code}, message=${message}`)
       case 'mediaUploadProgress':
         return (progress: number) => this.logSink(action.id, `progress=${progress}`)
       case 'mediaUploadCancel':
@@ -769,7 +749,7 @@ export class ApiDemoRuntime {
     return `${msg.messageId}/${msg.msgContent.getMsgType()}/${msg.senderId}/${msg.sentTime}`
   }
 
-  private describeValue(value: Object | null): string {
+  private describeValue(value: ApiValue | null | undefined): string {
     if (value == null) {
       return 'null'
     }
@@ -817,20 +797,38 @@ export class ApiDemoRuntime {
     }
     try {
       return JSON.stringify(value)
-    } catch (error) {
+    } catch {
       return `${value}`
     }
   }
 
-  private parseJson(raw: string): ApiValue {
+  private describeError(err: Object | string | number | boolean | null | undefined): string {
+    if (err == null) {
+      return 'null'
+    }
+    if (typeof err == 'string') {
+      return err
+    }
+    try {
+      return JSON.stringify(err)
+    } catch {
+      return `${err}`
+    }
+  }
+
+  private parseJson(raw: string): Object {
+    return this.parseJsonObject(raw)
+  }
+
+  private parseJsonObject(raw: string): Object {
     const text: string = raw.trim()
     if (text == '') {
       return new Object()
     }
     try {
-      return JSON.parse(text) as ApiValue
-    } catch (error) {
-      this.logSink('parse', `json parse error: ${error}`)
+      return JSON.parse(text) as Object
+    } catch {
+      this.logSink('parse', 'json parse error')
       return new Object()
     }
   }
@@ -852,7 +850,7 @@ export class ApiDemoRuntime {
     try {
       const items: Array<string> = JSON.parse(text) as Array<string>
       return items
-    } catch (error) {
+    } catch {
       return text.split(',').map((item) => item.trim()).filter((item) => item != '')
     }
   }
@@ -871,9 +869,9 @@ export class ApiDemoRuntime {
 
   private parseMapString(raw: string): Map<string, string> {
     const mapValue: Map<string, string> = new Map()
-    const parsed: ApiJsonRecord = this.parseJson(raw) as ApiJsonRecord
+    const parsed: Object = this.parseJsonObject(raw)
     Object.keys(parsed).forEach((name: string) => {
-      const value: ApiValue = parsed[name]
+      const value: ApiValue = this.readJsonValue(parsed, name)
       mapValue.set(name, value == null ? '' : `${value}`)
     })
     return mapValue
@@ -881,9 +879,9 @@ export class ApiDemoRuntime {
 
   private parseHashMapString(raw: string): HashMap<string, string> {
     const mapValue: HashMap<string, string> = new HashMap()
-    const parsed: ApiJsonRecord = this.parseJson(raw) as ApiJsonRecord
+    const parsed: Object = this.parseJsonObject(raw)
     Object.keys(parsed).forEach((name: string) => {
-      const value: ApiValue = parsed[name]
+      const value: ApiValue = this.readJsonValue(parsed, name)
       mapValue.set(name, value == null ? '' : `${value}`)
     })
     return mapValue
@@ -899,14 +897,14 @@ export class ApiDemoRuntime {
 
   private parseConversationArray(raw: string, context: ApiDemoInvokeContext): Conversation[] {
     const parsed: Object = this.parseJson(raw)
-    const list: Array<object> = Array.isArray(parsed) ? (parsed as Array<object>) : []
+    const list: Object[] = Array.isArray(parsed) ? (parsed as Object[]) : []
     if (list.length == 0) {
       const single: string = this.getCommonValue(context, 'conversationIdsJson')
       const text: string = single.trim()
       if (text != '') {
         try {
           return this.parseConversationArray(text, context)
-        } catch (error) {
+        } catch {
         }
       }
     }
@@ -1082,7 +1080,7 @@ export class ApiDemoRuntime {
 
   private parseTimePeriods(raw: string): TimePeriod[] {
     const parsed: Object = this.parseJson(raw)
-    const list: Array<object> = Array.isArray(parsed) ? (parsed as Array<object>) : []
+    const list: Object[] = Array.isArray(parsed) ? (parsed as Object[]) : []
     const periods: TimePeriod[] = []
     list.forEach((item) => {
       const period: TimePeriod = new TimePeriod()
@@ -1117,7 +1115,7 @@ export class ApiDemoRuntime {
 
   private parseMomentMediaArray(raw: string): MomentMedia[] {
     const parsed: Object = this.parseJson(raw)
-    const list: Array<object> = Array.isArray(parsed) ? (parsed as Array<object>) : []
+    const list: Object[] = Array.isArray(parsed) ? (parsed as Object[]) : []
     const items: MomentMedia[] = []
     list.forEach((item) => {
       const media: MomentMedia = new MomentMedia()
@@ -1164,7 +1162,7 @@ export class ApiDemoRuntime {
 
   private parseUserInfoArray(raw: string): UserInfo[] {
     const parsed: Object = this.parseJson(raw)
-    const list: Array<object> = Array.isArray(parsed) ? (parsed as Array<object>) : []
+    const list: Object[] = Array.isArray(parsed) ? (parsed as Object[]) : []
     const items: UserInfo[] = []
     list.forEach((item) => {
       items.push(this.parseUserInfo(JSON.stringify(item)))
@@ -1201,18 +1199,18 @@ export class ApiDemoRuntime {
     return friendInfo
   }
 
-  private buildMessageFromClientMsgNo(raw: string, context: ApiDemoInvokeContext): Message | null {
+  private buildMessageFromClientMsgNo(raw: string, context: ApiDemoInvokeContext): Message | undefined {
     const clientMsgNo: number = this.toNumber(raw)
     if (clientMsgNo <= 0) {
       const fallback: number = this.toNumber(this.getCommonValue(context, 'clientMsgNo'))
       if (fallback <= 0) {
-        return null
+        return undefined
       }
       const list: Message[] = JuggleIm.instance.getMessageManager().getMessagesByClientMsgNos([fallback])
-      return list.length > 0 ? list[0] : null
+      return list.length > 0 ? list[0] : undefined
     }
     const messages: Message[] = JuggleIm.instance.getMessageManager().getMessagesByClientMsgNos([clientMsgNo])
-    return messages.length > 0 ? messages[0] : null
+    return messages.length > 0 ? messages[0] : undefined
   }
 
   private resolveCustomMessageType(raw: string, context: ApiDemoInvokeContext): string {
@@ -1225,8 +1223,7 @@ export class ApiDemoRuntime {
   }
 
   private pickString(source: Object, key: string, defaultValue: string): string {
-    const record: ApiJsonRecord = source as ApiJsonRecord
-    const value: ApiValue = record[key]
+    const value: ApiValue = this.readJsonValue(source, key)
     if (value == undefined || value == null) {
       return defaultValue
     }
@@ -1234,12 +1231,15 @@ export class ApiDemoRuntime {
   }
 
   private pickNumber(source: Object, key: string, defaultValue: number): number {
-    const record: ApiJsonRecord = source as ApiJsonRecord
-    const value: ApiValue = record[key]
+    const value: ApiValue = this.readJsonValue(source, key)
     if (value == undefined || value == null) {
       return defaultValue
     }
     const num: number = Number(`${value}`)
     return isNaN(num) ? defaultValue : num
+  }
+
+  private readJsonValue(source: Object, key: string): ApiValue {
+    return Reflect.get(source, key) as ApiValue
   }
 }

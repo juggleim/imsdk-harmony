@@ -7,8 +7,6 @@ import { CommonCallback } from './commoncallback'
 import {
   IMessageUploadProvider,
   MediaUploadCredentialCallback,
-  MediaUploadErrorCallback,
-  MediaUploadSuccessCallback
 } from './imessageuploadprovider'
 import {
   BroadcastMessageCallback,
@@ -74,7 +72,6 @@ export interface IMessageManager {
   registerMessage(msgType: string, factory: () => MessageContent): void
   setMessageUploadProvider(provider: IMessageUploadProvider | null): void
   getMessageUploadProvider(): IMessageUploadProvider | null
-  uploadImage(path: string, onSuccess: MediaUploadSuccessCallback, onError?: MediaUploadErrorCallback): void
   addMessageReaction(messageId: string, reactionId: string, callback: CommonCallback): void
   removeMessageReaction(messageId: string, reactionId: string, callback: CommonCallback): void
   getMessagesReaction(conver: Conversation | null, msgIds: string[], callback: MessageReactionsCallback): void

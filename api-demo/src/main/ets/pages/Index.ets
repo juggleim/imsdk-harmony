@@ -1,3 +1,7 @@
+import { promptAction } from '@kit.ArkUI'
+import { common } from '@kit.AbilityKit'
+import { fileIo, fileUri, picker } from '@kit.CoreFileKit'
+import { photoAccessHelper } from '@kit.MediaLibraryKit'
 import { loadApiDemoConfig } from '../models/apiDemoConfig'
 import {
   ApiActionConfig,
@@ -7,13 +11,10 @@ import {
   ApiFieldKind,
   ApiFieldViewState,
   ApiListenerConfig,
-  ApiLogItem
+  ApiLogItem,
+  ApiMediaMessageValue
 } from '../models/apiDemoTypes'
 import { ApiDemoRuntime } from '../runtime/apiDemoRuntime'
-
-interface ApiDemoJsonRecord {
-  [key: string]: string | number | boolean | null
-}
 
 @Entry
 @Component
@@ -24,6 +25,7 @@ struct Index {
   @State private selectedCategoryIndex: number = 0
   @State private selectedActionIndex: number = -1
   @State private selectedFields: ApiFieldViewState[] = []
+  @State private quickSetupCollapsed: boolean = true
   @State private quickAddress: string = ''
   @State private quickAppkey: string = ''
   @State private quickToken: string = ''
@@ -31,8 +33,11 @@ struct Index {
   @State private quickPackageName: string = ''
   @State private quickLanguage: string = ''
   @State private advancedJson: string = '{}'
+  @State private currentActionId: string = ''
+  @State private currentActionResult: string = ''
+  @State private listenerDrawerVisible: boolean = false
+  @State private listenerLogs: ApiLogItem[] = []
   @State private logs: ApiLogItem[] = []
-  @State private listenersRegistered: boolean = false
   @State private statusText: string = 'ready'
   private runtime!: ApiDemoRuntime
 
@@ -59,22 +64,217 @@ struct Index {
 
   private selectFirstAction(): void {
     if (this.categories.length == 0 || this.categories[0].actions.length == 0) {
+      this.selectedCategoryIndex = -1
       this.selectedActionIndex = -1
       this.selectedFields = []
+      this.currentActionId = ''
+      this.currentActionResult = ''
       return
     }
     this.selectedCategoryIndex = 0
-    this.selectedActionIndex = 0
-    this.selectedFields = this.buildFieldViews(this.categories[0].actions[0])
+    this.selectedActionIndex = -1
+    this.selectedFields = []
+    this.currentActionId = ''
+    this.currentActionResult = ''
   }
 
   private appendLog(title: string, content: string): void {
+    if (this.isListenerLog(title)) {
+      this.appendListenerLog(title, content)
+      return
+    }
     const item: ApiLogItem = new ApiLogItem()
     item.time = new Date().getTime()
     item.title = title
     item.content = content
     this.logs = [item, ...this.logs].slice(0, 300)
     this.statusText = `${title}: ${content}`
+    if (this.currentActionId != '' && title == this.currentActionId) {
+      this.currentActionResult = content
+    }
+  }
+
+  private appendListenerLog(title: string, content: string): void {
+    const item: ApiLogItem = new ApiLogItem()
+    item.time = new Date().getTime()
+    item.title = title
+    item.content = content
+    this.listenerLogs = [item, ...this.listenerLogs].slice(0, 300)
+    this.showToast(`收到监听: ${title}`)
+  }
+
+  private showToast(message: string): void {
+    promptAction.showToast({
+      message: message,
+      duration: 1200,
+      bottom: 120
+    })
+  }
+
+  private getAbilityContext(): common.UIAbilityContext | null {
+    const hostContext: common.UIAbilityContext | undefined = getContext(this) as common.UIAbilityContext | undefined
+    if (hostContext == undefined) {
+      return null
+    }
+    return hostContext
+  }
+
+  private buildTextMessageJson(): string {
+    const value: ApiMediaMessageValue = new ApiMediaMessageValue()
+    value.contentKind = 'text'
+    value.content = 'Hello'
+    value.extra = ''
+    return JSON.stringify(value)
+  }
+
+  private buildImageMessageJson(uri: string): string {
+    const value: ApiMediaMessageValue = new ApiMediaMessageValue()
+    value.contentKind = 'image'
+    value.content = ''
+    value.localPath = uri
+    value.size = this.getFileSizeFromUri(uri)
+    value.extra = ''
+    console.info('------------------buildImageMessageJson', value)
+    return JSON.stringify(value)
+  }
+
+  private buildFileMessageJson(uri: string): string {
+    const fileName: string = this.getFileNameFromUri(uri)
+    const value: ApiMediaMessageValue = new ApiMediaMessageValue()
+    value.contentKind = 'file'
+    value.content = ''
+    value.localPath = uri
+    value.name = fileName
+    value.type = this.inferFileMimeType(fileName)
+    value.size = this.getFileSizeFromUri(uri)
+    value.extra = ''
+    return JSON.stringify(value)
+  }
+
+  private getFileNameFromUri(uri: string): string {
+    try {
+      return new fileUri.FileUri(uri).name
+    } catch {
+      const uriWithoutQuery: string = uri.split('?')[0]
+      const index: number = uriWithoutQuery.lastIndexOf('/')
+      if (index >= 0 && index < uriWithoutQuery.length - 1) {
+        return uriWithoutQuery.substring(index + 1)
+      }
+      return 'unknown'
+    }
+  }
+
+  private getFileSizeFromUri(uri: string): number {
+    try {
+      const stat = fileIo.statSync(uri)
+      return stat.size
+    } catch {
+      return 0
+    }
+  }
+
+  private inferFileMimeType(fileName: string): string {
+    const lowerName: string = fileName.toLowerCase()
+    if (lowerName.endsWith('.pdf')) {
+      return 'application/pdf'
+    }
+    if (lowerName.endsWith('.doc')) {
+      return 'application/msword'
+    }
+    if (lowerName.endsWith('.docx')) {
+      return 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+    }
+    if (lowerName.endsWith('.xls')) {
+      return 'application/vnd.ms-excel'
+    }
+    if (lowerName.endsWith('.xlsx')) {
+      return 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    }
+    if (lowerName.endsWith('.ppt')) {
+      return 'application/vnd.ms-powerpoint'
+    }
+    if (lowerName.endsWith('.pptx')) {
+      return 'application/vnd.openxmlformats-officedocument.presentationml.presentation'
+    }
+    if (lowerName.endsWith('.zip')) {
+      return 'application/zip'
+    }
+    if (lowerName.endsWith('.txt')) {
+      return 'text/plain'
+    }
+    return 'application/octet-stream'
+  }
+
+  private setMediaFieldValue(fieldKey: string, value: string): void {
+    this.updateSelectedField(fieldKey, value)
+  }
+
+  private async pickImageForField(fieldKey: string): Promise<void> {
+    const options = new photoAccessHelper.PhotoSelectOptions()
+    options.MIMEType = photoAccessHelper.PhotoViewMIMETypes.IMAGE_TYPE
+    options.maxSelectNumber = 1
+    options.isPhotoTakingSupported = true
+    try {
+      const result = await new photoAccessHelper.PhotoViewPicker().select(options)
+      if (result.photoUris.length == 0) {
+        return
+      }
+      this.setMediaFieldValue(fieldKey, this.buildImageMessageJson(result.photoUris[0]))
+    } catch {
+      this.showToast('选择图片失败')
+    }
+  }
+
+  private async pickFileForField(fieldKey: string): Promise<void> {
+    const context: common.UIAbilityContext | null = this.getAbilityContext()
+    if (context == null) {
+      this.showToast('当前页面上下文不可用')
+      return
+    }
+    const options = new picker.DocumentSelectOptions()
+    options.maxSelectNumber = 1
+    try {
+      const uris: string[] = await new picker.DocumentViewPicker(context).select(options)
+      if (uris.length == 0) {
+        return
+      }
+      this.setMediaFieldValue(fieldKey, this.buildFileMessageJson(uris[0]))
+    } catch {
+      this.showToast('选择文件失败')
+    }
+  }
+
+  private describeMediaValue(raw: string): string {
+    const text: string = raw.trim()
+    if (text == '') {
+      return '未选择'
+    }
+    try {
+      const parsed: Object = JSON.parse(text) as Object
+      const kindValue: string = this.pickMediaString(parsed, 'contentKind', 'text')
+      if (kindValue == 'image' || kindValue == 'file' || kindValue == 'video' || kindValue == 'voice') {
+        const pathValue: string = this.pickMediaString(parsed, 'localPath', '')
+        if (pathValue != '') {
+          return `${kindValue}:${pathValue}`
+        }
+        return kindValue
+      }
+      const contentValue: string = this.pickMediaString(parsed, 'content', '')
+      if (contentValue != '') {
+        return `${kindValue}:${contentValue}`
+      }
+      return kindValue
+    } catch {
+      return '未选择'
+    }
+  }
+
+  private pickMediaString(source: Object, key: string, defaultValue: string): string {
+    const value: string | number | boolean | undefined = Reflect.get(source, key) as string | number | boolean | undefined
+    if (value == undefined || value == null) {
+      return defaultValue
+    }
+    return `${value}`
   }
 
   private buildContext(): ApiDemoInvokeContext {
@@ -98,8 +298,8 @@ struct Index {
       view.kind = field.kind
       view.placeholder = field.placeholder
       view.help = field.help
-      view.value = field.defaultValue
-      if (field.sourceKey != '') {
+      view.value = field.kind == ApiFieldKind.MediaMessage ? '' : field.defaultValue
+      if (field.sourceKey != '' && field.kind != ApiFieldKind.MediaMessage) {
         view.value = this.getCommonValue(field.sourceKey)
       }
       fields.push(view)
@@ -129,13 +329,13 @@ struct Index {
       return ''
     }
     try {
-      const advanced: ApiDemoJsonRecord = JSON.parse(text) as ApiDemoJsonRecord
-      const value: string | number | boolean | null = advanced[key]
+      const advanced: Object = JSON.parse(text) as Object
+      const value: string | number | boolean | undefined = Reflect.get(advanced, key) as string | number | boolean | undefined
       if (value == undefined || value == null) {
         return ''
       }
       return `${value}`
-    } catch (error) {
+    } catch {
       return ''
     }
   }
@@ -148,6 +348,37 @@ struct Index {
       return field
     })
     this.selectedFields = next
+  }
+
+  private toggleQuickSetup(): void {
+    this.quickSetupCollapsed = !this.quickSetupCollapsed
+  }
+
+  private openListenerDrawer(): void {
+    this.listenerDrawerVisible = true
+  }
+
+  private closeListenerDrawer(): void {
+    this.listenerDrawerVisible = false
+  }
+
+  private isListenerLog(title: string): boolean {
+    return this.listeners.some((listener: ApiListenerConfig) => listener.id == title)
+  }
+
+  private selectCategory(categoryIndex: number): void {
+    if (categoryIndex < 0 || categoryIndex >= this.categories.length) {
+      return
+    }
+    this.selectedCategoryIndex = categoryIndex
+    this.selectedActionIndex = -1
+    this.selectedFields = []
+    this.currentActionId = ''
+    this.currentActionResult = ''
+  }
+
+  private isCategorySelected(categoryIndex: number): boolean {
+    return this.selectedCategoryIndex == categoryIndex
   }
 
   private isMultilineField(kind: string): boolean {
@@ -182,10 +413,26 @@ struct Index {
   }
 
   private selectAction(categoryIndex: number, actionIndex: number): void {
+    if (categoryIndex < 0 || categoryIndex >= this.categories.length) {
+      return
+    }
+    const category: ApiCategoryConfig = this.categories[categoryIndex]
+    if (actionIndex < 0 || actionIndex >= category.actions.length) {
+      return
+    }
+    if (this.selectedCategoryIndex == categoryIndex && this.selectedActionIndex == actionIndex) {
+      this.selectedActionIndex = -1
+      this.selectedFields = []
+      this.currentActionId = ''
+      this.currentActionResult = ''
+      return
+    }
     this.selectedCategoryIndex = categoryIndex
     this.selectedActionIndex = actionIndex
-    const action: ApiActionConfig = this.categories[categoryIndex].actions[actionIndex]
+    const action: ApiActionConfig = category.actions[actionIndex]
     this.selectedFields = this.buildFieldViews(action)
+    this.currentActionId = action.id
+    this.currentActionResult = ''
   }
 
   private currentAction(): ApiActionConfig | null {
@@ -205,43 +452,106 @@ struct Index {
       this.appendLog('invoke', 'no action selected')
       return
     }
-    this.runtime.invoke(action, this.selectedFields, this.buildContext())
-  }
-
-  private registerAllListeners(): void {
-    this.runtime.registerListeners(this.listeners, this.buildContext())
-    this.listenersRegistered = true
-    this.appendLog('listeners', 'all listeners registered')
-  }
-
-  private unregisterAllListeners(): void {
-    this.runtime.unregisterListeners(this.listeners)
-    this.listenersRegistered = false
-    this.appendLog('listeners', 'all listeners removed')
+    if (action.method == 'sendMediaMessage') {
+      const mediaField: ApiFieldViewState | undefined = this.selectedFields.find((field: ApiFieldViewState) => field.kind == ApiFieldKind.MediaMessage)
+      if (mediaField != undefined && mediaField.value.trim() == '') {
+        this.currentActionId = action.id
+        this.currentActionResult = '请先选择图片或文件'
+        return
+      }
+      this.appendLog(
+        action.id,
+        `prepare sendMediaMessage, uploadProvider=${this.runtime.hasMessageUploadProvider() ? 'set' : 'null'}, media=${mediaField == undefined ? '' : mediaField.value}`
+      )
+    }
+    const context: ApiDemoInvokeContext = this.buildContext()
+    this.currentActionId = action.id
+    this.currentActionResult = '调用中...'
+    if (action.target == 'sdk' && action.method == 'init') {
+      this.runtime.initSdk(context, this.listeners, action.id)
+    } else {
+      this.runtime.invoke(action, this.selectedFields, context)
+    }
+    setTimeout(() => {
+      if (this.currentActionId == action.id && this.currentActionResult == '调用中...') {
+        this.currentActionResult = '未返回结果'
+      }
+    }, 5000)
   }
 
   @Builder
   renderField(field: ApiFieldViewState) {
-    if (field.kind == ApiFieldKind.Boolean) {
+    if (field.kind == ApiFieldKind.MediaMessage) {
+      Column() {
+        Row() {
+          Text(field.label)
+            .fontSize(13)
+            .width(88)
+            .maxLines(2)
+          Blank()
+          Text(this.describeMediaValue(field.value))
+            .fontSize(11)
+            .fontColor('#6b7280')
+            .maxLines(1)
+        }
+        .width('100%')
+        .alignItems(VerticalAlign.Center)
+        .margin({ bottom: 4 })
+
+        Row() {
+          Button('文本')
+            .fontSize(12)
+            .margin({ right: 6 })
+            .onClick(() => {
+              this.setMediaFieldValue(field.key, this.buildTextMessageJson())
+            })
+          Button('图片')
+            .fontSize(12)
+            .margin({ right: 6 })
+            .onClick(() => {
+              void this.pickImageForField(field.key)
+            })
+          Button('文件')
+            .fontSize(12)
+            .onClick(() => {
+              void this.pickFileForField(field.key)
+            })
+        }
+        .width('100%')
+        .alignItems(VerticalAlign.Center)
+        .margin({ bottom: 6 })
+
+        TextArea({ placeholder: field.placeholder, text: field.value })
+          .width('100%')
+          .minFontSize(12)
+          .maxLines(6)
+          .onChange((value: string) => {
+            this.updateSelectedField(field.key, value)
+          })
+      }
+      .width('100%')
+      .padding({ top: 4, bottom: 4 })
+    } else if (field.kind == ApiFieldKind.Boolean) {
       Row() {
         Text(field.label)
           .fontSize(13)
-          .width(140)
-        Switch({
-          isOn: field.value == 'true' || field.value == '1'
-        })
+          .width(88)
+          .maxLines(2)
+        Toggle({ type: ToggleType.Switch, isOn: field.value == 'true' || field.value == '1' })
+          .selectedColor('#4C8DFF')
           .onChange((value: boolean) => {
             this.updateSelectedField(field.key, value ? 'true' : 'false')
           })
       }
-      .justifyContent(FlexAlign.SpaceBetween)
       .width('100%')
-      .padding({ top: 6, bottom: 6 })
+      .alignItems(VerticalAlign.Center)
+      .padding({ top: 4, bottom: 4 })
     } else if (this.isMultilineField(field.kind)) {
       Column() {
         Text(field.label)
           .fontSize(13)
-          .margin({ bottom: 6 })
+          .fontColor('#374151')
+          .margin({ bottom: 4 })
         TextArea({ placeholder: field.placeholder, text: field.value })
           .width('100%')
           .minFontSize(12)
@@ -251,12 +561,13 @@ struct Index {
           })
       }
       .width('100%')
-      .padding({ top: 6, bottom: 6 })
+      .padding({ top: 4, bottom: 4 })
     } else {
       Row() {
         Text(field.label)
           .fontSize(13)
-          .width(140)
+          .width(88)
+          .maxLines(2)
         TextInput({ text: field.value, placeholder: field.placeholder })
           .layoutWeight(1)
           .type(field.kind == ApiFieldKind.Password ? InputType.Password : InputType.Normal)
@@ -264,15 +575,15 @@ struct Index {
             this.updateSelectedField(field.key, value)
           })
       }
-      .justifyContent(FlexAlign.SpaceBetween)
       .width('100%')
-      .padding({ top: 6, bottom: 6 })
+      .alignItems(VerticalAlign.Center)
+      .padding({ top: 4, bottom: 4 })
     }
     if (field.help != '') {
       Text(field.help)
         .fontSize(11)
         .fontColor('#6b7280')
-        .margin({ left: 144, bottom: 4 })
+      .margin({ left: 92, bottom: 4 })
     }
   }
 
@@ -282,7 +593,7 @@ struct Index {
       Row() {
         Column() {
           Text(action.title)
-            .fontSize(16)
+            .fontSize(14)
             .fontWeight(FontWeight.Medium)
           if (action.description != '') {
             Text(action.description)
@@ -292,14 +603,15 @@ struct Index {
           }
         }
         .layoutWeight(1)
-        Button('选中')
-          .onClick(() => {
-            this.selectAction(categoryIndex, actionIndex)
-          })
+        Text(this.selectedCategoryIndex == categoryIndex && this.selectedActionIndex == actionIndex ? '收起' : '展开')
+          .fontSize(12)
+          .fontColor('#2563eb')
       }
-      .justifyContent(FlexAlign.SpaceBetween)
       .alignItems(VerticalAlign.Center)
       .width('100%')
+      .onClick(() => {
+        this.selectAction(categoryIndex, actionIndex)
+      })
 
       if (this.selectedCategoryIndex == categoryIndex && this.selectedActionIndex == actionIndex) {
         Column() {
@@ -312,199 +624,364 @@ struct Index {
             .onClick(() => {
               this.invokeSelectedAction()
             })
+          if (this.currentActionResult != '') {
+            Column() {
+              Text('调用结果')
+                .fontSize(12)
+                .fontColor('#6b7280')
+              Text(this.currentActionResult)
+                .fontSize(12)
+                .fontColor('#111827')
+                .margin({ top: 6 })
+            }
+            .width('100%')
+            .margin({ top: 10 })
+          }
         }
         .width('100%')
         .margin({ top: 10 })
       }
     }
-    .padding(12)
-    .borderRadius(8)
+    .padding(10)
+    .borderWidth(1)
+    .borderColor(this.selectedCategoryIndex == categoryIndex && this.selectedActionIndex == actionIndex ? '#93c5fd' : '#dbe4f0')
+    .borderRadius(6)
+    .backgroundColor(this.selectedCategoryIndex == categoryIndex && this.selectedActionIndex == actionIndex ? '#f8fbff' : '#ffffff')
+    .margin({ bottom: 8 })
+    .onClick(() => {
+      this.selectAction(categoryIndex, actionIndex)
+    })
+  }
+
+  @Builder
+  renderCategoryItem(category: ApiCategoryConfig, categoryIndex: number) {
+    Row() {
+      Text(category.title)
+        .fontSize(11)
+        .fontWeight(this.isCategorySelected(categoryIndex) ? FontWeight.Medium : FontWeight.Regular)
+        .fontColor(this.isCategorySelected(categoryIndex) ? '#1d4ed8' : '#111827')
+      .layoutWeight(1)
+    }
+    .width('100%')
+    .padding(4)
+    .borderRadius(4)
+    .backgroundColor(this.isCategorySelected(categoryIndex) ? '#dbeafe' : '#ffffff')
+    .margin({ bottom: 2 })
+    .onClick(() => {
+      this.selectCategory(categoryIndex)
+    })
+  }
+
+  @Builder
+  renderQuickSetup() {
+    Column() {
+      Row() {
+        Text('Quick Setup')
+          .fontSize(13)
+          .fontWeight(FontWeight.Medium)
+        Blank()
+        Text(this.quickSetupCollapsed ? '展开' : '收起')
+          .fontSize(12)
+          .fontColor('#2563eb')
+      }
+      .width('100%')
+      .alignItems(VerticalAlign.Center)
+      .onClick(() => {
+        this.toggleQuickSetup()
+      })
+
+      if (!this.quickSetupCollapsed) {
+        Column() {
+          Column() {
+            Text('address')
+              .fontSize(12)
+              .fontColor('#6b7280')
+              .margin({ bottom: 2 })
+            TextInput({ text: this.quickAddress, placeholder: 'address' })
+              .width('100%')
+              .onChange((value: string) => this.quickAddress = value)
+          }
+          .width('100%')
+          .padding({ top: 6, bottom: 6 })
+          Divider().strokeWidth(1).color('#E5E7EB')
+
+          Column() {
+            Text('appkey')
+              .fontSize(12)
+              .fontColor('#6b7280')
+              .margin({ bottom: 2 })
+            TextInput({ text: this.quickAppkey, placeholder: 'appkey' })
+              .width('100%')
+              .onChange((value: string) => this.quickAppkey = value)
+          }
+          .width('100%')
+          .padding({ top: 6, bottom: 6 })
+          Divider().strokeWidth(1).color('#E5E7EB')
+
+          Column() {
+            Text('token')
+              .fontSize(12)
+              .fontColor('#6b7280')
+              .margin({ bottom: 2 })
+            TextInput({ text: this.quickToken, placeholder: 'token' })
+              .width('100%')
+              .onChange((value: string) => this.quickToken = value)
+          }
+          .width('100%')
+          .padding({ top: 6, bottom: 6 })
+          Divider().strokeWidth(1).color('#E5E7EB')
+
+          Column() {
+            Text('userId')
+              .fontSize(12)
+              .fontColor('#6b7280')
+              .margin({ bottom: 2 })
+            TextInput({ text: this.quickUserId, placeholder: 'userId' })
+              .width('100%')
+              .onChange((value: string) => this.quickUserId = value)
+          }
+          .width('100%')
+          .padding({ top: 6, bottom: 6 })
+          Divider().strokeWidth(1).color('#E5E7EB')
+
+          Column() {
+            Text('packageName')
+              .fontSize(12)
+              .fontColor('#6b7280')
+              .margin({ bottom: 2 })
+            TextInput({ text: this.quickPackageName, placeholder: 'packageName' })
+              .width('100%')
+              .onChange((value: string) => this.quickPackageName = value)
+          }
+          .width('100%')
+          .padding({ top: 6, bottom: 6 })
+          Divider().strokeWidth(1).color('#E5E7EB')
+
+          Column() {
+            Text('language')
+              .fontSize(12)
+              .fontColor('#6b7280')
+              .margin({ bottom: 2 })
+            TextInput({ text: this.quickLanguage, placeholder: 'language' })
+              .width('100%')
+              .onChange((value: string) => this.quickLanguage = value)
+          }
+          .width('100%')
+          .padding({ top: 6, bottom: 6 })
+          Divider().strokeWidth(1).color('#E5E7EB')
+
+          Column() {
+            Text('advancedJson')
+              .fontSize(12)
+              .fontColor('#6b7280')
+              .margin({ bottom: 2 })
+            TextArea({ text: this.advancedJson, placeholder: 'advancedJson' })
+              .width('100%')
+              .minFontSize(12)
+              .maxLines(5)
+              .onChange((value: string) => this.advancedJson = value)
+          }
+          .width('100%')
+          .padding({ top: 6, bottom: 6 })
+        }
+        .width('100%')
+        .margin({ top: 8 })
+      }
+    }
+    .width('100%')
+    .padding({ left: 8, right: 8, top: 6, bottom: 6 })
+    .borderRadius(4)
     .backgroundColor('#ffffff')
     .margin({ bottom: 8 })
   }
 
+  @Builder
+  renderLogsSection() {
+    Column() {
+      Text('Logs')
+        .fontSize(13)
+        .fontWeight(FontWeight.Medium)
+        .margin({ bottom: 8 })
+      Text(this.statusText)
+        .fontSize(12)
+        .fontColor('#6b7280')
+        .margin({ bottom: 8 })
+      ForEach(this.logs, (item: ApiLogItem) => {
+        Column() {
+          Text(`${item.time}  ${item.title}`)
+            .fontSize(12)
+            .fontColor('#111827')
+          Text(item.content)
+            .fontSize(12)
+            .fontColor('#374151')
+            .margin({ top: 4 })
+        }
+        .padding(10)
+        .borderRadius(6)
+        .backgroundColor('#ffffff')
+        .margin({ bottom: 6 })
+      }, (item: ApiLogItem) => `${item.time}_${item.title}`)
+    }
+    .padding(8)
+    .borderRadius(4)
+    .backgroundColor('#f9fafb')
+    .margin({ bottom: 24 })
+  }
+
   build() {
-    Scroll() {
+    Stack() {
       Column() {
-        Text('API Demo')
+        Row() {
+          Text('API Demo')
           .fontSize(26)
           .fontWeight(FontWeight.Bold)
-          .margin({ bottom: 10 })
+          Blank()
+          Text('查看监听列表')
+            .fontSize(12)
+            .fontColor('#2563eb')
+            .onClick(() => {
+              this.openListenerDrawer()
+            })
+        }
+        .width('100%')
+        .alignItems(VerticalAlign.Center)
+        .margin({ bottom: 8 })
 
-        Column() {
-          Text('Quick Setup')
-            .fontSize(16)
-            .fontWeight(FontWeight.Medium)
-            .margin({ bottom: 8 })
-          Row() {
-            TextInput({ text: this.quickAddress, placeholder: 'address' })
-              .layoutWeight(1)
-              .margin({ right: 8 })
-              .onChange((value: string) => this.quickAddress = value)
-            TextInput({ text: this.quickAppkey, placeholder: 'appkey' })
-              .layoutWeight(1)
-              .margin({ right: 8 })
-              .onChange((value: string) => this.quickAppkey = value)
-          }
-          .margin({ bottom: 8 })
-          Row() {
-            TextInput({ text: this.quickToken, placeholder: 'token' })
-              .layoutWeight(1)
-              .margin({ right: 8 })
-              .onChange((value: string) => this.quickToken = value)
-            TextInput({ text: this.quickUserId, placeholder: 'userId' })
-              .layoutWeight(1)
-              .margin({ right: 8 })
-              .onChange((value: string) => this.quickUserId = value)
-          }
-          .margin({ bottom: 8 })
-          Row() {
-            TextInput({ text: this.quickPackageName, placeholder: 'packageName' })
-              .layoutWeight(1)
-              .margin({ right: 8 })
-              .onChange((value: string) => this.quickPackageName = value)
-            TextInput({ text: this.quickLanguage, placeholder: 'language' })
-              .layoutWeight(1)
-              .onChange((value: string) => this.quickLanguage = value)
-          }
-          .margin({ bottom: 8 })
-          TextArea({ text: this.advancedJson, placeholder: 'advanced JSON defaults' })
+        this.renderQuickSetup()
+
+        Row() {
+          Scroll() {
+            Column() {
+              Text('分类')
+                .fontSize(12)
+                .fontWeight(FontWeight.Medium)
+                .margin({ bottom: 6 })
+              ForEach(this.categories, (category: ApiCategoryConfig, categoryIndex: number) => {
+                this.renderCategoryItem(category, categoryIndex)
+              }, (category: ApiCategoryConfig) => category.id)
+            }
             .width('100%')
-            .minFontSize(12)
-            .maxLines(6)
-            .onChange((value: string) => this.advancedJson = value)
+            .padding(0)
+          }
+          .width(80)
+          .height('100%')
+          .scrollBar(BarState.Off)
+          .backgroundColor('#f8fafc')
+
+          Scroll() {
+            Column() {
+              Column() {
+                Row() {
+                  Text('接口列表')
+                    .fontSize(12)
+                    .fontWeight(FontWeight.Medium)
+                  Blank()
+                  Text(this.selectedCategoryIndex >= 0 && this.selectedCategoryIndex < this.categories.length ? this.categories[this.selectedCategoryIndex].title : '未选择分类')
+                    .fontSize(12)
+                    .fontColor('#6b7280')
+                }
+                .width('100%')
+                .alignItems(VerticalAlign.Center)
+                .margin({ bottom: 6 })
+
+                if (this.selectedCategoryIndex >= 0 && this.selectedCategoryIndex < this.categories.length && this.categories[this.selectedCategoryIndex].actions.length > 0) {
+                  ForEach(this.categories[this.selectedCategoryIndex].actions, (action: ApiActionConfig, actionIndex: number) => {
+                    this.renderAction(action, this.selectedCategoryIndex, actionIndex)
+                  }, (action: ApiActionConfig) => action.id)
+                } else {
+                  Text('请选择左侧分类')
+                    .fontSize(12)
+                    .fontColor('#6b7280')
+                    .padding({ top: 6, bottom: 6 })
+                }
+              }
+              .padding(6)
+              .borderRadius(4)
+              .backgroundColor('#ffffff')
+              .margin({ bottom: 8 })
+
+              this.renderLogsSection()
+            }
+            .width('100%')
+            .padding(6)
+          }
+          .layoutWeight(1)
+          .height('100%')
+          .scrollBar(BarState.Off)
+        }
+      }
+      .width('100%')
+      .height('100%')
+      .backgroundColor('#eef2f7')
+
+      if (this.listenerDrawerVisible) {
+        Row() {
+          Blank()
+            .layoutWeight(1)
+            .height('100%')
+            .onClick(() => {
+              this.closeListenerDrawer()
+            })
           Column() {
             Row() {
-              Button('Init SDK')
-                .margin({ right: 8 })
-                .onClick(() => {
-                  this.runtime.initSdk(this.buildContext())
-                })
-              Button('Mock Upload')
-                .margin({ right: 8 })
-                .onClick(() => {
-                  this.runtime.useMockUploadProvider()
-                })
-              Button('Clear Upload')
-                .onClick(() => {
-                  this.runtime.useRealUploadProvider()
-                })
-            }
-            .margin({ bottom: 8 })
-            Row() {
-              Button('Register Listeners')
-                .margin({ right: 8 })
-                .onClick(() => {
-                  this.registerAllListeners()
-                })
-              Button('Remove Listeners')
-                .margin({ right: 8 })
-                .onClick(() => {
-                  this.unregisterAllListeners()
-                })
-              Button('Clear Logs')
-                .onClick(() => {
-                  this.logs = []
-                })
-            }
-          }
-          .margin({ top: 10 })
-        }
-        .padding(12)
-        .borderRadius(8)
-        .backgroundColor('#f9fafb')
-        .margin({ bottom: 12 })
-
-        Text(`Listener State: ${this.listenersRegistered ? 'registered' : 'idle'}`)
-          .fontSize(14)
-          .margin({ bottom: 8 })
-
-        Tabs({ barPosition: BarPosition.Start }) {
-          ForEach(this.categories, (category: ApiCategoryConfig, categoryIndex: number) => {
-            TabContent() {
-              Column() {
-                ForEach(category.actions, (action: ApiActionConfig, actionIndex: number) => {
-                  this.renderAction(action, categoryIndex, actionIndex)
-                }, (action: ApiActionConfig) => action.id)
-              }
-              .padding({ top: 12, bottom: 12 })
-            }
-            .tabBar(category.title)
-          }, (category: ApiCategoryConfig) => category.id)
-        }
-        .height(520)
-        .margin({ bottom: 12 })
-
-        Column() {
-          Text('Listeners')
-            .fontSize(16)
-            .fontWeight(FontWeight.Medium)
-            .margin({ bottom: 8 })
-          ForEach(this.listeners, (listener: ApiListenerConfig) => {
-            Column() {
-              Text(listener.title)
+              Text('监听列表')
                 .fontSize(14)
                 .fontWeight(FontWeight.Medium)
-              if (listener.key != '') {
-                Text(`key: ${listener.key}`)
-                  .fontSize(11)
-                  .fontColor('#6b7280')
-                  .margin({ top: 2 })
-              }
-              if (listener.description != '') {
-                Text(listener.description)
-                  .fontSize(12)
-                  .fontColor('#6b7280')
-                  .margin({ top: 2 })
-              }
+              Blank()
+              Text(`${this.listenerLogs.length}`)
+                .fontSize(12)
+                .fontColor('#6b7280')
             }
-            .padding(10)
-            .borderRadius(8)
-            .backgroundColor('#ffffff')
-            .margin({ bottom: 6 })
-          }, (listener: ApiListenerConfig) => listener.id)
-        }
-        .padding(12)
-        .borderRadius(8)
-        .backgroundColor('#f9fafb')
-        .margin({ bottom: 12 })
+            .width('100%')
+            .alignItems(VerticalAlign.Center)
+            .margin({ bottom: 8 })
 
-        Column() {
-          Text('Logs')
-            .fontSize(16)
-            .fontWeight(FontWeight.Medium)
-            .margin({ bottom: 8 })
-          Text(this.statusText)
-            .fontSize(12)
-            .fontColor('#6b7280')
-            .margin({ bottom: 8 })
-          ForEach(this.logs, (item: ApiLogItem) => {
-            Column() {
-              Text(`${item.time}  ${item.title}`)
-                .fontSize(12)
-                .fontColor('#111827')
-              Text(item.content)
-                .fontSize(12)
-                .fontColor('#374151')
-                .margin({ top: 4 })
+            Scroll() {
+              Column() {
+                if (this.listenerLogs.length > 0) {
+                  ForEach(this.listenerLogs, (item: ApiLogItem) => {
+                    Column() {
+                      Text(item.title)
+                        .fontSize(12)
+                        .fontWeight(FontWeight.Medium)
+                      Text(`${item.time}`)
+                        .fontSize(10)
+                        .fontColor('#6b7280')
+                        .margin({ top: 2 })
+                      Text(item.content)
+                        .fontSize(12)
+                        .fontColor('#374151')
+                        .margin({ top: 4 })
+                    }
+                    .width('100%')
+                    .padding(8)
+                    .borderRadius(4)
+                    .backgroundColor('#f8fafc')
+                    .margin({ bottom: 6 })
+                  }, (item: ApiLogItem) => `${item.time}_${item.title}`)
+                } else {
+                  Text('暂无监听记录')
+                    .fontSize(12)
+                    .fontColor('#6b7280')
+                }
+              }
+              .width('100%')
             }
-            .padding(10)
-            .borderRadius(8)
-            .backgroundColor('#ffffff')
-            .margin({ bottom: 6 })
-          }, (item: ApiLogItem) => `${item.time}_${item.title}`)
-        }
+            .layoutWeight(1)
+            .width('100%')
+            .scrollBar(BarState.Off)
+          }
+        .width(320)
+        .height('100%')
         .padding(12)
-        .borderRadius(8)
-        .backgroundColor('#f9fafb')
-        .margin({ bottom: 24 })
+        .backgroundColor('#ffffff')
       }
-      .padding(12)
-      .width('100%')
+        .width('100%')
+        .height('100%')
+        .backgroundColor('#66000000')
+      }
     }
-    .scrollBar(BarState.Off)
     .width('100%')
     .height('100%')
-    .backgroundColor('#eef2f7')
   }
 }

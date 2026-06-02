@@ -27,9 +27,7 @@ import {
   IMessageUploadProvider,
   MediaUploadCredential,
   MediaUploadCredentialCallback,
-  MediaUploadErrorCallback,
   MediaUploadResult,
-  MediaUploadSuccessCallback
 } from '../interfaces/imessageuploadprovider'
 import { HashMap } from '@kit.ArkTS'
 import { JimDbManager } from '../dbs/dbmanager'
@@ -211,38 +209,11 @@ export class MessageManager implements IMessageManager{
 
   setMessageUploadProvider(provider:IMessageUploadProvider | null):void{
     this.messageUploadProvider = provider
+    console.info(`jimsdk_message_upload_provider:${provider == null ? 'null' : 'set'}`)
   }
 
   getMessageUploadProvider():IMessageUploadProvider | null{
     return this.messageUploadProvider
-  }
-
-  uploadImage(path:string, onSuccess:MediaUploadSuccessCallback, onError?:MediaUploadErrorCallback):void{
-    let normalizedPath = path.trim()
-    if(normalizedPath == ''){
-      onError?.(-1, 'image path is empty')
-      return
-    }
-    if(this.messageUploadProvider == null){
-      onError?.(-1, 'message upload provider is not set')
-      return
-    }
-    let image = new ImageMessage()
-    image.localPath = normalizedPath
-    this.messageUploadProvider.uploadMediaMessage(
-      image,
-      ()=>{
-      },
-      (result:MediaUploadResult)=>{
-        onSuccess(result)
-      },
-      (code:number, message:string)=>{
-        onError?.(code, message)
-      },
-      ()=>{
-        onError?.(-2, 'upload canceled')
-      }
-    )
   }
 
   addMessageReaction(messageId:string, reactionId:string, callback:CommonCallback):void{
@@ -1566,12 +1537,17 @@ export class MessageManager implements IMessageManager{
       return
     }
     let mediaMsg = msg as MediaMessageContent
+    console.info(
+      `jimsdk_send_media_message:type=${mediaMsg.getContentType()}, msgType=${mediaMsg.getMsgType()}, ` +
+      `localPath=${mediaMsg.localPath}, url=${mediaMsg.url}, provider=${this.messageUploadProvider == null ? 'null' : 'set'}`
+    )
     if(mediaMsg.url != ''){
       mediaMsg.setUploadState(MediaMessageUploadState.success, 100)
       this.sendMessage(mediaMsg, conver, completed)
       return
     }
     if(this.messageUploadProvider == null){
+      console.error(`jimsdk_send_media_message_no_provider:type=${mediaMsg.getContentType()}, localPath=${mediaMsg.localPath}`)
       mediaMsg.setUploadState(MediaMessageUploadState.failed)
       completed(-1, null)
       return
