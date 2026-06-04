@@ -11,11 +11,14 @@ import {
   MediaUploadFileType,
   MediaUploadOssType,
   MediaUploadResult,
+  JimUtil,
   VideoMessage,
   VoiceMessage
 } from 'juggleim'
 
 class UploadRequestHeaders {
+  'Content-Type'?: string
+  'content-type'?: string
   'content-length'?: string
   'x-amz-acl'?: string
   constructor() {
@@ -127,6 +130,49 @@ export class RealMessageUploadProvider implements IMessageUploadProvider {
         'content-length': `${payload.byteLength}`
       } as UploadRequestHeaders
     }
+    let requestContentType = headers['Content-Type'] ?? headers['content-type'] ?? ''
+    let requestPathRaw = this.getUploadUrlPath(credential.uploadUrl)
+    let requestPathDecoded = this.decodeUrlPath(requestPathRaw)
+    console.info(
+      `jimsdk_media_upload_request:${credential.ossType}:${credential.uploadUrl}:` +
+      `contentType=${requestContentType}:rawPath=${requestPathRaw}:decodedPath=${requestPathDecoded}:headers=${JSON.stringify(headers)}`
+    )
+
+    let responseStatusCode = -1
+    let responseBodyParts:string[] = []
+    let responseEnded = false
+    let responseLogged = false
+    let cleanup = ():void => {
+      requestTask.off('dataSendProgress')
+      requestTask.off('dataReceive')
+      requestTask.off('dataEnd')
+      requestTask.destroy()
+    }
+    let tryFinalize = ():void => {
+      if(responseLogged || !responseEnded || responseStatusCode < 0){
+        return
+      }
+      responseLogged = true
+      let responseBody = responseBodyParts.join('')
+      console.info(`jimsdk_media_upload_response:${credential.ossType}:${responseStatusCode}:bodyLength=${responseBody.length}`)
+      this.logHttpResponseBody(responseStatusCode, credential.uploadUrl, responseBody, requestContentType, requestPathRaw, requestPathDecoded)
+      cleanup()
+      if(responseStatusCode < 200 || responseStatusCode >= 300){
+        console.error(`jimsdk_media_upload_response_fail:${credential.ossType}:${responseStatusCode}`)
+        onError(responseStatusCode, `HTTP ${responseStatusCode}`)
+        return
+      }
+      onProgress(100)
+      onSuccess(this.buildUploadResult(msg, credential))
+    }
+
+    requestTask.on('dataReceive', (data:ArrayBuffer) => {
+      responseBodyParts.push(JimUtil.uint8ArrayToString(JimUtil.arrayBufferToUint8Array(data)))
+    })
+    requestTask.on('dataEnd', () => {
+      responseEnded = true
+      tryFinalize()
+    })
 
     requestTask.requestInStream(credential.uploadUrl, {
       method: http.RequestMethod.PUT,
@@ -135,22 +181,15 @@ export class RealMessageUploadProvider implements IMessageUploadProvider {
       usingCache: false,
       readTimeout: 20000,
       connectTimeout: 20000
-    }, (err: BusinessError | undefined, responseCode: number)=>{
-      requestTask.off('dataSendProgress')
-      requestTask.destroy()
+    }, (err: BusinessError | undefined, responseCodeValue: number)=>{
       if(err){
+        cleanup()
         console.error(`jimsdk_media_upload_http_fail:${credential.ossType}:${err.code}:${err.message}`)
         onError(err.code, err.message)
         return
       }
-      console.info(`jimsdk_media_upload_response_code:${credential.ossType}:${responseCode}`)
-      if(responseCode < 200 || responseCode >= 300){
-        console.error(`jimsdk_media_upload_response_fail:${credential.ossType}:${responseCode}`)
-        onError(responseCode, `HTTP ${responseCode}`)
-        return
-      }
-      onProgress(100)
-      onSuccess(this.buildUploadResult(msg, credential))
+      responseStatusCode = responseCodeValue
+      tryFinalize()
     })
   }
 
@@ -211,5 +250,69 @@ export class RealMessageUploadProvider implements IMessageUploadProvider {
       return url
     }
     return url.substring(0, queryIndex)
+  }
+
+  private getUploadUrlPath(url:string):string{
+    let normalizedUrl = this.removeQueryString(url)
+    let schemeIndex = normalizedUrl.indexOf('://')
+    let pathIndex = schemeIndex >= 0 ? normalizedUrl.indexOf('/', schemeIndex + 3) : normalizedUrl.indexOf('/')
+    if(pathIndex < 0){
+      return '/'
+    }
+    return normalizedUrl.substring(pathIndex)
+  }
+
+  private decodeUrlPath(path:string):string{
+    try{
+      return decodeURIComponent(path)
+    }catch (error) {
+      console.error(`jimsdk_media_upload_decode_path_fail:${path}:${error}`)
+      return path
+    }
+  }
+
+  private extractXmlTagValue(body:string, tagName:string):string{
+    let openTag = `<${tagName}>`
+    let closeTag = `</${tagName}>`
+    let startIndex = body.indexOf(openTag)
+    if(startIndex < 0){
+      return ''
+    }
+    startIndex += openTag.length
+    let endIndex = body.indexOf(closeTag, startIndex)
+    if(endIndex < 0 || endIndex < startIndex){
+      return ''
+    }
+    return body.substring(startIndex, endIndex).trim()
+  }
+
+  private logHttpResponseBody(
+    responseCode:number,
+    url:string,
+    body:string,
+    requestContentType:string,
+    rawPath:string,
+    decodedPath:string
+  ):void{
+    console.info(
+      `jimsdk_media_upload_body_hint:url=${url}:code=${responseCode}:contentType=${requestContentType}:rawPath=${rawPath}:decodedPath=${decodedPath}`
+    )
+    if(responseCode != 403){
+      return
+    }
+    let trimmedBody = body.trim()
+    if(trimmedBody == ''){
+      console.error(`jimsdk_media_upload_403_body_empty:${url}`)
+      return
+    }
+    let sanitizedBody = trimmedBody.replaceAll('\r', '\\r').replaceAll('\n', '\\n')
+    console.error(`jimsdk_media_upload_403_body:${url}:${sanitizedBody}`)
+    console.error(
+      `jimsdk_media_upload_403_fields:${url}:` +
+      `Code=${this.extractXmlTagValue(trimmedBody, 'Code')}:` +
+      `Message=${this.extractXmlTagValue(trimmedBody, 'Message')}:` +
+      `StringToSign=${this.extractXmlTagValue(trimmedBody, 'StringToSign')}:` +
+      `SignatureProvided=${this.extractXmlTagValue(trimmedBody, 'SignatureProvided')}`
+    )
   }
 }

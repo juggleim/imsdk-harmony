@@ -16,10 +16,12 @@ import { IConnectionManager } from './interfaces/iconnectionmanager'
 import { IChatroomManager } from './interfaces/ichatroommanager'
 import { IConversationManager } from './interfaces/iconversationmanager'
 import { IMessageManager } from './interfaces/imessagemanager'
+import { MediaUploadCredentialCallback } from './interfaces/imessageuploadprovider'
 import { IUserInfoManager } from './interfaces/iuserinfomanager'
 import { IGroupInfoManager } from './interfaces/igroupinfomanager'
 import { IMomentManager } from './interfaces/imomentmanager'
 import { MomentManager } from './managers/momentmanager'
+import { DefaultMessageUploadProvider } from './managers/defaultmessageuploadprovider'
 
 /**
  * Represents Jim Config.
@@ -85,6 +87,11 @@ export class JuggleIm{
     this.connectManager = new ConnectionManager(this.imclient)
     this.msgSyncManager = new MsgSyncManager(this.imclient)
     this.messageManager = new MessageManager(this.imclient,this.msgSyncManager)
+    this.messageManager.setDefaultMessageUploadProvider(
+      new DefaultMessageUploadProvider((fileType:number, ext:string, callback:MediaUploadCredentialCallback)=>{
+        this.messageManager.queryUploadFileCredential(fileType, ext, callback)
+      })
+    )
     this.converManager = new ConversationManager(this.imclient,this.msgSyncManager)
     this.userInfoManager = new UserInfoManager(this.imclient)
     this.groupInfoManager = new GroupInfoManager(this.imclient)

@@ -124,11 +124,17 @@ export class MessageManager implements IMessageManager{
   private imclient:ImClient
   private msgSyncMgr:MsgSyncManager
   private messageUploadProvider:IMessageUploadProvider | null = null
+  private defaultMessageUploadProvider:IMessageUploadProvider | null = null
   private mediaDownloadTasks:Map<string, request.DownloadTask> = new Map()
 
   constructor(imclient:ImClient,mgr:MsgSyncManager) {
     this.imclient = imclient
     this.msgSyncMgr = mgr
+  }
+
+  setDefaultMessageUploadProvider(provider:IMessageUploadProvider | null):void{
+    this.defaultMessageUploadProvider = provider
+    console.info(`jimsdk_default_message_upload_provider:${provider == null ? 'null' : 'set'}`)
   }
 
   addMsgReceivedListener(listener:MsgReceivedListener){
@@ -213,7 +219,14 @@ export class MessageManager implements IMessageManager{
   }
 
   getMessageUploadProvider():IMessageUploadProvider | null{
-    return this.messageUploadProvider
+    return this.resolveMessageUploadProvider()
+  }
+
+  private resolveMessageUploadProvider():IMessageUploadProvider | null{
+    if(this.messageUploadProvider != null){
+      return this.messageUploadProvider
+    }
+    return this.defaultMessageUploadProvider
   }
 
   addMessageReaction(messageId:string, reactionId:string, callback:CommonCallback):void{
@@ -570,7 +583,8 @@ export class MessageManager implements IMessageManager{
       this.publishOutgoingMessage(resendMessage, msgDbId, this.resolveReferencedMessage(resendMessage), callback)
       return resendMessage
     }
-    if(this.messageUploadProvider == null){
+    let provider = this.resolveMessageUploadProvider()
+    if(provider == null){
       mediaMsg.setUploadState(MediaMessageUploadState.failed)
       resendMessage.state = MessageSentState.failed
       this.updateLocalMediaMessage(msgDbId, resendMessage)
@@ -580,7 +594,7 @@ export class MessageManager implements IMessageManager{
     mediaMsg.setUploadState(MediaMessageUploadState.uploading, 0)
     resendMessage.state = MessageSentState.uploading
     this.updateLocalMediaMessage(msgDbId, resendMessage)
-    this.messageUploadProvider.uploadMediaMessage(
+    provider.uploadMediaMessage(
       mediaMsg,
       (progress:number)=>{
         mediaMsg.setUploadState(MediaMessageUploadState.uploading, progress)
@@ -1281,6 +1295,10 @@ export class MessageManager implements IMessageManager{
         if(resp.qiniuCred != undefined && resp.qiniuCred != null){
           credential.domain = resp.qiniuCred.domain ?? ''
           credential.token = resp.qiniuCred.token ?? ''
+          console.info(
+            `jimsdk_qry_file_cred_qiniu: ossType=${credential.ossType}, ` +
+            `domain=${credential.domain}, tokenLength=${credential.token.length}`
+          )
         }
         if(resp.preSignResp != undefined && resp.preSignResp != null){
           credential.uploadUrl = resp.preSignResp.url ?? ''
@@ -1289,7 +1307,16 @@ export class MessageManager implements IMessageManager{
           if(credential.downloadUrl == ''){
             credential.downloadUrl = this.removeQueryString(resp.preSignResp.url ?? '')
           }
+          console.info(
+            `jimsdk_qry_file_cred_presign: ossType=${credential.ossType}, ` +
+            `uploadUrl=${credential.uploadUrl}, objKey=${credential.objKey}, downloadUrl=${credential.downloadUrl}`
+          )
         }
+        console.info(
+          `jimsdk_qry_file_cred_result: ossType=${credential.ossType}, ` +
+          `uploadUrl=${credential.uploadUrl}, objKey=${credential.objKey}, ` +
+          `downloadUrl=${credential.downloadUrl}, domain=${credential.domain}, tokenLength=${credential.token.length}`
+        )
         callback(0, credential)
       }catch (e) {
         console.error(`jimsdk_qry_file_cred_decode_fail:${e}`)
@@ -1537,16 +1564,17 @@ export class MessageManager implements IMessageManager{
       return
     }
     let mediaMsg = msg as MediaMessageContent
+    let provider = this.resolveMessageUploadProvider()
     console.info(
       `jimsdk_send_media_message:type=${mediaMsg.getContentType()}, msgType=${mediaMsg.getMsgType()}, ` +
-      `localPath=${mediaMsg.localPath}, url=${mediaMsg.url}, provider=${this.messageUploadProvider == null ? 'null' : 'set'}`
+      `localPath=${mediaMsg.localPath}, url=${mediaMsg.url}, provider=${provider == null ? 'null' : 'set'}`
     )
     if(mediaMsg.url != ''){
       mediaMsg.setUploadState(MediaMessageUploadState.success, 100)
       this.sendMessage(mediaMsg, conver, completed)
       return
     }
-    if(this.messageUploadProvider == null){
+    if(provider == null){
       console.error(`jimsdk_send_media_message_no_provider:type=${mediaMsg.getContentType()}, localPath=${mediaMsg.localPath}`)
       mediaMsg.setUploadState(MediaMessageUploadState.failed)
       completed(-1, null)
@@ -1559,7 +1587,7 @@ export class MessageManager implements IMessageManager{
     let msgDbId = msgDao.insert(localMessage)
     this.msgSyncMgr.updConver(localMessage)
     this.msgSyncMgr.notifyMessageModified(localMessage)
-    this.messageUploadProvider.uploadMediaMessage(
+    provider.uploadMediaMessage(
       mediaMsg,
       (progress:number)=>{
         mediaMsg.setUploadState(MediaMessageUploadState.uploading, progress)
