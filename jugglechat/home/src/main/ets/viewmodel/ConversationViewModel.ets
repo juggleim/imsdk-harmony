@@ -162,6 +162,14 @@ class GlobalMessageSearchParams {
   }
 }
 
+class NavSourceParam {
+  source:string
+
+  constructor(source:string = '') {
+    this.source = source
+  }
+}
+
 class MentionMessagesParams {
   conversationId:string
   converType:number
@@ -222,5 +230,6 @@ export {
   ConversationDetailParams,
   ConversationRouteParams,
   GlobalMessageSearchParams,
+  NavSourceParam,
   MentionMessagesParams
 };

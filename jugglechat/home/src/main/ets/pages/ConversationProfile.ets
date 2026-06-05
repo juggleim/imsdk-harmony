@@ -11,6 +11,7 @@ import {
   JuggleIm
 } from 'juggleim'
 import { CommonUtil, ObservedArray } from '../jim/common'
+import { GroupSettingStore } from '../jim/groupsettingstore'
 import { ConversationRouteParams, MentionMessagesParams } from '../viewmodel/ConversationViewModel'
 
 const TOP_TRACE_TAG:string = 'TOPTRACE'
@@ -39,6 +40,8 @@ export struct ConversationProfile {
   @State private groupPortrait:string = ''
   @State private groupMembers:ObservedArray<GroupMemberPreviewItem> = new ObservedArray<GroupMemberPreviewItem>([])
   @State private groupMemberCount:number = 0
+  @State private groupAnnouncement:string = ''
+  @State private myGroupNickname:string = ''
   @State private friendStatus:string = ''
   @State private friendAlias:string = ''
   @State private isConversationTop:boolean = false
@@ -59,6 +62,8 @@ export struct ConversationProfile {
     this.groupPortrait = ''
     this.groupMembers = new ObservedArray<GroupMemberPreviewItem>([])
     this.groupMemberCount = 0
+    this.groupAnnouncement = ''
+    this.myGroupNickname = ''
     this.friendStatus = ''
     this.friendAlias = ''
     this.isConversationTop = false
@@ -69,6 +74,13 @@ export struct ConversationProfile {
     this.bindConversationUpdateListener()
     this.loadConversationMeta()
     this.loadConversationSettings()
+    this.loadGroupLocalSettings()
+  }
+
+  onPageShow(): void {
+    this.loadConversationMeta()
+    this.loadConversationSettings()
+    this.loadGroupLocalSettings()
   }
 
   aboutToDisappear(): void {
@@ -143,6 +155,20 @@ export struct ConversationProfile {
         this.buildGroupMemberPreview(members)
       }
     })
+  }
+
+  private loadGroupLocalSettings():void{
+    if(this.conversationType != 2){
+      return
+    }
+    let setting = GroupSettingStore.getGroupSetting(this.conversationId)
+    if(setting != null){
+      this.groupAnnouncement = setting.announcement
+      this.myGroupNickname = setting.myNickname
+      return
+    }
+    this.groupAnnouncement = ''
+    this.myGroupNickname = ''
   }
 
   private getConversation():Conversation{
@@ -369,6 +395,8 @@ export struct ConversationProfile {
       Text(value)
         .fontSize(15)
         .fontColor('#111111')
+        .maxLines(2)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
     }
     .width('100%')
     .padding({ left: 16, right: 16, top: 14, bottom: 14 })
@@ -417,6 +445,13 @@ export struct ConversationProfile {
     }
     .width('100%')
     .padding({ left: 16, right: 16, top: 16, bottom: 16 })
+  }
+
+  private openGroupPage(name:string):void{
+    this.pageInfo.pushPath({
+      name,
+      param: new ConversationRouteParams(this.conversationId, this.conversationType, this.title, this.conversationSubChannel)
+    })
   }
 
   build() {
@@ -522,6 +557,62 @@ export struct ConversationProfile {
 
         if(this.conversationType == 2){
           Column() {
+            this.infoRow('群公告', this.groupAnnouncement != '' ? this.groupAnnouncement : '未设置')
+            Divider().strokeWidth(1).color('#EAEAEA')
+            this.infoRow('我的群昵称', this.myGroupNickname != '' ? this.myGroupNickname : '未设置')
+            Divider().strokeWidth(1).color('#EAEAEA')
+            Row() {
+              Text('群管理总览')
+                .fontSize(16)
+                .fontColor('#111111')
+              Blank()
+              StandardIcon({ icon: $r('app.media.ic_public_more') })
+            }
+            .width('100%')
+            .padding({ left: 16, right: 16, top: 16, bottom: 16 })
+            .onClick(()=>{
+              this.openGroupPage('GroupManagement')
+            })
+            Divider().strokeWidth(1).color('#EAEAEA')
+            Row() {
+              Text('群公告设置')
+                .fontSize(16)
+                .fontColor('#111111')
+              Blank()
+              StandardIcon({ icon: $r('app.media.ic_public_more') })
+            }
+            .width('100%')
+            .padding({ left: 16, right: 16, top: 16, bottom: 16 })
+            .onClick(()=>{
+              this.openGroupPage('GroupAnnouncement')
+            })
+            Divider().strokeWidth(1).color('#EAEAEA')
+            Row() {
+              Text('群昵称设置')
+                .fontSize(16)
+                .fontColor('#111111')
+              Blank()
+              StandardIcon({ icon: $r('app.media.ic_public_more') })
+            }
+            .width('100%')
+            .padding({ left: 16, right: 16, top: 16, bottom: 16 })
+            .onClick(()=>{
+              this.openGroupPage('GroupNickname')
+            })
+            Divider().strokeWidth(1).color('#EAEAEA')
+            Row() {
+              Text('群成员管理')
+                .fontSize(16)
+                .fontColor('#111111')
+              Blank()
+              StandardIcon({ icon: $r('app.media.ic_public_more') })
+            }
+            .width('100%')
+            .padding({ left: 16, right: 16, top: 16, bottom: 16 })
+            .onClick(()=>{
+              this.openGroupPage('GroupMembers')
+            })
+            Divider().strokeWidth(1).color('#EAEAEA')
             Row() {
               Text('群成员')
                 .fontSize(16)

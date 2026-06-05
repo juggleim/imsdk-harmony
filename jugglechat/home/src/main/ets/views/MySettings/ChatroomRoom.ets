@@ -1,7 +1,5 @@
 import { promptAction } from '@kit.ArkUI'
-import { BaseConstants } from 'base/src/main/ets/constants/BaseConstants'
 import { CommonUtil, ObservedArray } from '../../jim/common'
-import { SettingTop } from './SettingTop'
 import {
   ChatroomAttributesListener,
   ChatroomListener,
@@ -102,7 +100,9 @@ class ChatroomPageAttributesListener implements ChatroomAttributesListener {
 
 @Component
 export default struct ChatroomRoomPage {
+  @Consume('pageInfo') pageInfo: NavPathStack
   @Consume('mySettingPageInfo') mySettingPageInfo:NavPathStack
+  @Consume('activeNavSource') activeNavSource: string
 
   @State private chatroomId:string = ''
   @State private title:string = '聊天室'
@@ -119,6 +119,13 @@ export default struct ChatroomRoomPage {
   private msgReceiveListener:MsgReceivedListener = async (_message)=>{}
   private msgModifiedListener:MsgModifiedListener = async (_message)=>{}
 
+  private getActivePageInfo(): NavPathStack {
+    if (this.activeNavSource == 'settings') {
+      return this.mySettingPageInfo
+    }
+    return this.pageInfo
+  }
+
   private showToast(message:string):void {
     promptAction.showToast({
       message: message,
@@ -133,6 +140,9 @@ export default struct ChatroomRoomPage {
 
   aboutToAppear(): void {
     let param = this.mySettingPageInfo.getParamByIndex(this.mySettingPageInfo.size() - 1) as ChatroomRoomParams
+    if (this.activeNavSource != 'settings') {
+      param = this.pageInfo.getParamByIndex(this.pageInfo.size() - 1) as ChatroomRoomParams
+    }
     this.chatroomId = param.chatroomId
     this.title = param.title
     this.listenerKey = `chatroom_room_${this.chatroomId}`
@@ -155,7 +165,7 @@ export default struct ChatroomRoomPage {
     }
     JuggleIm.instance.getMessageManager().addMsgReceivedListener(this.msgReceiveListener)
     JuggleIm.instance.getMessageManager().addMsgModifiedListener(this.msgModifiedListener)
-    JuggleIm.instance.getChatroomManager().joinChatroom(this.chatroomId, 20, false)
+    JuggleIm.instance.getChatroomManager().joinChatroom(this.chatroomId, 20, param.isAutoCreate)
     this.loadLocalMessages()
     this.refreshAttributes()
   }
@@ -376,15 +386,6 @@ export default struct ChatroomRoomPage {
     NavDestination() {
       Column() {
         Row() {
-          SettingTop({ settingTitle: this.title })
-        }
-        .width(BaseConstants.FULL_WIDTH)
-        .height(60)
-        .alignItems(VerticalAlign.Top)
-        .backgroundColor(Color.White)
-        .padding({ top: 20 })
-
-        Row() {
           Text(this.chatroomId)
             .fontSize(12)
             .fontColor('#6B7280')
@@ -523,6 +524,6 @@ export default struct ChatroomRoomPage {
       .height('100%')
       .backgroundColor('#F5F7FA')
     }
-    .hideTitleBar(true)
+    .title(this.title)
   }
 }

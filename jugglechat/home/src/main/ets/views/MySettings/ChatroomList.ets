@@ -1,13 +1,14 @@
 import { BaseConstants } from 'base/src/main/ets/constants/BaseConstants'
-import { SettingTop } from './SettingTop'
 
 class ChatroomRoomParams {
   chatroomId:string = ''
   title:string = ''
+  isAutoCreate:boolean = false
 
-  constructor(chatroomId:string, title:string) {
+  constructor(chatroomId:string, title:string, isAutoCreate:boolean = false) {
     this.chatroomId = chatroomId
     this.title = title
+    this.isAutoCreate = isAutoCreate
   }
 }
 
@@ -35,20 +36,20 @@ const CHATROOM_ITEMS:ChatroomListItem[] = [
 
 @Component
 export default struct ChatroomListPage {
+  @Consume('pageInfo') pageInfo: NavPathStack
   @Consume('mySettingPageInfo') mySettingPageInfo:NavPathStack
+  @Consume('activeNavSource') activeNavSource: string
+
+  private getActivePageInfo(): NavPathStack {
+    if (this.activeNavSource == 'settings') {
+      return this.mySettingPageInfo
+    }
+    return this.pageInfo
+  }
 
   build() {
     NavDestination() {
       Column() {
-        Row() {
-          SettingTop({ settingTitle: '聊天室' })
-        }
-        .width(BaseConstants.FULL_WIDTH)
-        .height(60)
-        .alignItems(VerticalAlign.Top)
-        .backgroundColor(Color.White)
-        .padding({ top: 20 })
-
         List() {
           ForEach(CHATROOM_ITEMS, (item:ChatroomListItem)=>{
             ListItem() {
@@ -67,18 +68,18 @@ export default struct ChatroomListPage {
 
                 Blank()
 
-                Text('进入')
-                  .fontSize(14)
-                  .fontColor('#4C8DFF')
-              }
-              .width('100%')
-              .padding({ left: 16, right: 16, top: 14, bottom: 14 })
-              .backgroundColor(Color.White)
-              .borderRadius(6)
+              Text('进入')
+                .fontSize(14)
+                .fontColor('#4C8DFF')
             }
-            .padding({ left: 12, right: 12, top: 8 })
-            .onClick(()=>{
-              this.mySettingPageInfo.pushPath({
+            .width('100%')
+            .padding({ left: 16, right: 16, top: 14, bottom: 14 })
+            .backgroundColor(Color.White)
+            .borderRadius(6)
+          }
+          .padding({ left: 12, right: 12, top: 8 })
+          .onClick(()=>{
+              this.getActivePageInfo().pushPath({
                 name: 'ChatroomRoom',
                 param: new ChatroomRoomParams(item.chatroomId, item.title)
               })
@@ -94,7 +95,7 @@ export default struct ChatroomListPage {
       .height('100%')
       .backgroundColor('#F5F7FA')
     }
-    .hideTitleBar(true)
+    .title('聊天室')
   }
 }
 

@@ -5,6 +5,7 @@ let prefName = 'jchat_pref'
 let authKey = 'jchat_auth'
 let loginProfileKey = 'jchat_login_profile'
 let serverConfigKey = 'jchat_server_config'
+let profileDisplayKey = 'jchat_profile_display'
 
 let defaultAppServer = 'https://ws.juggleim.com'
 let defaultImServer = 'ws://ws.juggleim.com'
@@ -52,6 +53,11 @@ export interface ServerConfig{
   appkey:string
 }
 
+export interface ProfileDisplay{
+  nickname:string
+  avatarIndex:number
+}
+
 function trimRightSlash(url:string):string{
   if(url.endsWith('/')){
     return url.substring(0,url.length - 1)
@@ -93,6 +99,7 @@ export class PreferenceUtil{
   private static cacheAuth?:CacheAuth = undefined
   private static loginProfile?:LoginProfile = undefined
   private static serverConfig?:ServerConfig = undefined
+  private static profileDisplay?:ProfileDisplay = undefined
 
   static getCacheAuth():CacheAuth|undefined{
     if(PreferenceUtil.cacheAuth!=undefined){
@@ -192,5 +199,43 @@ export class PreferenceUtil{
     pref.putSync(serverConfigKey,JSON.stringify(config))
     pref.flush()
     PreferenceUtil.serverConfig = config
+  }
+
+  static getProfileDisplay():ProfileDisplay|undefined{
+    if(PreferenceUtil.profileDisplay != undefined){
+      return PreferenceUtil.profileDisplay
+    }
+    let ctx = getContext()
+    let optionos:preferences.Options = {name:prefName}
+    let pref = preferences.getPreferencesSync(ctx,optionos)
+    let profileStr = pref.getSync(profileDisplayKey, "")
+    if(profileStr != ""){
+      let profile = JSON.parse(profileStr.toString()) as ProfileDisplay
+      PreferenceUtil.profileDisplay = profile
+      return profile
+    }
+    return undefined
+  }
+
+  static setProfileDisplay(nickname:string, avatarIndex:number){
+    let ctx = getContext()
+    let optionos:preferences.Options = {name:prefName}
+    let pref = preferences.getPreferencesSync(ctx,optionos)
+    let profile:ProfileDisplay = {
+      nickname,
+      avatarIndex
+    }
+    pref.putSync(profileDisplayKey, JSON.stringify(profile))
+    pref.flush()
+    PreferenceUtil.profileDisplay = profile
+  }
+
+  static clearProfileDisplay(){
+    let ctx = getContext()
+    let optionos:preferences.Options = {name:prefName}
+    let pref = preferences.getPreferencesSync(ctx,optionos)
+    pref.deleteSync(profileDisplayKey)
+    pref.flush()
+    PreferenceUtil.profileDisplay = undefined
   }
 }

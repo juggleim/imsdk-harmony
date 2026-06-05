@@ -10,7 +10,7 @@ import {
   SearchParams
 } from 'juggleim'
 import { isDisplayableMessage, MessageViewItem, toMessageViewItem } from '../viewmodel/MessageViewModel'
-import { ConversationRouteParams } from '../viewmodel/ConversationViewModel'
+import { ConversationDetailParams, ConversationRouteParams } from '../viewmodel/ConversationViewModel'
 
 @Component
 export struct ConversationHistory {
@@ -18,6 +18,7 @@ export struct ConversationHistory {
   @State private conversationId:string = ''
   @State private conversationType:number = 1
   @State private conversationSubChannel:string = ''
+  @State private conversationTitle:string = ''
   @State private sourceMessages:ObservedArray<MessageViewItem> = new ObservedArray<MessageViewItem>([])
   @State private displayMessages:ObservedArray<MessageViewItem> = new ObservedArray<MessageViewItem>([])
   @State private selectedMessageTypeFilter:string = 'all'
@@ -36,6 +37,7 @@ export struct ConversationHistory {
     this.conversationId = params.conversationId
     this.conversationType = params.converType
     this.conversationSubChannel = params.subChannel ?? ''
+    this.conversationTitle = params.title
     this.loadInitialHistory()
   }
 
@@ -48,6 +50,19 @@ export struct ConversationHistory {
 
   private getConversation():Conversation{
     return new Conversation(this.conversationId, this.conversationType, this.conversationSubChannel)
+  }
+
+  private openConversation():void{
+    this.pageInfo.pushPath({
+      name: 'ConversationDetail',
+      param: new ConversationDetailParams(
+        this.conversationType == 1 ? this.conversationId : '',
+        this.conversationId,
+        this.conversationType,
+        this.conversationTitle,
+        this.conversationSubChannel
+      )
+    })
   }
 
   private showToast(message:string):void{
@@ -470,6 +485,9 @@ export struct ConversationHistory {
                 ListItem() {
                   this.historyRow(item)
                 }
+                .onClick(()=>{
+                  this.openConversation()
+                })
               }, (item:MessageViewItem) => this.getItemKey(item))
             }
           }

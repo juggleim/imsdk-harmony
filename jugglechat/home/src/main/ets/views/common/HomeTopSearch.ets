@@ -23,6 +23,7 @@ export struct HomeTopSearch {
   @StorageProp('currentBreakpoint') currentBreakpoint: string = BreakpointConstants.BREAKPOINT_SM;
   @Prop title: Resource;
   @Prop enableGlobalMessageSearch:boolean = false
+  onAddTap?: ()=>void
   @State private searchInput:string = ''
   @Consume('pageInfo') pageInfo: NavPathStack;
 
@@ -64,6 +65,11 @@ export struct HomeTopSearch {
       Column() {
         StandardIcon({ icon: $r('app.media.ic_public_add_norm') })
           .flexBasis(HomeConstants.FLEX_BASIS_AUTO)
+          .onClick(()=>{
+            if(this.onAddTap != undefined){
+              this.onAddTap()
+            }
+          })
       }
       .margin({ right: $r('app.float.phone_icon_right') })
     }

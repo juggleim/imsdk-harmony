@@ -29,7 +29,16 @@ import { SocialCircle } from 'socialcircle';
 import { deviceInfo } from '@kit.BasicServicesKit';
 import { initJuggleIm } from '../jim/jimsdk';
 import { MeDetail } from './MeDetail';
+import { ProfileSetting } from './ProfileSetting';
+import { QRCodeDisplay } from './QRCodeDisplay';
+import { ScanPage } from './ScanPage';
+import { CreateChatroom } from './CreateChatroom';
 import FriendVerify from '../views/MySettings/FriendVerify';
+import FriendRequestList from '../views/MySettings/FriendRequestList';
+import GroupManagement from '../views/MySettings/GroupManagement';
+import GroupAnnouncement from '../views/MySettings/GroupAnnouncement';
+import GroupNickname from '../views/MySettings/GroupNickname';
+import GroupMembers from '../views/MySettings/GroupMembers';
 import BroadcastMessagePage from '../views/MySettings/BroadcastMessage';
 import ChatroomListPage from '../views/MySettings/ChatroomList';
 import ChatroomRoomPage from '../views/MySettings/ChatroomRoom';
@@ -42,12 +51,13 @@ import PushSetting from '../views/MySettings/PushSetting';
 @Component
 export struct Index {
   @StorageProp('currentBreakpoint') @Watch('watchCurrentBreakpoint') currentBreakpoint: string = BreakpointConstants.BREAKPOINT_SM;
+  @Provide('activeNavSource') activeNavSource: string = 'home'
   @Provide('pageInfo') pageInfo: NavPathStack = new NavPathStack();
   @State currentContactUserId:string = ''
   @State currentConversationUserName: string = '';
   @State currentContactUserName: string = '';
   @State currentContactUserIcon: Resource = HomeConstants.DEFAULT_AVATAR;
-  @State currentPageIndex: number = CurrentPage.HOME;
+  @State @Watch('watchCurrentPageIndex') currentPageIndex: number = CurrentPage.HOME;
   @State currentFeatureIndex: Number = CurrentFeature.HOME;
   @State isSplitAppletScreen: boolean = BaseConstants.SPLIT_APPLET_SCREEN;
   @State isSplitDocumentScreen: boolean = BaseConstants.SPLIT_DOCUMENT_SCREEN;
@@ -60,11 +70,16 @@ export struct Index {
     }
   }
 
+  watchCurrentPageIndex() {
+    this.activeNavSource = this.currentPageIndex === CurrentPage.ME ? 'settings' : 'home'
+  }
+
   aboutToAppear(): void {
     //init juggleim
     initJuggleIm((status,code)=>{
       console.log("jimsdk_init_sdk. status:",status,"\tcode:",code)
     })
+    this.watchCurrentPageIndex()
   }
 
   @Builder
@@ -87,6 +102,40 @@ export struct Index {
         currentContactUserName: this.currentContactUserName,
         currentContactUserIcon: this.currentContactUserIcon
       });
+    } else if (name === 'ProfileSetting') {
+      ProfileSetting()
+    } else if (name === 'QRCodeDisplay') {
+      QRCodeDisplay()
+    } else if (name === 'ScanPage') {
+      ScanPage()
+    } else if (name === 'CreateChatroom') {
+      CreateChatroom()
+    } else if (name === 'FriendVerify') {
+      FriendVerify()
+    } else if (name === 'FriendRequestList') {
+      FriendRequestList()
+    } else if (name === 'GroupManagement') {
+      GroupManagement()
+    } else if (name === 'GroupAnnouncement') {
+      GroupAnnouncement()
+    } else if (name === 'GroupNickname') {
+      GroupNickname()
+    } else if (name === 'GroupMembers') {
+      GroupMembers()
+    } else if(name === 'ChatroomList'){
+      ChatroomListPage()
+    } else if(name === 'ChatroomRoom'){
+      ChatroomRoomPage()
+    } else if(name === 'BroadcastMessage'){
+      BroadcastMessagePage()
+    } else if(name === 'GlobalUndisturb'){
+      GlobalUndisturb()
+    } else if(name === 'PushSetting'){
+      PushSetting()
+    } else if(name === 'LanguageSetting'){
+      LanguageSetting()
+    } else if(name === 'MyFavorite'){
+      MyFavorite()
     } else {
       ConversationDetailNone();
     }
@@ -96,6 +145,16 @@ export struct Index {
   MySettingsPageMap(name: string) {
     if (name === 'FriendVerify') {
       FriendVerify()
+    } else if (name === 'FriendRequestList') {
+      FriendRequestList()
+    } else if (name === 'GroupManagement') {
+      GroupManagement()
+    } else if (name === 'GroupAnnouncement') {
+      GroupAnnouncement()
+    } else if (name === 'GroupNickname') {
+      GroupNickname()
+    } else if (name === 'GroupMembers') {
+      GroupMembers()
     }else if(name === 'ChatroomList'){
       ChatroomListPage()
     }else if(name === 'ChatroomRoom'){
@@ -110,6 +169,14 @@ export struct Index {
       LanguageSetting()
     }else if(name === 'MyFavorite'){
       MyFavorite()
+    }else if(name === 'ProfileSetting'){
+      ProfileSetting()
+    }else if(name === 'QRCodeDisplay'){
+      QRCodeDisplay()
+    }else if(name === 'ScanPage'){
+      ScanPage()
+    }else if(name === 'CreateChatroom'){
+      CreateChatroom()
     }
   }
 

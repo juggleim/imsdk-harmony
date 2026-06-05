@@ -1,6 +1,5 @@
 import { StandardIcon } from 'base';
 import { BaseConstants } from 'base/src/main/ets/constants/BaseConstants';
-import { SettingTop } from './SettingTop';
 
 @Component
 export default struct LanguageSetting{
@@ -10,14 +9,6 @@ export default struct LanguageSetting{
   build() {
     NavDestination(){
       Flex({direction:FlexDirection.Column,alignItems:ItemAlign.Center}){
-        Row(){
-          SettingTop({ settingTitle: '语言设置' })
-        }.width(BaseConstants.FULL_WIDTH)
-        .height(60)
-        .alignItems(VerticalAlign.Top)
-        .backgroundColor(Color.White)
-        .padding({top:20})
-
         Row(){
           Column(){
             Text('简体中文').fontSize(18)
@@ -35,7 +26,7 @@ export default struct LanguageSetting{
         .width('90%')
         .backgroundColor('#F1F3F5')
         .margin({
-          top:60
+          top:24
         })
         .borderRadius({
           topLeft: 6,
@@ -73,6 +64,6 @@ export default struct LanguageSetting{
       .width(BaseConstants.FULL_WIDTH)
       .height(BaseConstants.FULL_HEIGHT)
     }
-    .hideTitleBar(true)
+    .title('语言设置')
   }
 }

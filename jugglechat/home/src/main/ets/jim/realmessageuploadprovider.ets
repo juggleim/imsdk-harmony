@@ -130,13 +130,13 @@ export class RealMessageUploadProvider implements IMessageUploadProvider {
         'content-length': `${payload.byteLength}`
       } as UploadRequestHeaders
     }
-    let requestContentType = headers['Content-Type'] ?? headers['content-type'] ?? ''
+    // let requestContentType = headers['Content-Type'] ?? headers['content-type'] ?? ''
     let requestPathRaw = this.getUploadUrlPath(credential.uploadUrl)
     let requestPathDecoded = this.decodeUrlPath(requestPathRaw)
-    console.info(
-      `jimsdk_media_upload_request:${credential.ossType}:${credential.uploadUrl}:` +
-      `contentType=${requestContentType}:rawPath=${requestPathRaw}:decodedPath=${requestPathDecoded}:headers=${JSON.stringify(headers)}`
-    )
+    // console.info(
+    //   `jimsdk_media_upload_request:${credential.ossType}:${credential.uploadUrl}:` +
+    //   `contentType=${requestContentType}:rawPath=${requestPathRaw}:decodedPath=${requestPathDecoded}:headers=${JSON.stringify(headers)}`
+    // )
 
     let responseStatusCode = -1
     let responseBodyParts:string[] = []
@@ -155,7 +155,7 @@ export class RealMessageUploadProvider implements IMessageUploadProvider {
       responseLogged = true
       let responseBody = responseBodyParts.join('')
       console.info(`jimsdk_media_upload_response:${credential.ossType}:${responseStatusCode}:bodyLength=${responseBody.length}`)
-      this.logHttpResponseBody(responseStatusCode, credential.uploadUrl, responseBody, requestContentType, requestPathRaw, requestPathDecoded)
+      this.logHttpResponseBody(responseStatusCode, credential.uploadUrl, responseBody, '', requestPathRaw, requestPathDecoded)
       cleanup()
       if(responseStatusCode < 200 || responseStatusCode >= 300){
         console.error(`jimsdk_media_upload_response_fail:${credential.ossType}:${responseStatusCode}`)

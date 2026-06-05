@@ -12,7 +12,6 @@ import {
   Message,
   TextMessage
 } from 'juggleim'
-import { SettingTop } from './SettingTop'
 
 const TOP_TRACE_TAG:string = 'TOPTRACE'
 
@@ -221,15 +220,6 @@ export default struct BroadcastMessagePage {
   build() {
     NavDestination(){
       Column(){
-        Row(){
-          SettingTop({ settingTitle: '广播消息' })
-        }
-        .width(BaseConstants.FULL_WIDTH)
-        .height(60)
-        .alignItems(VerticalAlign.Top)
-        .backgroundColor(Color.White)
-        .padding({ top: 20 })
-
         Column() {
           TextInput({ text: this.messageText, placeholder: '输入广播消息内容' })
             .fontSize(15)
@@ -360,6 +350,6 @@ export default struct BroadcastMessagePage {
       .height(BaseConstants.FULL_HEIGHT)
       .backgroundColor('#F5F6F8')
     }
-    .hideTitleBar(true)
+    .title('广播消息')
   }
 }

@@ -15,7 +15,6 @@
 
 import { Adaptive, BaseConstants, BreakpointConstants, StandardIcon } from 'base';
 import {ConversationDetailItem} from '../views/Conversation/ConversationDetailItem';
-import { ConversationDetailTopSearch } from '../views/Conversation/ConversationDetailTopSearch';
 import { common } from '@kit.AbilityKit';
 import { BusinessError, deviceInfo } from '@kit.BasicServicesKit';
 import abilityAccessCtrl, { Permissions } from '@ohos.abilityAccessCtrl';
@@ -23,7 +22,7 @@ import { fileIo, fileUri, picker } from '@kit.CoreFileKit';
 import { media } from '@kit.MediaKit';
 import { photoAccessHelper } from '@kit.MediaLibraryKit';
 import { ConversationDetailParams } from '../viewmodel/ConversationViewModel';
-import { ConversationViewItem, toConverViewItem } from '../viewmodel/ConversationViewModel';
+import { ConversationRouteParams, ConversationViewItem, toConverViewItem } from '../viewmodel/ConversationViewModel';
 import { buildMessagePreview, cloneMessageContent, isDisplayableMessage, MediaDownloadState, MessageViewItem, toMessageViewItem } from '../viewmodel/MessageViewModel'
 import { ObservedArray } from '../jim/common';
 import {
@@ -43,6 +42,8 @@ import {
   JuggleIm,
   MediaMessageContent,
   Message,
+  MessageReaction,
+  MessageReactionResult,
   MessageMentionInfo,
   MessageOptions,
   MentionType,
@@ -334,7 +335,65 @@ export struct ConversationDetail {
     if(messageIds.length == 0){
       return
     }
-    JuggleIm.instance.getMessageManager().getMessagesReaction(this.getConversation(), messageIds, (_code, _items)=>{})
+    JuggleIm.instance.getMessageManager().getMessagesReaction(this.getConversation(), messageIds, (code, items)=>{
+      if(code != 0 || items.length == 0){
+        return
+      }
+      this.applyMessageReactionResults(items)
+    })
+  }
+
+  private refreshReactionStateByIds(msgIds:string[]):void{
+    if(msgIds.length == 0){
+      return
+    }
+    JuggleIm.instance.getMessageManager().getMessagesReaction(this.getConversation(), msgIds, (code, items)=>{
+      if(code != 0 || items.length == 0){
+        return
+      }
+      this.applyMessageReactionResults(items)
+    })
+  }
+
+  private buildReactionSummaries(reactions:MessageReaction[]):string[]{
+    let summaries:string[] = []
+    reactions.forEach((reaction)=>{
+      if(reaction.reactionId == ''){
+        return
+      }
+      let count = reaction.count > 0 ? reaction.count : reaction.userIds.length
+      summaries.push(`${reaction.reactionId} ${count}`)
+    })
+    return summaries
+  }
+
+  private buildSelectedReactionIds(reactions:MessageReaction[]):string[]{
+    let selectedIds:string[] = []
+    reactions.forEach((reaction)=>{
+      if(reaction.isSelected == true && reaction.reactionId != ''){
+        selectedIds.push(reaction.reactionId)
+      }
+    })
+    return selectedIds
+  }
+
+  private applyMessageReactionResults(results:MessageReactionResult[]):void{
+    let changed = false
+    results.forEach((result)=>{
+      let foundIndex = this.msgList.findIndex((item)=>{
+        return item.messageId == result.messageId ||
+          (result.clientId != '' && item.clientId == result.clientId)
+      })
+      if(foundIndex < 0){
+        return
+      }
+      this.msgList[foundIndex].reactionSummaries = this.buildReactionSummaries(result.reactions)
+      this.msgList[foundIndex].selectedReactionIds = this.buildSelectedReactionIds(result.reactions)
+      changed = true
+    })
+    if(changed){
+      this.msgList = new ObservedArray<MessageViewItem>(this.msgList.slice())
+    }
   }
 
   private queryMessagesByOptions(options:GetMessageOptions):void{
@@ -400,6 +459,21 @@ export struct ConversationDetail {
     this.showMentionPanel = false
   }
 
+  private openConversationProfile():void{
+    if(this.conversationType == 3){
+      return
+    }
+    this.pageInfo.pushPath({
+      name: 'ConversationProfile',
+      param: new ConversationRouteParams(
+        this.conversationId,
+        this.conversationType,
+        this.conversationTitle != '' ? this.conversationTitle : this.currentConversationUserName,
+        this.conversationSubChannel
+      )
+    })
+  }
+
   private toggleMediaPanel():void{
     if(this.isRecordingVoice || this.isPreparingRecording){
       return
@@ -438,17 +512,19 @@ export struct ConversationDetail {
       this.showToast('当前消息暂不支持 reaction')
       return
     }
+    let messageId = item?.messageId as string
     let callback = (code:number)=>{
       if(code != 0){
         this.showToast(`reaction 失败: ${code}`)
         return
       }
+      this.refreshReactionStateByIds([messageId])
       this.closePanels()
     }
     if(this.hasSelectedReaction(item, reactionId)){
-      JuggleIm.instance.getMessageManager().removeMessageReaction(item?.messageId as string, reactionId, callback)
+      JuggleIm.instance.getMessageManager().removeMessageReaction(messageId, reactionId, callback)
     }else{
-      JuggleIm.instance.getMessageManager().addMessageReaction(item?.messageId as string, reactionId, callback)
+      JuggleIm.instance.getMessageManager().addMessageReaction(messageId, reactionId, callback)
     }
   }
 
@@ -1393,17 +1469,18 @@ export struct ConversationDetail {
     NavDestination() {
       Stack({ alignContent: Alignment.Bottom }) {
         Flex({ direction: FlexDirection.Column }) {
-          ConversationDetailTopSearch({
-            currentConversationUserName: $conversationTitle,
-            conversationId: this.conversationId,
-            conversationType: this.conversationType,
-            subChannel: this.conversationSubChannel,
-            showProfile: this.conversationType != 3
-          })
-            .height(Adaptive.ContactItemHeight(this.currentBreakpoint))
-            .zIndex(1)
-            .backgroundColor(Color.White)
-            .expandSafeArea([SafeAreaType.SYSTEM, SafeAreaType.KEYBOARD], [SafeAreaEdge.TOP])
+          if(this.conversationType != 3){
+            Row() {
+              Blank()
+              StandardIcon({ icon: $r('app.media.ic_public_more') })
+                .onClick(()=>{
+                  this.openConversationProfile()
+                })
+            }
+            .width('100%')
+            .height(42)
+            .padding({ left: 12, right: 12 })
+          }
 
           Refresh({ refreshing: $$this.refreshing, builder: this.refreshContent }) {
             List({ scroller: this.scroller }) {
@@ -2047,6 +2124,6 @@ export struct ConversationDetail {
         }
       }
     }
-    .hideTitleBar(true)
+    .title(this.conversationTitle != '' ? this.conversationTitle : (this.currentConversationUserName != '' ? this.currentConversationUserName : HomeConstants.CONVERSATION_DETAIL_TOP_TITLE))
   }
 }

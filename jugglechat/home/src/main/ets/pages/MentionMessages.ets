@@ -2,7 +2,7 @@ import { promptAction } from '@kit.ArkUI'
 import { CommonUtil, ObservedArray } from '../jim/common'
 import { Conversation, GetMessageDirection, JuggleIm, Message } from 'juggleim'
 import { isDisplayableMessage, MessageViewItem, toMessageViewItem } from '../viewmodel/MessageViewModel'
-import { MentionMessagesParams } from '../viewmodel/ConversationViewModel'
+import { ConversationDetailParams, MentionMessagesParams } from '../viewmodel/ConversationViewModel'
 
 @Component
 export struct MentionMessages {
@@ -35,6 +35,19 @@ export struct MentionMessages {
 
   private getConversation():Conversation{
     return new Conversation(this.conversationId, this.conversationType, this.conversationSubChannel)
+  }
+
+  private openConversation():void{
+    this.pageInfo.pushPath({
+      name: 'ConversationDetail',
+      param: new ConversationDetailParams(
+        this.conversationType == 1 ? this.conversationId : '',
+        this.conversationId,
+        this.conversationType,
+        this.title,
+        this.conversationSubChannel
+      )
+    })
   }
 
   private showToast(message:string):void{
@@ -176,6 +189,9 @@ export struct MentionMessages {
                 ListItem() {
                   this.mentionRow(item)
                 }
+                .onClick(()=>{
+                  this.openConversation()
+                })
               }, (item:MessageViewItem) => this.getItemKey(item))
             }
 

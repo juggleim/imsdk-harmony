@@ -15,7 +15,6 @@
 
 import { Adaptive, BaseConstants, BreakpointConstants } from 'base';
 import { Alphabets, ContactsListData, ContactsDataInterface } from '../viewmodel/ConstactsViewModel';
-import { ConversationViewItem,ConversationDetailParams } from '../viewmodel/ConversationViewModel';
 import { ContactsItem } from '../views/Contacts/ContactsItem';
 import { HomeConstants } from '../constants/HomeConstants';
 import { HomeTopSearch } from '../views/common/HomeTopSearch';
@@ -51,26 +50,26 @@ export struct ContactsList {
           friendTag: ''
         }
         this.contactList.push(contactItem)
-        this.refreshFriendTag(contactItem.user_id, this.contactList.length - 1)
+        this.refreshFriendTag(contactItem.user_id)
       })
     })
   }
 
-  private refreshFriendTag(userId:string, index:number):void{
-    if(userId == '' || index < 0){
+  private refreshFriendTag(userId:string):void{
+    if(userId == ''){
       return
     }
     JuggleIm.instance.getUserInfoManager().queryFriendInfo(userId, (code, friendInfo)=>{
       if(code != 0 || friendInfo == null){
         return
       }
-      if(index >= this.contactList.length){
+      let foundIndex = this.contactList.findIndex((item)=>{
+        return item.user_id == userId
+      })
+      if(foundIndex < 0){
         return
       }
-      let contactItem = this.contactList[index]
-      if(contactItem.user_id != userId){
-        return
-      }
+      let contactItem = this.contactList[foundIndex]
       contactItem.friendTag = friendInfo.isFriend ? '好友' : ''
       this.contactList = new ObservedArray<ContactsDataInterface>(this.contactList.slice())
     })
@@ -97,12 +96,24 @@ export struct ContactsList {
         List({ scroller: this.listScroller }) {
           ListItem() {
             ContactsItem({ name: HomeConstants.CONTACTS_LIST[0], icon: $r('app.media.ic_public_groups') })
+              .onClick(() => {
+                if (this.pageInfo.size() > 1) {
+                  this.pageInfo.pop();
+                }
+                this.pageInfo.pushPath({ name: 'ChatroomList' })
+              })
           }
           .height(Adaptive.ContactItemHeight(this.currentBreakpoint))
           .backgroundColor(Color.White)
 
           ListItem() {
             ContactsItem({ name: HomeConstants.CONTACTS_LIST[1], icon: $r('app.media.ic_public_names') })
+              .onClick(() => {
+                if (this.pageInfo.size() > 1) {
+                  this.pageInfo.pop();
+                }
+                this.pageInfo.pushPath({ name: 'FriendRequestList' })
+              })
           }
           .height(Adaptive.ContactItemHeight(this.currentBreakpoint))
           .backgroundColor(Color.White)
@@ -111,18 +122,13 @@ export struct ContactsList {
             ListItem() {
               ContactsItem({ name: item.name, icon: item.icon, friendTag: item.friendTag ?? '' })
                 .onClick(() => {
+                  this.currentContactUserId = item.user_id
+                  this.currentContactUserName = item.name;
+                  this.currentContactUserIcon = item.icon;
                   if (this.pageInfo.size() > 1) {
                     this.pageInfo.pop();
                   }
-
-                  // this.pageInfo.pushPath({ name: 'ContactsDetail' });
-                  // this.currentContactUserId = item.user_id
-                  // this.currentContactUserName = item.name;
-                  // this.currentContactUserIcon = item.icon;
-
-                  this.pageInfo.pushPath({ name: 'ConversationDetail',param:new ConversationDetailParams(item.user_id,item.user_id,1, item.name as string, '')});
-
-                  // this.currentConversationUserName = '';
+                  this.pageInfo.pushPath({ name: 'ContactsDetail' });
                   this.currentIndex = index;
                 })
                 .height(BaseConstants.FULL_HEIGHT)

@@ -31,6 +31,6 @@ export default struct ConversationDetailNone {
     .padding({
       top: deviceInfo.deviceType === BaseConstants.DEVICE_2IN1 ? $r('app.float.zero') : $r('app.float.device_padding_top')
     })
-    .hideTitleBar(true)
+    .title('会话')
   }
 }

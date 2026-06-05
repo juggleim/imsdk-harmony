@@ -1,6 +1,5 @@
 import { promptAction } from '@kit.ArkUI'
 import { BaseConstants } from 'base/src/main/ets/constants/BaseConstants'
-import { SettingTop } from './SettingTop'
 import { HarmonyPushManager, PushDebugSnapshot } from '../../jim/harmonypushmanager'
 
 @Component
@@ -112,15 +111,6 @@ export default struct PushSetting {
   build() {
     NavDestination() {
       Column() {
-        Row() {
-          SettingTop({ settingTitle: '推送设置' })
-        }
-        .width(BaseConstants.FULL_WIDTH)
-        .height(60)
-        .alignItems(VerticalAlign.Top)
-        .backgroundColor(Color.White)
-        .padding({ top: 20 })
-
         Scroll() {
           Column() {
             Column() {
@@ -199,6 +189,6 @@ export default struct PushSetting {
       .height('100%')
       .backgroundColor('#F5F7FA')
     }
-    .hideTitleBar(true)
+    .title('推送设置')
   }
 }

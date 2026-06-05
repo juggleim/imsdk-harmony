@@ -46,6 +46,9 @@ export struct ConversationDetailTopSearch {
         .fontSize(BaseConstants.FONT_SIZE_EIGHTEEN)
         .fontFamily(BaseConstants.FONT_FAMILY_MEDIUM)
         .fontColor($r('app.color.conversation_default_text_color'))
+        .maxLines(1)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
+        .layoutWeight(1)
       StandardIcon({ icon: $r('app.media.ic_public_more') })
         .visibility(this.showProfile ? Visibility.Visible : Visibility.Hidden)
         .onClick(()=>{

@@ -4,7 +4,21 @@ import { deviceInfo } from "@kit.BasicServicesKit";
 @Component
 export struct SettingTop{
   @Prop settingTitle:string;
+  @Consume('pageInfo') pageInfo: NavPathStack
   @Consume('mySettingPageInfo') mySettingPageInfo:NavPathStack
+  @Consume('activeNavSource') activeNavSource: string
+
+  private back():void{
+    if (this.activeNavSource == 'settings') {
+      this.mySettingPageInfo.clear()
+      return
+    }
+    if (this.pageInfo.size() > 1) {
+      this.pageInfo.pop()
+      return
+    }
+    this.pageInfo.clear()
+  }
 
   build() {
     Flex({alignItems:ItemAlign.Center, justifyContent:FlexAlign.SpaceBetween}){
@@ -12,7 +26,7 @@ export struct SettingTop{
         Column(){
           StandardIcon({icon:$r('app.media.ic_public_back')})
             .onClick(()=>{
-              this.mySettingPageInfo.clear()
+              this.back()
             }).height(30)
             .width(30)
         }.width(30)

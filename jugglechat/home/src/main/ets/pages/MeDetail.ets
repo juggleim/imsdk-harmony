@@ -7,6 +7,21 @@ import { CommonUtil } from "../jim/common";
 import { PreferenceUtil } from "../jim/preferenceutil";
 import { JimServer } from "../jim/jimserver/jimserver";
 import { JuggleIm } from 'juggleim'
+import { NavSourceParam } from '../viewmodel/ConversationViewModel'
+
+const PROFILE_AVATARS: ResourceStr[] = [
+  $r('app.media.avatar1'),
+  $r('app.media.avatar2'),
+  $r('app.media.avatar3'),
+  $r('app.media.avatar4'),
+  $r('app.media.avatar5'),
+  $r('app.media.avatar6'),
+  $r('app.media.avatar7'),
+  $r('app.media.avatar8'),
+  $r('app.media.avatar9'),
+  $r('app.media.avatar10'),
+  $r('app.media.avatar11')
+]
 
 
 @Component
@@ -16,13 +31,28 @@ export struct MeDetail {
   @State private currentIndex: number = 0;
   @State private myUserId: string = ''
   @State private myName: string = ''
-  @State private myAvatar: string = ''
+  @State private myAvatar: ResourceStr = HomeConstants.DEFAULT_AVATAR
+  @Consume('pageInfo') pageInfo: NavPathStack
   @Consume('mySettingPageInfo') mySettingPageInfo:NavPathStack
 
   aboutToAppear(): void {
+    this.loadProfile()
+  }
+
+  onPageShow(): void {
+    this.loadProfile()
+  }
+
+  private loadProfile():void{
     let auth = PreferenceUtil.getCacheAuth()
     if (auth != undefined) {
       this.myUserId = auth.user_id
+      let profileDisplay = PreferenceUtil.getProfileDisplay()
+      if(profileDisplay != undefined && profileDisplay.nickname != ''){
+        this.myName = profileDisplay.nickname
+        this.myAvatar = this.getAvatarResource(profileDisplay.avatarIndex)
+        return
+      }
       JimServer.instance.getUserManager().GetUserInfo(auth.user_id, (user) => {
         if (user != null) {
           this.myName = user.nickname
@@ -46,12 +76,39 @@ export struct MeDetail {
     }
   }
 
+  private getAvatarResource(index:number):ResourceStr{
+    let safeIndex = index
+    if(safeIndex < 1 || safeIndex > PROFILE_AVATARS.length){
+      safeIndex = 1
+    }
+    return PROFILE_AVATARS[safeIndex - 1]
+  }
+
+  private openProfileSetting():void{
+    this.mySettingPageInfo.pushPath({ name: 'ProfileSetting', param: new NavSourceParam('settings') })
+  }
+
+  private openMyQrCode():void{
+    this.mySettingPageInfo.pushPath({ name: 'QRCodeDisplay', param: new NavSourceParam('settings') })
+  }
+
+  private openScanPage():void{
+    this.mySettingPageInfo.pushPath({ name: 'ScanPage', param: new NavSourceParam('settings') })
+  }
+
+  private openCreateChatroom():void{
+    this.mySettingPageInfo.pushPath({ name: 'CreateChatroom', param: new NavSourceParam('settings') })
+  }
+
   private logout() {
     JuggleIm.instance.getConnectionManager().disconnect()
     PreferenceUtil.cleanCacheAuth()
+    PreferenceUtil.clearProfileDisplay()
     JimServer.instance.clearAuth()
     JuggleIm.instance.userId = ''
     JuggleIm.instance.userInfo.userId = ''
+    JuggleIm.instance.userInfo.nickname = ''
+    JuggleIm.instance.userInfo.userPortrait = ''
     this.mySettingPageInfo.clear()
     promptAction.showToast({
       message: '已退出登录',
@@ -64,7 +121,8 @@ export struct MeDetail {
   }
 
   build() {
-    Stack({ alignContent: Alignment.Top }) {
+    NavDestination() {
+      Stack({ alignContent: Alignment.Top }) {
       Column() {
       }
       .width(BaseConstants.FULL_WIDTH)
@@ -110,10 +168,186 @@ export struct MeDetail {
               .fontFamily(BaseConstants.FONT_FAMILY_MEDIUM)
               .fontWeight(BaseConstants.FONT_WEIGHT_FIVE)
               .fontColor(Color.Black)
+              .maxLines(1)
+              .textOverflow({ overflow: TextOverflow.Ellipsis })
           }
           .width(BaseConstants.FULL_WIDTH)
           .alignItems(HorizontalAlign.Center)
-          .padding({ top: $r('app.float.contacts_detail_user_top') })
+            .padding({ top: $r('app.float.contacts_detail_user_top') })
+
+            Column() {
+              Row() {
+                Column() {
+                  StandardIcon({ icon: $r('app.media.ic_public_phone') })
+                    .margin({ right: $r('app.float.phone_icon_right') })
+                }
+                .width('10%')
+                .alignItems(HorizontalAlign.Start)
+                .padding({
+                  left: 15
+                })
+
+                Column() {
+                  Text('个人资料')
+                    .fontSize(18)
+                    .fontFamily(BaseConstants.FONT_FAMILY_MEDIUM)
+                }
+                .width('80%')
+                .alignItems(HorizontalAlign.Start)
+                .padding({ left: 20 })
+
+                Column() {
+                  StandardIcon({ icon: $r('app.media.ic_public_more') })
+                    .margin({ right: $r('app.float.phone_icon_right') })
+                }
+                .width('10%')
+                .alignItems(HorizontalAlign.End)
+              }
+              .alignItems(VerticalAlign.Center)
+              .height(BaseConstants.FULL_HEIGHT)
+            }
+            .height(40)
+            .width('90%')
+            .alignItems(HorizontalAlign.Start)
+            .backgroundColor('#F1F3F5')
+            .margin({ top: 40 })
+            .borderRadius({
+              topLeft: 6,
+              topRight: 6
+            }).onClick(()=>{
+              this.openProfileSetting()
+            })
+
+            Divider().width('90%')
+
+            Column() {
+              Row() {
+                Column() {
+                  StandardIcon({ icon: $r('app.media.ic_public_phone') })
+                    .margin({ right: $r('app.float.phone_icon_right') })
+                }
+                .width('10%')
+                .alignItems(HorizontalAlign.Start)
+                .padding({
+                  left: 15
+                })
+
+                Column() {
+                  Text('我的二维码')
+                    .fontSize(18)
+                    .fontFamily(BaseConstants.FONT_FAMILY_MEDIUM)
+                }
+                .width('80%')
+                .alignItems(HorizontalAlign.Start)
+                .padding({ left: 20 })
+
+                Column() {
+                  StandardIcon({ icon: $r('app.media.ic_public_more') })
+                    .margin({ right: $r('app.float.phone_icon_right') })
+                }
+                .width('10%')
+                .alignItems(HorizontalAlign.End)
+              }
+              .alignItems(VerticalAlign.Center)
+              .height(BaseConstants.FULL_HEIGHT)
+            }
+            .height(40)
+            .width('90%')
+            .alignItems(HorizontalAlign.Start)
+            .backgroundColor('#F1F3F5')
+            .borderRadius({
+              bottomLeft:6,
+              bottomRight:6,
+            }).onClick(()=>{
+              this.openMyQrCode()
+            })
+
+            Column() {
+              Row() {
+                Column() {
+                  StandardIcon({ icon: $r('app.media.ic_public_phone') })
+                    .margin({ right: $r('app.float.phone_icon_right') })
+                }
+                .width('10%')
+                .alignItems(HorizontalAlign.Start)
+                .padding({
+                  left: 15
+                })
+
+                Column() {
+                  Text('扫一扫')
+                    .fontSize(18)
+                    .fontFamily(BaseConstants.FONT_FAMILY_MEDIUM)
+                }
+                .width('80%')
+                .alignItems(HorizontalAlign.Start)
+                .padding({ left: 20 })
+
+                Column() {
+                  StandardIcon({ icon: $r('app.media.ic_public_more') })
+                    .margin({ right: $r('app.float.phone_icon_right') })
+                }
+                .width('10%')
+                .alignItems(HorizontalAlign.End)
+              }
+              .alignItems(VerticalAlign.Center)
+              .height(BaseConstants.FULL_HEIGHT)
+            }
+            .height(40)
+            .width('90%')
+            .alignItems(HorizontalAlign.Start)
+            .backgroundColor('#F1F3F5')
+            .margin({top:20})
+            .borderRadius({
+              topLeft: 6,
+              topRight: 6,
+              bottomLeft:6,
+              bottomRight:6,
+            }).onClick(()=>{
+              this.openScanPage()
+            })
+
+          Column(){
+            Row(){
+              Column(){
+                StandardIcon({ icon: $r('app.media.ic_public_phone') })
+                  .margin({ right: $r('app.float.phone_icon_right') })
+              }
+              .width('10%')
+              .alignItems(HorizontalAlign.Start)
+              .padding({
+                left:15
+              })
+
+              Column(){
+                Text('创建聊天室')
+                  .fontSize(18)
+                  .fontFamily(BaseConstants.FONT_FAMILY_MEDIUM)
+              }.width('80%')
+              .alignItems(HorizontalAlign.Start)
+              .padding({left:20})
+
+              Column(){
+                StandardIcon({ icon: $r('app.media.ic_public_more') })
+                  .margin({ right: $r('app.float.phone_icon_right') })
+              }.width('10%')
+              .alignItems(HorizontalAlign.End)
+            }.alignItems(VerticalAlign.Center)
+            .height(BaseConstants.FULL_HEIGHT)
+          }
+          .height(40)
+          .width('90%')
+          .alignItems(HorizontalAlign.Start)
+          .backgroundColor('#F1F3F5')
+          .margin({top:20})
+          .borderRadius({
+            topLeft: 6,
+            topRight: 6,
+            bottomLeft:6,
+            bottomRight:6,
+          }).onClick(()=>{
+            this.openCreateChatroom()
+          })
 
           Column(){
             Row(){
@@ -508,7 +742,10 @@ export struct MeDetail {
             this.logout()
           })
         }
-        .margin(this.currentBreakpoint === BreakpointConstants.BREAKPOINT_SM ? {} : {
+        .margin(this.currentBreakpoint === BreakpointConstants.BREAKPOINT_SM ? {
+          left: 0,
+          right: 0
+        } : {
           left: $r('app.float.images_column_left'),
           right: $r('app.float.images_column_right')
         })
@@ -522,6 +759,8 @@ export struct MeDetail {
       .margin({ top: $r('app.float.contacts_detail_column_top') })
       .width(BaseConstants.FULL_WIDTH)
       .alignItems(HorizontalAlign.Start)
+      }
+      }
+      .title('我')
     }
   }
-}

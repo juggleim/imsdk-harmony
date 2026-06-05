@@ -1,7 +1,6 @@
 import { promptAction } from '@kit.ArkUI'
 import { BaseConstants } from 'base/src/main/ets/constants/BaseConstants'
 import { JuggleIm, TimePeriod } from 'juggleim'
-import { SettingTop } from './SettingTop'
 
 const TOP_TRACE_TAG:string = 'TOPTRACE'
 
@@ -186,15 +185,6 @@ export default struct GlobalUndisturb {
   build() {
     NavDestination(){
       Column(){
-        Row(){
-          SettingTop({ settingTitle: '免打扰设置' })
-        }
-        .width(BaseConstants.FULL_WIDTH)
-        .height(60)
-        .alignItems(VerticalAlign.Top)
-        .backgroundColor(Color.White)
-        .padding({ top: 20 })
-
         if(this.isLoading){
           Column(){
             LoadingProgress()
@@ -232,6 +222,6 @@ export default struct GlobalUndisturb {
       .width(BaseConstants.FULL_WIDTH)
       .height(BaseConstants.FULL_HEIGHT)
     }
-    .hideTitleBar(true)
+    .title('免打扰设置')
   }
 }

@@ -3,7 +3,6 @@ import { BaseConstants } from 'base/src/main/ets/constants/BaseConstants'
 import { CommonUtil, ObservedArray } from '../../jim/common'
 import { buildMessagePreview } from '../../viewmodel/MessageViewModel'
 import { FavoriteMessage, GetFavoriteMessageOption, JuggleIm, Message } from 'juggleim'
-import { SettingTop } from './SettingTop'
 
 @Observed
 class FavoriteMessageViewItem {
@@ -143,14 +142,6 @@ export default struct MyFavorite{
   build() {
     NavDestination(){
       Column(){
-        Row(){
-          SettingTop({ settingTitle: '我的收藏' })
-        }.width(BaseConstants.FULL_WIDTH)
-        .height(60)
-        .alignItems(VerticalAlign.Top)
-        .backgroundColor(Color.White)
-        .padding({top:20})
-
         if(this.loading && this.items.length == 0){
           Column(){
             LoadingProgress()
@@ -252,6 +243,6 @@ export default struct MyFavorite{
       .width(BaseConstants.FULL_WIDTH)
       .height(BaseConstants.FULL_HEIGHT)
     }
-    .hideTitleBar(true)
+    .title('我的收藏')
   }
 }
