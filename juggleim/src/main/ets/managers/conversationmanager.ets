@@ -429,6 +429,13 @@ export class ConversationManager implements IConversationManager{
     req.conversations = [this.buildProtoConversation(conver)]
     let data = immessage.ConversationsReq.encode(req).finish()
     this.imclient.query("del_convers",JuggleIm.instance.userInfo.userId,data,(code)=>{
+      if(code == 0){
+        let localConver = JimDbManager.instance.getConversationDao().getConver(conver)
+        JimDbManager.instance.getConversationDao().delConver(conver.conversationId, conver.conversationType, conver.subChannel)
+        if(localConver != undefined){
+          this.msgSyncMgr.notifyConversationDelete([localConver])
+        }
+      }
       callback(code)
     })
   }

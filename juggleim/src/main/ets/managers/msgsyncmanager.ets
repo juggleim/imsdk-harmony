@@ -649,11 +649,13 @@ export class MsgSyncManager{
               if(isSenderBroadcast){
                 dbConver.converTime = 0
               }
+              dbConver.unreadCount = Math.max(dbConver.lastMessage.msgUnreadIndex - dbConver.lastReadMsgIndex, 0)
             }else{//update
               if(!isSenderBroadcast){
                 dbConver.converTime = newConverInfo.converTime
               }
               dbConver.lastMessage = newConverInfo.lastMessage
+              dbConver.unreadCount = Math.max(dbConver.lastMessage.msgUnreadIndex - dbConver.lastReadMsgIndex, 0)
               isAdd = false
             }
             //update conver
@@ -989,6 +991,7 @@ export class MsgSyncManager{
       oldMsg.msgContent = recallInfoContent
       msgDao.updateMsgContent(oldMsg.messageId,oldMsg.msgContent)
       this.triggerMsgRecall(oldMsg)
+      this.notifyMessageModified(oldMsg)
     }
   }
 
