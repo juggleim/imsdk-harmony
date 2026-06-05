@@ -1,7 +1,6 @@
 import http from '@ohos.net.http'
 import { BusinessError } from '@kit.BasicServicesKit'
 import { fileIo } from '@kit.CoreFileKit'
-import deviceInfo from '@ohos.deviceInfo'
 import { MediaUploadCredential, MediaUploadCredentialCallback, MediaUploadFileType, MediaUploadOssType, MediaUploadResult } from '../interfaces/imessageuploadprovider'
 import { IMessageUploadProvider } from '../interfaces/imessageuploadprovider'
 import { FileMessage, ImageMessage, MediaMessageContent, VideoMessage, VoiceMessage } from '../entries/message'
@@ -9,19 +8,8 @@ import { JimUtil } from '../commons/jimutil'
 
 class UploadRequestHeaders {
   'Content-Type'?: string
-  'content-type'?: string
-  'content-length'?: string
+  'Content-Length'?: string
   'x-amz-acl'?: string
-  'User-Agent'?: string
-
-  constructor() {
-  }
-}
-
-interface HttpUploadResponse {
-  responseCode:number
-  headers:string
-  body:string
 }
 
 export class DefaultMessageUploadProvider implements IMessageUploadProvider {
@@ -105,123 +93,101 @@ export class DefaultMessageUploadProvider implements IMessageUploadProvider {
     onError: (code: number, message: string) => void,
     onCancel: () => void
   ): void {
-    let payload: ArrayBuffer
-    try {
-      payload = this.readFileToBuffer(msg.localPath)
-    } catch (error) {
-      let bizError = error as BusinessError
-      console.error(`jimsdk_media_upload_read_fail: code=${bizError.code}, message=${bizError.message}`)
-      onError(bizError.code, bizError.message)
-      return
-    }
-
-    let requestTask = http.createHttp()
-    requestTask.on('headersReceive', (headers:Object) => {
-      console.info(`${this.traceTag}_http_headers: ossType=${credential.ossType}, headers=${JSON.stringify(headers)}`)
-    })
-    requestTask.on('dataSendProgress', (info: http.DataSendProgressInfo) => {
-      if (info.totalSize <= 0) {
+    void (async (): Promise<void> => {
+      let payload: ArrayBuffer
+      try {
+        payload = this.readFileToBuffer(msg.localPath)
+      } catch (error) {
+        let bizError = error as BusinessError
+        console.error(`jimsdk_media_upload_read_fail: code=${bizError.code}, message=${bizError.message}`)
+        onError(bizError.code, bizError.message)
         return
       }
-      let progress = Math.floor(info.sendSize * 100 / info.totalSize)
-      if (progress < 0) {
-        progress = 0
-      }
-      if (progress > 100) {
-        progress = 100
-      }
-      onProgress(progress)
-    })
 
-    let headers: UploadRequestHeaders
-    let userAgent = this.buildUserAgent()
-    if (credential.ossType == MediaUploadOssType.s3) {
-      headers = {
-        'content-length': `${payload.byteLength}`,
-        'x-amz-acl': 'public-read',
-        'User-Agent': userAgent
-      } as UploadRequestHeaders
-    } else {
-      headers = {
-        'content-length': `${payload.byteLength}`,
-        'User-Agent': userAgent
-      } as UploadRequestHeaders
-    }
-    let requestContentType = ''
-    let requestPathRaw = this.getUploadUrlPath(credential.uploadUrl)
-    let requestPathDecoded = this.decodeUrlPath(requestPathRaw)
-    let requestMsg = this.buildUploadMsgSummary(msg, credential.ossType, msg.localPath)
-    console.info(
-      `${this.traceTag}_http_request: location=${this.uploadPreSignLocation}, method=PUT, url=${credential.uploadUrl}, ` +
-      `requestMsg=${requestMsg}, requestContentType=${requestContentType}, rawPath=${requestPathRaw}, decodedPath=${requestPathDecoded}, ` +
-      `headers=${JSON.stringify(headers)}, ` +
-      `curl=${this.buildPreSignCurl(credential.uploadUrl, msg.localPath, payload.byteLength, credential.ossType == MediaUploadOssType.s3)}`
-    )
+      let requestTask = http.createHttp()
+      requestTask.on('dataSendProgress', (info: http.DataSendProgressInfo) => {
+        if (info.totalSize <= 0) {
+          return
+        }
+        let progress = Math.floor(info.sendSize * 100 / info.totalSize)
+        if (progress < 0) {
+          progress = 0
+        }
+        if (progress > 100) {
+          progress = 100
+        }
+        onProgress(progress)
+      })
 
-    let responseStatusCode = -1
-    let responseBodyParts:string[] = []
-    let responseEnded = false
-    let responseLogged = false
-    let cleanup = ():void => {
-      requestTask.off('dataSendProgress')
-      requestTask.off('headersReceive')
-      requestTask.off('dataReceive')
-      requestTask.off('dataEnd')
-      requestTask.destroy()
-    }
-    let tryFinalize = ():void => {
-      if(responseLogged || !responseEnded || responseStatusCode < 0){
-        return
+      let headers: UploadRequestHeaders
+      if (credential.ossType == MediaUploadOssType.s3) {
+        headers = {
+          'Content-Type': '',
+          'Content-Length': `${payload.byteLength}`,
+          'x-amz-acl': 'public-read'
+        } as UploadRequestHeaders
+      } else {
+        headers = {
+          'Content-Type': '',
+          'Content-Length': `${payload.byteLength}`
+        } as UploadRequestHeaders
       }
-      responseLogged = true
-      let responseBody = responseBodyParts.join('')
+      let requestContentType = ''
+      let requestPathRaw = this.getUploadUrlPath(credential.uploadUrl)
+      let requestPathDecoded = this.decodeUrlPath(requestPathRaw)
+      let requestMsg = this.buildUploadMsgSummary(msg, credential.ossType, msg.localPath)
       console.info(
-        `${this.traceTag}_http_response: location=${this.uploadPreSignLocation}, ossType=${credential.ossType}, ` +
-        `url=${credential.uploadUrl}, responseCode=${responseStatusCode}, responseBodyLength=${responseBody.length}`
+        `${this.traceTag}_http_request: location=${this.uploadPreSignLocation}, method=PUT, url=${credential.uploadUrl}, ` +
+        `requestMsg=${requestMsg}, requestContentType=${requestContentType}, rawPath=${requestPathRaw}, decodedPath=${requestPathDecoded}, ` +
+        `headers=${JSON.stringify(headers)}, ` +
+        `curl=${this.buildPreSignCurl(credential.uploadUrl, msg.localPath, payload.byteLength, credential.ossType == MediaUploadOssType.s3)}`
       )
-      this.logHttpResponseBody(responseStatusCode, credential.uploadUrl, responseBody, requestContentType, requestPathRaw, requestPathDecoded, requestMsg)
-      cleanup()
-      if (responseStatusCode < 200 || responseStatusCode >= 300) {
-        console.error(
-          `${this.traceTag}_http_response_fail: location=${this.uploadPreSignLocation}, ossType=${credential.ossType}, ` +
-          `url=${credential.uploadUrl}, responseCode=${responseStatusCode}`
+
+      try {
+        let response = await requestTask.request(credential.uploadUrl, {
+          method: http.RequestMethod.PUT,
+          extraData: payload,
+          header: headers,
+          expectDataType: http.HttpDataType.STRING,
+          readTimeout: 20000,
+          connectTimeout: 20000
+        })
+        let responseStatusCode = response.responseCode
+        let responseBody = response.result != undefined && response.result != null ? `${response.result}` : ''
+        console.info(
+          `${this.traceTag}_http_response: location=${this.uploadPreSignLocation}, ossType=${credential.ossType}, ` +
+          `url=${credential.uploadUrl}, responseCode=${responseStatusCode}, responseBodyLength=${responseBody.length}`
         )
-        onError(responseStatusCode, `HTTP ${responseStatusCode}`)
-        return
-      }
-      onProgress(100)
-      onSuccess(this.buildUploadResult(msg, credential, ''))
-    }
-
-    requestTask.on('dataReceive', (data:ArrayBuffer) => {
-      let chunk = JimUtil.uint8ArrayToString(JimUtil.arrayBufferToUint8Array(data))
-      responseBodyParts.push(chunk)
-    })
-    requestTask.on('dataEnd', () => {
-      responseEnded = true
-      tryFinalize()
-    })
-
-    requestTask.requestInStream(credential.uploadUrl, {
-      method: http.RequestMethod.PUT,
-      extraData: payload,
-      header: headers,
-      usingCache: false,
-      readTimeout: 20000,
-      connectTimeout: 20000
-    }, (err: BusinessError | undefined, responseCodeValue: number) => {
-      if (err) {
-        cleanup()
+        this.logHttpResponseBody(
+          responseStatusCode,
+          credential.uploadUrl,
+          responseBody,
+          requestContentType,
+          requestPathRaw,
+          requestPathDecoded,
+          requestMsg
+        )
+        if (responseStatusCode < 200 || responseStatusCode >= 300) {
+          console.error(
+            `${this.traceTag}_http_response_fail: location=${this.uploadPreSignLocation}, ossType=${credential.ossType}, ` +
+            `url=${credential.uploadUrl}, responseCode=${responseStatusCode}`
+          )
+          onError(responseStatusCode, `HTTP ${responseStatusCode}`)
+          return
+        }
+        onProgress(100)
+        onSuccess(this.buildUploadResult(msg, credential, ''))
+      } catch (error) {
+        let bizError = error as BusinessError
         console.error(
           `${this.traceTag}_http_fail: location=${this.uploadPreSignLocation}, ossType=${credential.ossType}, ` +
-          `url=${credential.uploadUrl}, code=${err.code}, message=${err.message}`
+          `url=${credential.uploadUrl}, code=${bizError.code}, message=${bizError.message}`
         )
-        onError(err.code, err.message)
-        return
+        onError(bizError.code, bizError.message)
+      } finally {
+        requestTask.destroy()
       }
-      responseStatusCode = responseCodeValue
-      tryFinalize()
-    })
+    })()
   }
 
   private uploadByQiniu(
@@ -232,122 +198,94 @@ export class DefaultMessageUploadProvider implements IMessageUploadProvider {
     onError: (code: number, message: string) => void,
     onCancel: () => void
   ): void {
-    let payload: ArrayBuffer
-    try {
-      payload = this.readFileToBuffer(msg.localPath)
-    } catch (error) {
-      let bizError = error as BusinessError
-      console.error(`jimsdk_media_upload_read_fail: code=${bizError.code}, message=${bizError.message}`)
-      onError(bizError.code, bizError.message)
-      return
-    }
-
-    let fileName = this.getFileName(msg.localPath)
-    if (fileName == '') {
-      onError(-6, 'file name is empty')
-      return
-    }
-    let key = credential.objKey.trim() != '' ? credential.objKey : fileName
-    let boundary = this.buildMultipartBoundary()
-    let multipart = this.buildQiniuMultipartBody(boundary, credential.token, key, fileName, payload)
-
-    let requestTask = http.createHttp()
-    requestTask.on('headersReceive', (headers:Object) => {
-      console.info(`${this.traceTag}_qiniu_headers: headers=${JSON.stringify(headers)}`)
-    })
-    requestTask.on('dataSendProgress', (info: http.DataSendProgressInfo) => {
-      if (info.totalSize <= 0) {
+    void (async (): Promise<void> => {
+      let payload: ArrayBuffer
+      try {
+        payload = this.readFileToBuffer(msg.localPath)
+      } catch (error) {
+        let bizError = error as BusinessError
+        console.error(`jimsdk_media_upload_read_fail: code=${bizError.code}, message=${bizError.message}`)
+        onError(bizError.code, bizError.message)
         return
       }
-      let progress = Math.floor(info.sendSize * 100 / info.totalSize)
-      if (progress < 0) {
-        progress = 0
-      }
-      if (progress > 100) {
-        progress = 100
-      }
-      onProgress(progress)
-    })
 
-    let headers: UploadRequestHeaders = {
-      'Content-Type': `multipart/form-data; boundary=${boundary}`,
-      'content-length': `${multipart.byteLength}`,
-      'User-Agent': this.buildUserAgent()
-    } as UploadRequestHeaders
-    let requestContentType = `multipart/form-data; boundary=${boundary}`
-    let requestUrl = 'https://upload.qiniup.com'
-    let requestMsg = this.buildUploadMsgSummary(msg, credential.ossType, msg.localPath)
-    console.info(
-      `${this.traceTag}_qiniu_request: location=${this.uploadQiniuLocation}, method=POST, url=${requestUrl}, ` +
-      `requestMsg=${requestMsg}, headers=${JSON.stringify(headers)}, ` +
-      `curl=${this.buildQiniuCurl(credential, key, msg.localPath, fileName, multipart.byteLength)}`
-    )
-
-    let requestPathRaw = this.getUploadUrlPath(requestUrl)
-    let requestPathDecoded = this.decodeUrlPath(requestPathRaw)
-    let responseStatusCode = -1
-    let responseBodyParts:string[] = []
-    let responseEnded = false
-    let responseLogged = false
-    let cleanup = ():void => {
-      requestTask.off('dataSendProgress')
-      requestTask.off('headersReceive')
-      requestTask.off('dataReceive')
-      requestTask.off('dataEnd')
-      requestTask.destroy()
-    }
-    let tryFinalize = ():void => {
-      if(responseLogged || !responseEnded || responseStatusCode < 0){
+      let fileName = this.getFileName(msg.localPath)
+      if (fileName == '') {
+        onError(-6, 'file name is empty')
         return
       }
-      responseLogged = true
-      let responseBody = responseBodyParts.join('')
+      let key = credential.objKey.trim() != '' ? credential.objKey : fileName
+      let boundary = this.buildMultipartBoundary()
+      let multipart = this.buildQiniuMultipartBody(boundary, credential.token, key, fileName, payload)
+
+      let requestTask = http.createHttp()
+      requestTask.on('dataSendProgress', (info: http.DataSendProgressInfo) => {
+        if (info.totalSize <= 0) {
+          return
+        }
+        let progress = Math.floor(info.sendSize * 100 / info.totalSize)
+        if (progress < 0) {
+          progress = 0
+        }
+        if (progress > 100) {
+          progress = 100
+        }
+        onProgress(progress)
+      })
+
+      let headers: UploadRequestHeaders = {
+        'Content-Type': `multipart/form-data; boundary=${boundary}`,
+        'Content-Length': `${multipart.byteLength}`
+      } as UploadRequestHeaders
+      let requestContentType = `multipart/form-data; boundary=${boundary}`
+      let requestUrl = 'https://upload.qiniup.com'
+      let requestMsg = this.buildUploadMsgSummary(msg, credential.ossType, msg.localPath)
+      let requestPathRaw = this.getUploadUrlPath(requestUrl)
+      let requestPathDecoded = this.decodeUrlPath(requestPathRaw)
       console.info(
-        `${this.traceTag}_qiniu_response: location=${this.uploadQiniuLocation}, url=${requestUrl}, ` +
-        `responseCode=${responseStatusCode}, responseBodyLength=${responseBody.length}, requestContentType=${requestContentType}, ` +
-        `rawPath=${requestPathRaw}, decodedPath=${requestPathDecoded}`
+        `${this.traceTag}_qiniu_request: location=${this.uploadQiniuLocation}, method=POST, url=${requestUrl}, ` +
+        `requestMsg=${requestMsg}, requestContentType=${requestContentType}, rawPath=${requestPathRaw}, decodedPath=${requestPathDecoded}, ` +
+        `headers=${JSON.stringify(headers)}, ` +
+        `curl=${this.buildQiniuCurl(credential, key, msg.localPath, fileName, multipart.byteLength)}`
       )
-      this.logHttpResponseBody(responseStatusCode, requestUrl, responseBody, requestContentType, requestPathRaw, requestPathDecoded, requestMsg)
-      cleanup()
-      if(responseStatusCode < 200 || responseStatusCode >= 300){
-        console.error(
-          `${this.traceTag}_qiniu_response_fail: location=${this.uploadQiniuLocation}, url=${requestUrl}, responseCode=${responseStatusCode}`
+
+      try {
+        let response = await requestTask.request(requestUrl, {
+          method: http.RequestMethod.POST,
+          extraData: multipart,
+          header: headers,
+          expectDataType: http.HttpDataType.STRING,
+          readTimeout: 20000,
+          connectTimeout: 20000
+        })
+        let responseStatusCode = response.responseCode
+        let responseBody = response.result != undefined && response.result != null ? `${response.result}` : ''
+        console.info(
+          `${this.traceTag}_qiniu_response: location=${this.uploadQiniuLocation}, url=${requestUrl}, ` +
+          `responseCode=${responseStatusCode}, responseBodyLength=${responseBody.length}, requestContentType=${requestContentType}, ` +
+          `rawPath=${requestPathRaw}, decodedPath=${requestPathDecoded}`
         )
-        onError(responseStatusCode, `HTTP ${responseStatusCode}`)
-        return
-      }
-      onProgress(100)
-      onSuccess(this.buildUploadResult(msg, credential, key))
-    }
-
-    requestTask.on('dataReceive', (data:ArrayBuffer) => {
-      responseBodyParts.push(JimUtil.uint8ArrayToString(JimUtil.arrayBufferToUint8Array(data)))
-    })
-    requestTask.on('dataEnd', () => {
-      responseEnded = true
-      tryFinalize()
-    })
-
-    requestTask.requestInStream(requestUrl, {
-      method: http.RequestMethod.POST,
-      extraData: multipart,
-      header: headers,
-      usingCache: false,
-      readTimeout: 20000,
-      connectTimeout: 20000
-    }, (err: BusinessError | undefined, responseCodeValue: number) => {
-      if (err) {
-        cleanup()
+        this.logHttpResponseBody(responseStatusCode, requestUrl, responseBody, requestContentType, requestPathRaw, requestPathDecoded, requestMsg)
+        if (responseStatusCode < 200 || responseStatusCode >= 300) {
+          console.error(
+            `${this.traceTag}_qiniu_response_fail: location=${this.uploadQiniuLocation}, url=${requestUrl}, responseCode=${responseStatusCode}`
+          )
+          onError(responseStatusCode, `HTTP ${responseStatusCode}`)
+          return
+        }
+        onProgress(100)
+        onSuccess(this.buildUploadResult(msg, credential, key))
+      } catch (error) {
+        let bizError = error as BusinessError
         console.error(
           `${this.traceTag}_qiniu_fail: location=${this.uploadQiniuLocation}, url=${requestUrl}, ` +
-          `code=${err.code}, message=${err.message}`
+          `code=${bizError.code}, message=${bizError.message}`
         )
-        onError(err.code, err.message)
-        return
+        onError(bizError.code, bizError.message)
+      } finally {
+        requestTask.destroy()
       }
-      responseStatusCode = responseCodeValue
-      tryFinalize()
-    })
+    })()
   }
 
   private buildQiniuMultipartBody(boundary: string, token: string, key: string, fileName: string, payload: ArrayBuffer): ArrayBuffer {
@@ -372,24 +310,10 @@ export class DefaultMessageUploadProvider implements IMessageUploadProvider {
     return `msgType=${msg.getContentType()}, localPath=${localPath}, ossType=${ossType}, uploadState=${msg.uploadState}, uploadProgress=${msg.uploadProgress}`
   }
 
-  private buildUserAgent(): string {
-    let brand = deviceInfo.brand.trim()
-    let model = deviceInfo.productModel.trim()
-    let osFullName = deviceInfo.osFullName.trim()
-    let devicePart = brand != '' && model != '' ? `${brand} ${model}` : (brand != '' ? brand : model)
-    if (devicePart == '') {
-      devicePart = 'HarmonyOS'
-    }
-    if (osFullName == '') {
-      osFullName = 'HarmonyOS'
-    }
-    return `Mozilla/5.0 (${devicePart}; ${osFullName}) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Mobile Safari/537.36 JuggleIm/1.0`
-  }
-
   private buildPreSignCurl(url: string, filePath: string, contentLength: number, isS3: boolean): string {
     let parts:string[] = []
     parts.push(`curl -X PUT '${this.escapeCurlSingleQuote(url)}'`)
-    parts.push(`-H 'content-length: ${contentLength}'`)
+    parts.push(`-H 'Content-Length: ${contentLength}'`)
     if(isS3){
       parts.push(`-H 'x-amz-acl: public-read'`)
     }
@@ -401,7 +325,7 @@ export class DefaultMessageUploadProvider implements IMessageUploadProvider {
     let parts:string[] = []
     parts.push(`curl -X POST 'https://upload.qiniup.com'`)
     parts.push(`-H 'Content-Type: multipart/form-data'`)
-    parts.push(`-H 'content-length: ${contentLength}'`)
+    parts.push(`-H 'Content-Length: ${contentLength}'`)
     parts.push(`-F 'token=${this.escapeCurlSingleQuote(credential.token)}'`)
     parts.push(`-F 'key=${this.escapeCurlSingleQuote(key)}'`)
     parts.push(`-F 'file=@${this.escapeCurlSingleQuote(filePath)};filename=${this.escapeCurlSingleQuote(fileName)}'`)
