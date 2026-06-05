@@ -30,6 +30,9 @@ import {
   ConversationUpdateListener,
   GetConversationDirection,
   GetConversationOptions,
+  Message,
+  MsgModifiedListener,
+  MsgReceivedListener,
   JuggleIm
 } from 'juggleim'
 import { toConverViewItem } from '../viewmodel/ConversationViewModel'
@@ -39,6 +42,7 @@ const RECONNECT_RELOAD_LISTENER_KEY:string = 'conversation_list_reconnect_reload
 @Component
 export struct ConversationList {
   @StorageProp('currentBreakpoint') currentBreakpoint: string = BreakpointConstants.BREAKPOINT_SM;
+  @StorageProp('conversationListRefreshTick') @Watch('watchConversationListRefreshTick') conversationListRefreshTick: number = 0;
   @Link currentConversationUserName: ResourceStr;
   @Link currentContactUserName: string;
   @State conversationList:ObservedArray<ConversationViewItem>=new ObservedArray<ConversationViewItem>([])
@@ -53,9 +57,12 @@ export struct ConversationList {
   private touchStartTimeMap:Map<string,number> = new Map()
   private suppressClickKey:string = ''
   private suppressClickTimer:number = -1
+  private conversationReloadTimer:number = -1
   private converAddListener:ConversationAddListener = ()=>{}
   private converUpdListener:ConversationUpdateListener = ()=>{}
   private converDelListener:ConversationDeleteListener = ()=>{}
+  private msgReceiveListener:MsgReceivedListener = async (_message)=>{}
+  private msgModifiedListener:MsgModifiedListener = async (_message)=>{}
 
   private showToast(message:string):void{
     promptAction.showToast({
@@ -63,6 +70,10 @@ export struct ConversationList {
       duration: 1500,
       bottom: 100
     })
+  }
+
+  watchConversationListRefreshTick():void{
+    this.reloadConversations()
   }
 
   private openQuickActionPanel():void{
@@ -101,6 +112,29 @@ export struct ConversationList {
     this.conversationList.forEach((item)=>{
       this.recordConverTime(item.converTime)
     })
+  }
+
+  private refreshConversationByMessage(message:Message):void{
+    let conversation = message.conversation
+    if(conversation == null || conversation.conversationId == ''){
+      return
+    }
+    this.scheduleConversationReload()
+    JuggleIm.instance.getConversationManager().getConversation(conversation, (code, converInfo)=>{
+      if(code == 0 && converInfo != null){
+        this.applyConversationItems([converInfo])
+      }
+    })
+  }
+
+  private scheduleConversationReload():void{
+    if(this.conversationReloadTimer >= 0){
+      clearTimeout(this.conversationReloadTimer)
+    }
+    this.conversationReloadTimer = setTimeout(()=>{
+      this.conversationReloadTimer = -1
+      this.reloadConversations()
+    }, 180)
   }
 
   private applyConversationItems(convers:ConversationInfo[]):void{
@@ -382,15 +416,25 @@ export struct ConversationList {
   }
 
   aboutToDisappear(): void {
-    JuggleIm.instance.getConnectionManager().removeConnectStatusListener(RECONNECT_RELOAD_LISTENER_KEY)
-    JuggleIm.instance.getConversationManager().removeConversationAddListener(this.converAddListener)
-    JuggleIm.instance.getConversationManager().removeConversationUpdateListener(this.converUpdListener)
-    JuggleIm.instance.getConversationManager().removeConversationDeleteListener(this.converDelListener)
+    if(this.conversationReloadTimer >= 0){
+      clearTimeout(this.conversationReloadTimer)
+      this.conversationReloadTimer = -1
+    }
+  }
+
+  onPageShow(): void {
+    this.reloadConversations()
   }
 
   aboutToAppear(): void {
     this.resetConverTimes()
     this.conversationList = new ObservedArray<ConversationViewItem>([])
+    JuggleIm.instance.getConnectionManager().removeConnectStatusListener(RECONNECT_RELOAD_LISTENER_KEY)
+    JuggleIm.instance.getConversationManager().removeConversationAddListener(this.converAddListener)
+    JuggleIm.instance.getConversationManager().removeConversationUpdateListener(this.converUpdListener)
+    JuggleIm.instance.getConversationManager().removeConversationDeleteListener(this.converDelListener)
+    JuggleIm.instance.getMessageManager().removeMsgReceivedListener(this.msgReceiveListener)
+    JuggleIm.instance.getMessageManager().removeMsgModifiedListener(this.msgModifiedListener)
 
     JuggleIm.instance.getConnectionManager().addConnectStatusListener(RECONNECT_RELOAD_LISTENER_KEY, (status, _code, _userId) => {
       if(status == ConnStatus.connected){
@@ -419,6 +463,15 @@ export struct ConversationList {
       this.removeConversationItems(convers)
     }
     JuggleIm.instance.getConversationManager().addConversationDeleteListener(this.converDelListener)
+
+    this.msgReceiveListener = async (message)=>{
+      this.refreshConversationByMessage(message)
+    }
+    this.msgModifiedListener = async (message)=>{
+      this.refreshConversationByMessage(message)
+    }
+    JuggleIm.instance.getMessageManager().addMsgReceivedListener(this.msgReceiveListener)
+    JuggleIm.instance.getMessageManager().addMsgModifiedListener(this.msgModifiedListener)
   }
 
   private queryConversations(direction:GetConversationDirection, time:number, reset:boolean):void{

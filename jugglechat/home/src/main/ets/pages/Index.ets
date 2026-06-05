@@ -76,6 +76,7 @@ export struct Index {
 
   aboutToAppear(): void {
     //init juggleim
+    AppStorage.SetOrCreate('conversationListRefreshTick', 0)
     initJuggleIm((status,code)=>{
       console.log("jimsdk_init_sdk. status:",status,"\tcode:",code)
     })

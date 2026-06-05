@@ -116,64 +116,51 @@ export struct MeDetail {
       bottom: 100
     })
     router.replaceUrl({
-      url: 'pages/Index'
+      url: 'pages/Login'
     })
   }
 
   build() {
     NavDestination() {
-      Stack({ alignContent: Alignment.Top }) {
       Column() {
-      }
-      .width(BaseConstants.FULL_WIDTH)
-      .height(BaseConstants.FULL_HEIGHT)
-      .backgroundColor($r('app.color.background_color_pink'))
-      .padding({
-        top: deviceInfo.deviceType === BaseConstants.DEVICE_2IN1 ? $r('app.float.zero') :
-        $r('app.float.device_padding_top')
-      })
-
-      if (this.myAvatar != '') {
-        Image(this.myAvatar)
-          .height($r('app.float.contacts_detail_avatar_height'))
-          .margin({ top: $r('app.float.contacts_detail_avatar_top') })
-          .zIndex(HomeConstants.CONTACTS_DETAIL_AVATAR_Z_INDEX)
-          .border({
-            width: $r('app.float.contacts_detail_avatar_border_width'),
-            color: Color.White,
-            radius: $r('app.float.contacts_detail_avatar_border_radius')
-          })
-      } else {
-        Stack() {
-          Text(this.getNameFirstChar()).fontColor(Color.White).fontSize(58)
-        }
-        .backgroundColor(this.getDefaultBackgroundColor())
-        .height(124)
-        .width(124)
-        .margin({ top: 84 })
-        .zIndex(HomeConstants.CONTACTS_DETAIL_AVATAR_Z_INDEX)
-        .border({
-          width: 5,
-          color: Color.White,
-          radius: 100
-        })
-        .borderRadius(200)
-      }
-
-      Column() {
-        Column() {
+        Scroll() {
           Column() {
-            Text(this.myName)
-              .fontSize(BaseConstants.FONT_SIZE_THIRTY_TWO)
-              .fontFamily(BaseConstants.FONT_FAMILY_MEDIUM)
-              .fontWeight(BaseConstants.FONT_WEIGHT_FIVE)
-              .fontColor(Color.Black)
-              .maxLines(1)
-              .textOverflow({ overflow: TextOverflow.Ellipsis })
-          }
-          .width(BaseConstants.FULL_WIDTH)
-          .alignItems(HorizontalAlign.Center)
-            .padding({ top: $r('app.float.contacts_detail_user_top') })
+            Column() {
+              if (this.myAvatar != '') {
+                Image(this.myAvatar)
+                  .height($r('app.float.contacts_detail_avatar_height'))
+                  .width($r('app.float.contacts_detail_avatar_height'))
+                  .borderRadius($r('app.float.contacts_detail_avatar_border_radius'))
+              } else {
+                Stack() {
+                  Text(this.getNameFirstChar())
+                    .fontColor(Color.White)
+                    .fontSize(58)
+                }
+                .backgroundColor(this.getDefaultBackgroundColor())
+                .height(124)
+                .width(124)
+                .border({
+                  width: 5,
+                  color: Color.White,
+                  radius: 100
+                })
+                .borderRadius(200)
+              }
+              Text(this.myName)
+                .fontSize(BaseConstants.FONT_SIZE_THIRTY_TWO)
+                .fontFamily(BaseConstants.FONT_FAMILY_MEDIUM)
+                .fontWeight(BaseConstants.FONT_WEIGHT_FIVE)
+                .fontColor(Color.Black)
+                .maxLines(1)
+                .textOverflow({ overflow: TextOverflow.Ellipsis })
+                .margin({ top: 12 })
+            }
+            .width('100%')
+            .padding({ top: 20, bottom: 24 })
+            .alignItems(HorizontalAlign.Center)
+            .backgroundColor(Color.White)
+            .borderRadius(8)
 
             Column() {
               Row() {
@@ -183,9 +170,7 @@ export struct MeDetail {
                 }
                 .width('10%')
                 .alignItems(HorizontalAlign.Start)
-                .padding({
-                  left: 15
-                })
+                .padding({ left: 15 })
 
                 Column() {
                   Text('个人资料')
@@ -207,18 +192,18 @@ export struct MeDetail {
               .height(BaseConstants.FULL_HEIGHT)
             }
             .height(40)
-            .width('90%')
+            .width('100%')
             .alignItems(HorizontalAlign.Start)
             .backgroundColor('#F1F3F5')
-            .margin({ top: 40 })
             .borderRadius({
               topLeft: 6,
               topRight: 6
-            }).onClick(()=>{
+            })
+            .onClick(()=>{
               this.openProfileSetting()
             })
 
-            Divider().width('90%')
+            Divider().width('100%')
 
             Column() {
               Row() {
@@ -228,9 +213,7 @@ export struct MeDetail {
                 }
                 .width('10%')
                 .alignItems(HorizontalAlign.Start)
-                .padding({
-                  left: 15
-                })
+                .padding({ left: 15 })
 
                 Column() {
                   Text('我的二维码')
@@ -252,13 +235,14 @@ export struct MeDetail {
               .height(BaseConstants.FULL_HEIGHT)
             }
             .height(40)
-            .width('90%')
+            .width('100%')
             .alignItems(HorizontalAlign.Start)
             .backgroundColor('#F1F3F5')
             .borderRadius({
-              bottomLeft:6,
-              bottomRight:6,
-            }).onClick(()=>{
+              bottomLeft: 6,
+              bottomRight: 6
+            })
+            .onClick(()=>{
               this.openMyQrCode()
             })
 
@@ -270,9 +254,7 @@ export struct MeDetail {
                 }
                 .width('10%')
                 .alignItems(HorizontalAlign.Start)
-                .padding({
-                  left: 15
-                })
+                .padding({ left: 15 })
 
                 Column() {
                   Text('扫一扫')
@@ -294,473 +276,498 @@ export struct MeDetail {
               .height(BaseConstants.FULL_HEIGHT)
             }
             .height(40)
-            .width('90%')
+            .width('100%')
             .alignItems(HorizontalAlign.Start)
             .backgroundColor('#F1F3F5')
-            .margin({top:20})
+            .margin({ top: 20 })
             .borderRadius({
               topLeft: 6,
               topRight: 6,
-              bottomLeft:6,
-              bottomRight:6,
-            }).onClick(()=>{
+              bottomLeft: 6,
+              bottomRight: 6
+            })
+            .onClick(()=>{
               this.openScanPage()
             })
 
-          Column(){
-            Row(){
-              Column(){
-                StandardIcon({ icon: $r('app.media.ic_public_phone') })
-                  .margin({ right: $r('app.float.phone_icon_right') })
+            Column() {
+              Row() {
+                Column() {
+                  StandardIcon({ icon: $r('app.media.ic_public_phone') })
+                    .margin({ right: $r('app.float.phone_icon_right') })
+                }
+                .width('10%')
+                .alignItems(HorizontalAlign.Start)
+                .padding({ left: 15 })
+
+                Column() {
+                  Text('创建聊天室')
+                    .fontSize(18)
+                    .fontFamily(BaseConstants.FONT_FAMILY_MEDIUM)
+                }
+                .width('80%')
+                .alignItems(HorizontalAlign.Start)
+                .padding({ left: 20 })
+
+                Column() {
+                  StandardIcon({ icon: $r('app.media.ic_public_more') })
+                    .margin({ right: $r('app.float.phone_icon_right') })
+                }
+                .width('10%')
+                .alignItems(HorizontalAlign.End)
               }
-              .width('10%')
-              .alignItems(HorizontalAlign.Start)
-              .padding({
-                left:15
-              })
-
-              Column(){
-                Text('创建聊天室')
-                  .fontSize(18)
-                  .fontFamily(BaseConstants.FONT_FAMILY_MEDIUM)
-              }.width('80%')
-              .alignItems(HorizontalAlign.Start)
-              .padding({left:20})
-
-              Column(){
-                StandardIcon({ icon: $r('app.media.ic_public_more') })
-                  .margin({ right: $r('app.float.phone_icon_right') })
-              }.width('10%')
-              .alignItems(HorizontalAlign.End)
-            }.alignItems(VerticalAlign.Center)
-            .height(BaseConstants.FULL_HEIGHT)
-          }
-          .height(40)
-          .width('90%')
-          .alignItems(HorizontalAlign.Start)
-          .backgroundColor('#F1F3F5')
-          .margin({top:20})
-          .borderRadius({
-            topLeft: 6,
-            topRight: 6,
-            bottomLeft:6,
-            bottomRight:6,
-          }).onClick(()=>{
-            this.openCreateChatroom()
-          })
-
-          Column(){
-            Row(){
-              Column(){
-                StandardIcon({ icon: $r('app.media.ic_public_phone') })
-                  .margin({ right: $r('app.float.phone_icon_right') })
-              }
-              .width('10%')
-              .alignItems(HorizontalAlign.Start)
-              .padding({
-                left:15
-              })
-
-              Column(){
-                Text('好友验证')
-                  .fontSize(18)
-                  .fontFamily(BaseConstants.FONT_FAMILY_MEDIUM)
-              }.width('80%')
-              .alignItems(HorizontalAlign.Start)
-              .padding({left:20})
-
-              Column(){
-                StandardIcon({ icon: $r('app.media.ic_public_more') })
-                  .margin({ right: $r('app.float.phone_icon_right') })
-              }.width('10%')
-              .alignItems(HorizontalAlign.End)
-            }.alignItems(VerticalAlign.Center)
-            .height(BaseConstants.FULL_HEIGHT)
-          }
-          .height(40)
-          .width('90%')
-          .alignItems(HorizontalAlign.Start)
-          .backgroundColor('#F1F3F5')
-          .margin({top:45})
-          .borderRadius({
-            topLeft: 6,
-            topRight: 6
-          }).onClick(()=>{
-            if (this.mySettingPageInfo.size() > 1) {
-              this.mySettingPageInfo.pop()
+              .alignItems(VerticalAlign.Center)
+              .height(BaseConstants.FULL_HEIGHT)
             }
-            this.mySettingPageInfo.pushPath({name:'FriendVerify'})
-          })
+            .height(40)
+            .width('100%')
+            .alignItems(HorizontalAlign.Start)
+            .backgroundColor('#F1F3F5')
+            .margin({ top: 20 })
+            .borderRadius({
+              topLeft: 6,
+              topRight: 6,
+              bottomLeft: 6,
+              bottomRight: 6
+            })
+            .onClick(()=>{
+              this.openCreateChatroom()
+            })
 
-          Divider().width('90%')
+            Column() {
+              Row() {
+                Column() {
+                  StandardIcon({ icon: $r('app.media.ic_public_phone') })
+                    .margin({ right: $r('app.float.phone_icon_right') })
+                }
+                .width('10%')
+                .alignItems(HorizontalAlign.Start)
+                .padding({ left: 15 })
 
-          Column(){
-            Row(){
-              Column(){
-                StandardIcon({ icon: $r('app.media.ic_public_phone') })
-                  .margin({ right: $r('app.float.phone_icon_right') })
+                Column() {
+                  Text('好友验证')
+                    .fontSize(18)
+                    .fontFamily(BaseConstants.FONT_FAMILY_MEDIUM)
+                }
+                .width('80%')
+                .alignItems(HorizontalAlign.Start)
+                .padding({ left: 20 })
+
+                Column() {
+                  StandardIcon({ icon: $r('app.media.ic_public_more') })
+                    .margin({ right: $r('app.float.phone_icon_right') })
+                }
+                .width('10%')
+                .alignItems(HorizontalAlign.End)
               }
-              .width('10%')
-              .alignItems(HorizontalAlign.Start)
-              .padding({
-                left:15
-              })
-
-              Column(){
-                Text('免打扰设置')
-                  .fontSize(18)
-                  .fontFamily(BaseConstants.FONT_FAMILY_MEDIUM)
-              }.width('80%')
-              .alignItems(HorizontalAlign.Start)
-              .padding({left:20})
-
-              Column(){
-                StandardIcon({ icon: $r('app.media.ic_public_more') })
-                  .margin({ right: $r('app.float.phone_icon_right') })
-              }.width('10%')
-              .alignItems(HorizontalAlign.End)
-            }.alignItems(VerticalAlign.Center)
-            .height(BaseConstants.FULL_HEIGHT)
-          }
-          .height(40)
-          .width('90%')
-          .alignItems(HorizontalAlign.Start)
-          .backgroundColor('#F1F3F5')
-          .borderRadius({
-            bottomLeft:6,
-            bottomRight:6,
-          }).onClick(()=>{
-            if (this.mySettingPageInfo.size() > 1) {
-              this.mySettingPageInfo.pop()
+              .alignItems(VerticalAlign.Center)
+              .height(BaseConstants.FULL_HEIGHT)
             }
-            this.mySettingPageInfo.pushPath({name:'GlobalUndisturb'})
-          })
-
-          Column(){
-            Row(){
-              Column(){
-                StandardIcon({ icon: $r('app.media.ic_public_phone') })
-                  .margin({ right: $r('app.float.phone_icon_right') })
+            .height(40)
+            .width('100%')
+            .alignItems(HorizontalAlign.Start)
+            .backgroundColor('#F1F3F5')
+            .margin({ top: 20 })
+            .borderRadius({
+              topLeft: 6,
+              topRight: 6
+            })
+            .onClick(()=>{
+              if (this.mySettingPageInfo.size() > 1) {
+                this.mySettingPageInfo.pop()
               }
-              .width('10%')
-              .alignItems(HorizontalAlign.Start)
-              .padding({
-                left:15
-              })
+              this.mySettingPageInfo.pushPath({name:'FriendVerify'})
+            })
 
-              Column(){
-                Text('推送设置')
-                  .fontSize(18)
-                  .fontFamily(BaseConstants.FONT_FAMILY_MEDIUM)
-              }.width('80%')
-              .alignItems(HorizontalAlign.Start)
-              .padding({left:20})
+            Divider().width('100%')
 
-              Column(){
-                StandardIcon({ icon: $r('app.media.ic_public_more') })
-                  .margin({ right: $r('app.float.phone_icon_right') })
-              }.width('10%')
-              .alignItems(HorizontalAlign.End)
-            }.alignItems(VerticalAlign.Center)
-            .height(BaseConstants.FULL_HEIGHT)
-          }
-          .height(40)
-          .width('90%')
-          .alignItems(HorizontalAlign.Start)
-          .backgroundColor('#F1F3F5')
-          .margin({top:20})
-          .borderRadius({
-            topLeft: 6,
-            topRight: 6,
-            bottomLeft:6,
-            bottomRight:6,
-          }).onClick(()=>{
-            if (this.mySettingPageInfo.size() > 1) {
-              this.mySettingPageInfo.pop()
+            Column() {
+              Row() {
+                Column() {
+                  StandardIcon({ icon: $r('app.media.ic_public_phone') })
+                    .margin({ right: $r('app.float.phone_icon_right') })
+                }
+                .width('10%')
+                .alignItems(HorizontalAlign.Start)
+                .padding({ left: 15 })
+
+                Column() {
+                  Text('免打扰设置')
+                    .fontSize(18)
+                    .fontFamily(BaseConstants.FONT_FAMILY_MEDIUM)
+                }
+                .width('80%')
+                .alignItems(HorizontalAlign.Start)
+                .padding({ left: 20 })
+
+                Column() {
+                  StandardIcon({ icon: $r('app.media.ic_public_more') })
+                    .margin({ right: $r('app.float.phone_icon_right') })
+                }
+                .width('10%')
+                .alignItems(HorizontalAlign.End)
+              }
+              .alignItems(VerticalAlign.Center)
+              .height(BaseConstants.FULL_HEIGHT)
             }
-            this.mySettingPageInfo.pushPath({name:'PushSetting'})
-          })
-
-          Column(){
-            Row(){
-              Column(){
-                StandardIcon({ icon: $r('app.media.ic_public_phone') })
-                  .margin({ right: $r('app.float.phone_icon_right') })
+            .height(40)
+            .width('100%')
+            .alignItems(HorizontalAlign.Start)
+            .backgroundColor('#F1F3F5')
+            .borderRadius({
+              bottomLeft: 6,
+              bottomRight: 6
+            })
+            .onClick(()=>{
+              if (this.mySettingPageInfo.size() > 1) {
+                this.mySettingPageInfo.pop()
               }
-              .width('10%')
-              .alignItems(HorizontalAlign.Start)
-              .padding({
-                left:15
-              })
+              this.mySettingPageInfo.pushPath({name:'GlobalUndisturb'})
+            })
 
-              Column(){
-                Text('我的收藏')
-                  .fontSize(18)
-                  .fontFamily(BaseConstants.FONT_FAMILY_MEDIUM)
-              }.width('80%')
-              .alignItems(HorizontalAlign.Start)
-              .padding({left:20})
+            Column() {
+              Row() {
+                Column() {
+                  StandardIcon({ icon: $r('app.media.ic_public_phone') })
+                    .margin({ right: $r('app.float.phone_icon_right') })
+                }
+                .width('10%')
+                .alignItems(HorizontalAlign.Start)
+                .padding({ left: 15 })
 
-              Column(){
-                StandardIcon({ icon: $r('app.media.ic_public_more') })
-                  .margin({ right: $r('app.float.phone_icon_right') })
-              }.width('10%')
-              .alignItems(HorizontalAlign.End)
-            }.alignItems(VerticalAlign.Center)
-            .height(BaseConstants.FULL_HEIGHT)
-          }
-          .height(40)
-          .width('90%')
-          .alignItems(HorizontalAlign.Start)
-          .backgroundColor('#F1F3F5')
-          .margin({top:20})
-          .borderRadius({
-            topLeft: 6,
-            topRight: 6,
-            bottomLeft:6,
-            bottomRight:6,
-          }).onClick(()=>{
-            if (this.mySettingPageInfo.size() > 1) {
-              this.mySettingPageInfo.pop()
+                Column() {
+                  Text('推送设置')
+                    .fontSize(18)
+                    .fontFamily(BaseConstants.FONT_FAMILY_MEDIUM)
+                }
+                .width('80%')
+                .alignItems(HorizontalAlign.Start)
+                .padding({ left: 20 })
+
+                Column() {
+                  StandardIcon({ icon: $r('app.media.ic_public_more') })
+                    .margin({ right: $r('app.float.phone_icon_right') })
+                }
+                .width('10%')
+                .alignItems(HorizontalAlign.End)
+              }
+              .alignItems(VerticalAlign.Center)
+              .height(BaseConstants.FULL_HEIGHT)
             }
-            this.mySettingPageInfo.pushPath({name:'MyFavorite'})
-          })
-
-          Column(){
-            Row(){
-              Column(){
-                StandardIcon({ icon: $r('app.media.ic_public_phone') })
-                  .margin({ right: $r('app.float.phone_icon_right') })
+            .height(40)
+            .width('100%')
+            .alignItems(HorizontalAlign.Start)
+            .backgroundColor('#F1F3F5')
+            .margin({ top: 20 })
+            .borderRadius({
+              topLeft: 6,
+              topRight: 6,
+              bottomLeft: 6,
+              bottomRight: 6
+            })
+            .onClick(()=>{
+              if (this.mySettingPageInfo.size() > 1) {
+                this.mySettingPageInfo.pop()
               }
-              .width('10%')
-              .alignItems(HorizontalAlign.Start)
-              .padding({
-                left:15
-              })
+              this.mySettingPageInfo.pushPath({name:'PushSetting'})
+            })
 
-              Column(){
-                Text('广播消息')
-                  .fontSize(18)
-                  .fontFamily(BaseConstants.FONT_FAMILY_MEDIUM)
-              }.width('80%')
-              .alignItems(HorizontalAlign.Start)
-              .padding({left:20})
+            Column() {
+              Row() {
+                Column() {
+                  StandardIcon({ icon: $r('app.media.ic_public_phone') })
+                    .margin({ right: $r('app.float.phone_icon_right') })
+                }
+                .width('10%')
+                .alignItems(HorizontalAlign.Start)
+                .padding({ left: 15 })
 
-              Column(){
-                StandardIcon({ icon: $r('app.media.ic_public_more') })
-                  .margin({ right: $r('app.float.phone_icon_right') })
-              }.width('10%')
-              .alignItems(HorizontalAlign.End)
-            }.alignItems(VerticalAlign.Center)
-            .height(BaseConstants.FULL_HEIGHT)
-          }
-          .height(40)
-          .width('90%')
-          .alignItems(HorizontalAlign.Start)
-          .backgroundColor('#F1F3F5')
-          .margin({top:20})
-          .borderRadius({
-            topLeft: 6,
-            topRight: 6,
-            bottomLeft:6,
-            bottomRight:6,
-          }).onClick(()=>{
-            if (this.mySettingPageInfo.size() > 1) {
-              this.mySettingPageInfo.pop()
+                Column() {
+                  Text('我的收藏')
+                    .fontSize(18)
+                    .fontFamily(BaseConstants.FONT_FAMILY_MEDIUM)
+                }
+                .width('80%')
+                .alignItems(HorizontalAlign.Start)
+                .padding({ left: 20 })
+
+                Column() {
+                  StandardIcon({ icon: $r('app.media.ic_public_more') })
+                    .margin({ right: $r('app.float.phone_icon_right') })
+                }
+                .width('10%')
+                .alignItems(HorizontalAlign.End)
+              }
+              .alignItems(VerticalAlign.Center)
+              .height(BaseConstants.FULL_HEIGHT)
             }
-            this.mySettingPageInfo.pushPath({name:'BroadcastMessage'})
-          })
-
-          Column(){
-            Row(){
-              Column(){
-                StandardIcon({ icon: $r('app.media.ic_public_phone') })
-                  .margin({ right: $r('app.float.phone_icon_right') })
+            .height(40)
+            .width('100%')
+            .alignItems(HorizontalAlign.Start)
+            .backgroundColor('#F1F3F5')
+            .margin({ top: 20 })
+            .borderRadius({
+              topLeft: 6,
+              topRight: 6,
+              bottomLeft: 6,
+              bottomRight: 6
+            })
+            .onClick(()=>{
+              if (this.mySettingPageInfo.size() > 1) {
+                this.mySettingPageInfo.pop()
               }
-              .width('10%')
-              .alignItems(HorizontalAlign.Start)
-              .padding({
-                left:15
-              })
+              this.mySettingPageInfo.pushPath({name:'MyFavorite'})
+            })
 
-              Column(){
-                Text('聊天室')
-                  .fontSize(18)
-                  .fontFamily(BaseConstants.FONT_FAMILY_MEDIUM)
-              }.width('80%')
-              .alignItems(HorizontalAlign.Start)
-              .padding({left:20})
+            Column() {
+              Row() {
+                Column() {
+                  StandardIcon({ icon: $r('app.media.ic_public_phone') })
+                    .margin({ right: $r('app.float.phone_icon_right') })
+                }
+                .width('10%')
+                .alignItems(HorizontalAlign.Start)
+                .padding({ left: 15 })
 
-              Column(){
-                StandardIcon({ icon: $r('app.media.ic_public_more') })
-                  .margin({ right: $r('app.float.phone_icon_right') })
-              }.width('10%')
-              .alignItems(HorizontalAlign.End)
-            }.alignItems(VerticalAlign.Center)
-            .height(BaseConstants.FULL_HEIGHT)
-          }
-          .height(40)
-          .width('90%')
-          .alignItems(HorizontalAlign.Start)
-          .backgroundColor('#F1F3F5')
-          .margin({top:20})
-          .borderRadius({
-            topLeft: 6,
-            topRight: 6,
-            bottomLeft:6,
-            bottomRight:6,
-          }).onClick(()=>{
-            if (this.mySettingPageInfo.size() > 1) {
-              this.mySettingPageInfo.pop()
+                Column() {
+                  Text('广播消息')
+                    .fontSize(18)
+                    .fontFamily(BaseConstants.FONT_FAMILY_MEDIUM)
+                }
+                .width('80%')
+                .alignItems(HorizontalAlign.Start)
+                .padding({ left: 20 })
+
+                Column() {
+                  StandardIcon({ icon: $r('app.media.ic_public_more') })
+                    .margin({ right: $r('app.float.phone_icon_right') })
+                }
+                .width('10%')
+                .alignItems(HorizontalAlign.End)
+              }
+              .alignItems(VerticalAlign.Center)
+              .height(BaseConstants.FULL_HEIGHT)
             }
-            this.mySettingPageInfo.pushPath({name:'ChatroomList'})
-          })
-
-          Column(){
-            Row(){
-              Column(){
-                StandardIcon({ icon: $r('app.media.ic_public_phone') })
-                  .margin({ right: $r('app.float.phone_icon_right') })
+            .height(40)
+            .width('100%')
+            .alignItems(HorizontalAlign.Start)
+            .backgroundColor('#F1F3F5')
+            .margin({ top: 20 })
+            .borderRadius({
+              topLeft: 6,
+              topRight: 6,
+              bottomLeft: 6,
+              bottomRight: 6
+            })
+            .onClick(()=>{
+              if (this.mySettingPageInfo.size() > 1) {
+                this.mySettingPageInfo.pop()
               }
-              .width('10%')
-              .alignItems(HorizontalAlign.Start)
-              .padding({
-                left:15
-              })
+              this.mySettingPageInfo.pushPath({name:'BroadcastMessage'})
+            })
 
-              Column(){
-                Text('用户协议')
-                  .fontSize(18)
-                  .fontFamily(BaseConstants.FONT_FAMILY_MEDIUM)
-              }.width('80%')
-              .alignItems(HorizontalAlign.Start)
-              .padding({left:20})
+            Column() {
+              Row() {
+                Column() {
+                  StandardIcon({ icon: $r('app.media.ic_public_phone') })
+                    .margin({ right: $r('app.float.phone_icon_right') })
+                }
+                .width('10%')
+                .alignItems(HorizontalAlign.Start)
+                .padding({ left: 15 })
 
-              Column(){
-                StandardIcon({ icon: $r('app.media.ic_public_more') })
-                  .margin({ right: $r('app.float.phone_icon_right') })
-              }.width('10%')
-              .alignItems(HorizontalAlign.End)
-            }.alignItems(VerticalAlign.Center)
-            .height(BaseConstants.FULL_HEIGHT)
-          }
-          .height(40)
-          .width('90%')
-          .alignItems(HorizontalAlign.Start)
-          .backgroundColor('#F1F3F5')
-          .margin({top:20})
-          .borderRadius({
-            topLeft: 6,
-            topRight: 6
-          }).onClick(()=>{
-            if (this.mySettingPageInfo.size() > 1) {
-              this.mySettingPageInfo.pop()
+                Column() {
+                  Text('聊天室')
+                    .fontSize(18)
+                    .fontFamily(BaseConstants.FONT_FAMILY_MEDIUM)
+                }
+                .width('80%')
+                .alignItems(HorizontalAlign.Start)
+                .padding({ left: 20 })
+
+                Column() {
+                  StandardIcon({ icon: $r('app.media.ic_public_more') })
+                    .margin({ right: $r('app.float.phone_icon_right') })
+                }
+                .width('10%')
+                .alignItems(HorizontalAlign.End)
+              }
+              .alignItems(VerticalAlign.Center)
+              .height(BaseConstants.FULL_HEIGHT)
             }
-            this.mySettingPageInfo.pushPath({name:'FriendVerify'})
-          })
-          Divider().width('90%')
-          Column(){
-            Row(){
-              Column(){
-                StandardIcon({ icon: $r('app.media.ic_public_phone') })
-                  .margin({ right: $r('app.float.phone_icon_right') })
+            .height(40)
+            .width('100%')
+            .alignItems(HorizontalAlign.Start)
+            .backgroundColor('#F1F3F5')
+            .margin({ top: 20 })
+            .borderRadius({
+              topLeft: 6,
+              topRight: 6,
+              bottomLeft: 6,
+              bottomRight: 6
+            })
+            .onClick(()=>{
+              if (this.mySettingPageInfo.size() > 1) {
+                this.mySettingPageInfo.pop()
               }
-              .width('10%')
-              .alignItems(HorizontalAlign.Start)
-              .padding({
-                left:15
-              })
+              this.mySettingPageInfo.pushPath({name:'ChatroomList'})
+            })
 
-              Column(){
-                Text('隐私协议')
-                  .fontSize(18)
-                  .fontFamily(BaseConstants.FONT_FAMILY_MEDIUM)
-              }.width('80%')
-              .alignItems(HorizontalAlign.Start)
-              .padding({left:20})
+            Column() {
+              Row() {
+                Column() {
+                  StandardIcon({ icon: $r('app.media.ic_public_phone') })
+                    .margin({ right: $r('app.float.phone_icon_right') })
+                }
+                .width('10%')
+                .alignItems(HorizontalAlign.Start)
+                .padding({ left: 15 })
 
-              Column(){
-                StandardIcon({ icon: $r('app.media.ic_public_more') })
-                  .margin({ right: $r('app.float.phone_icon_right') })
-              }.width('10%')
-              .alignItems(HorizontalAlign.End)
-            }.alignItems(VerticalAlign.Center)
-            .height(BaseConstants.FULL_HEIGHT)
-          }
-          .height(40)
-          .width('90%')
-          .alignItems(HorizontalAlign.Start)
-          .backgroundColor('#F1F3F5')
-          .borderRadius({
-            bottomLeft:6,
-            bottomRight:6
-          }).onClick(()=>{
-            if (this.mySettingPageInfo.size() > 1) {
-              this.mySettingPageInfo.pop()
+                Column() {
+                  Text('用户协议')
+                    .fontSize(18)
+                    .fontFamily(BaseConstants.FONT_FAMILY_MEDIUM)
+                }
+                .width('80%')
+                .alignItems(HorizontalAlign.Start)
+                .padding({ left: 20 })
+
+                Column() {
+                  StandardIcon({ icon: $r('app.media.ic_public_more') })
+                    .margin({ right: $r('app.float.phone_icon_right') })
+                }
+                .width('10%')
+                .alignItems(HorizontalAlign.End)
+              }
+              .alignItems(VerticalAlign.Center)
+              .height(BaseConstants.FULL_HEIGHT)
             }
-            this.mySettingPageInfo.pushPath({name:'FriendVerify'})
-          })
-          Column(){
-            Row(){
-              Column(){
-                StandardIcon({ icon: $r('app.media.ic_public_phone') })
-                  .margin({ right: $r('app.float.phone_icon_right') })
+            .height(40)
+            .width('100%')
+            .alignItems(HorizontalAlign.Start)
+            .backgroundColor('#F1F3F5')
+            .margin({ top: 20 })
+            .borderRadius({
+              topLeft: 6,
+              topRight: 6
+            })
+            .onClick(()=>{
+              if (this.mySettingPageInfo.size() > 1) {
+                this.mySettingPageInfo.pop()
               }
-              .width('10%')
-              .alignItems(HorizontalAlign.Start)
-              .padding({
-                left:15
-              })
+              this.mySettingPageInfo.pushPath({name:'FriendVerify'})
+            })
 
-              Column(){
-                Text('退出登录')
-                  .fontSize(18)
-                  .fontFamily(BaseConstants.FONT_FAMILY_MEDIUM)
-              }.width('80%')
-              .alignItems(HorizontalAlign.Start)
-              .padding({left:20})
+            Divider().width('100%')
 
-              Column(){
-                StandardIcon({ icon: $r('app.media.ic_public_more') })
-                  .margin({ right: $r('app.float.phone_icon_right') })
-              }.width('10%')
-              .alignItems(HorizontalAlign.End)
-            }.alignItems(VerticalAlign.Center)
-            .height(BaseConstants.FULL_HEIGHT)
+            Column() {
+              Row() {
+                Column() {
+                  StandardIcon({ icon: $r('app.media.ic_public_phone') })
+                    .margin({ right: $r('app.float.phone_icon_right') })
+                }
+                .width('10%')
+                .alignItems(HorizontalAlign.Start)
+                .padding({ left: 15 })
+
+                Column() {
+                  Text('隐私协议')
+                    .fontSize(18)
+                    .fontFamily(BaseConstants.FONT_FAMILY_MEDIUM)
+                }
+                .width('80%')
+                .alignItems(HorizontalAlign.Start)
+                .padding({ left: 20 })
+
+                Column() {
+                  StandardIcon({ icon: $r('app.media.ic_public_more') })
+                    .margin({ right: $r('app.float.phone_icon_right') })
+                }
+                .width('10%')
+                .alignItems(HorizontalAlign.End)
+              }
+              .alignItems(VerticalAlign.Center)
+              .height(BaseConstants.FULL_HEIGHT)
+            }
+            .height(40)
+            .width('100%')
+            .alignItems(HorizontalAlign.Start)
+            .backgroundColor('#F1F3F5')
+            .borderRadius({
+              bottomLeft: 6,
+              bottomRight: 6
+            })
+            .onClick(()=>{
+              if (this.mySettingPageInfo.size() > 1) {
+                this.mySettingPageInfo.pop()
+              }
+              this.mySettingPageInfo.pushPath({name:'FriendVerify'})
+            })
+
+            Column() {
+              Row() {
+                Column() {
+                  StandardIcon({ icon: $r('app.media.ic_public_phone') })
+                    .margin({ right: $r('app.float.phone_icon_right') })
+                }
+                .width('10%')
+                .alignItems(HorizontalAlign.Start)
+                .padding({ left: 15 })
+
+                Column() {
+                  Text('退出登录')
+                    .fontSize(18)
+                    .fontFamily(BaseConstants.FONT_FAMILY_MEDIUM)
+                }
+                .width('80%')
+                .alignItems(HorizontalAlign.Start)
+                .padding({ left: 20 })
+
+                Column() {
+                  StandardIcon({ icon: $r('app.media.ic_public_more') })
+                    .margin({ right: $r('app.float.phone_icon_right') })
+                }
+                .width('10%')
+                .alignItems(HorizontalAlign.End)
+              }
+              .alignItems(VerticalAlign.Center)
+              .height(BaseConstants.FULL_HEIGHT)
+            }
+            .height(40)
+            .width('100%')
+            .alignItems(HorizontalAlign.Start)
+            .backgroundColor('#F1F3F5')
+            .margin({ top: 20 })
+            .borderRadius({
+              topLeft: 6,
+              topRight: 6,
+              bottomLeft: 6,
+              bottomRight: 6
+            })
+            .onClick(()=>{
+              this.logout()
+            })
           }
-          .height(40)
-          .width('90%')
-          .alignItems(HorizontalAlign.Start)
-          .backgroundColor('#F1F3F5')
-          .margin({top:20})
-          .borderRadius({
-            topLeft: 6,
-            topRight: 6,
-            bottomLeft:6,
-            bottomRight:6,
-          }).onClick(()=>{
-            this.logout()
+          .width('100%')
+          .padding({
+            left: this.currentBreakpoint === BreakpointConstants.BREAKPOINT_SM ? 0 : $r('app.float.images_column_left'),
+            right: this.currentBreakpoint === BreakpointConstants.BREAKPOINT_SM ? 0 : $r('app.float.images_column_right')
           })
+          .padding({ bottom: 24 })
         }
-        .margin(this.currentBreakpoint === BreakpointConstants.BREAKPOINT_SM ? {
-          left: 0,
-          right: 0
-        } : {
-          left: $r('app.float.images_column_left'),
-          right: $r('app.float.images_column_right')
-        })
-        .height(Adaptive.ContactDetailHeight(this.currentBreakpoint))
-        .borderRadius({
-          topLeft: $r('app.float.contacts_detail_left'),
-          topRight: $r('app.float.contacts_detail_right')
-        })
+        .width(BaseConstants.FULL_WIDTH)
+        .height(BaseConstants.FULL_HEIGHT)
+        .scrollBar(BarState.Auto)
         .backgroundColor(Color.White)
       }
-      .margin({ top: $r('app.float.contacts_detail_column_top') })
       .width(BaseConstants.FULL_WIDTH)
-      .alignItems(HorizontalAlign.Start)
-      }
-      }
-      .title('我')
+      .height(BaseConstants.FULL_HEIGHT)
+      .backgroundColor($r('app.color.background_color_pink'))
+      .padding({
+        top: deviceInfo.deviceType === BaseConstants.DEVICE_2IN1 ? $r('app.float.zero') :
+        $r('app.float.device_padding_top')
+      })
+    }
+    .title('我')
     }
   }

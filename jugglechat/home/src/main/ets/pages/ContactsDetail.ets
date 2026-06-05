@@ -14,12 +14,11 @@
  */
 import { Adaptive, BaseConstants, BreakpointConstants, StandardIcon } from 'base';
 import { HomeConstants } from '../constants/HomeConstants';
-import { SocialCirclePictures } from '../viewmodel/SocialCircleViewModel';
 import { deviceInfo } from '@kit.BasicServicesKit';
 import { CommonUtil } from '../jim/common';
 import { promptAction } from '@kit.ArkUI';
 import { ConversationDetailParams } from '../viewmodel/ConversationViewModel';
-import { JuggleIm } from 'juggleim';
+import { GetMomentDirection, GetMomentOption, JuggleIm, Moment, MomentMedia } from 'juggleim';
 import { FriendRequestStore } from '../jim/friendrequeststore';
 
 @Component
@@ -33,13 +32,18 @@ export struct ContactsDetail {
   @State private friendAlias: string = ''
   @State private friendUpdatedText: string = ''
   @State private friendRequestStatus: string = '未申请'
+  @State private contactMoments: Moment[] = []
+  @State private contactMomentsLoading: boolean = false
+  @State private contactMomentsFinished: boolean = true
 
   aboutToAppear(): void {
     this.refreshFriendInfo()
+    this.loadContactMoments()
   }
 
   onPageShow(): void {
     this.refreshFriendInfo()
+    this.loadContactMoments()
   }
 
   private getDefaultBackgroundColor():string{
@@ -70,6 +74,74 @@ export struct ContactsDetail {
     let date = new Date(timestamp)
     let pad = (value:number):string => value < 10 ? `0${value}` : `${value}`
     return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`
+  }
+
+  private getMomentOwnerName(moment: Moment): string {
+    if (moment.userInfo == null) {
+      return this.currentContactUserName as string
+    }
+    if (moment.userInfo.nickname != '') {
+      return moment.userInfo.nickname
+    }
+    if (moment.userInfo.userId != '') {
+      return moment.userInfo.userId
+    }
+    return this.currentContactUserName as string
+  }
+
+  private getMomentAvatar(moment: Moment): string {
+    if (moment.userInfo == null) {
+      return ''
+    }
+    return moment.userInfo.userPortrait
+  }
+
+  private getAvatarColor(name: string): string {
+    let colors: string[] = ['#D97706', '#2563EB', '#7C3AED', '#0F766E', '#DC2626', '#4F46E5']
+    if (name == '') {
+      return colors[0]
+    }
+    return colors[name.charCodeAt(0) % colors.length]
+  }
+
+  private getAvatarText(name: string): string {
+    if (name == '') {
+      return '友'
+    }
+    return name.charAt(0)
+  }
+
+  private loadContactMoments(): void {
+    if (this.currentContactUserId == '') {
+      this.contactMoments = []
+      this.contactMomentsFinished = true
+      return
+    }
+    this.contactMomentsLoading = true
+    let option = new GetMomentOption()
+    option.startTime = 0
+    option.count = 20
+    option.direction = GetMomentDirection.Backward
+    option.userId = this.currentContactUserId
+    JuggleIm.instance.getMomentManager().getMomentList(option, (code, moments, isFinished) => {
+      this.contactMomentsLoading = false
+      if (code != 0) {
+        this.contactMoments = []
+        this.contactMomentsFinished = true
+        return
+      }
+      this.contactMomentsFinished = isFinished
+      this.contactMoments = moments
+        .filter((moment: Moment) => {
+          let userInfo = moment.userInfo
+          return userInfo == null ||
+            userInfo.userId == '' ||
+            userInfo.userId == this.currentContactUserId
+        })
+        .sort((left: Moment, right: Moment) => {
+          return right.createTime - left.createTime
+        })
+    })
   }
 
   private getFriendStatusColor():string{
@@ -256,7 +328,7 @@ export struct ContactsDetail {
               StandardIcon({ icon: $r('app.media.ic_public_comments') })
                 .margin({ right: $r('app.float.phone_icon_right') })
                 .onClick(()=>{
-                  this.refreshFriendInfo()
+                  this.openConversation()
                 })
             }
             .width(BaseConstants.FULL_WIDTH)
@@ -282,21 +354,109 @@ export struct ContactsDetail {
             .padding({ left: $r('app.float.last_post_left'), top: $r('app.float.last_post_top') })
             .alignItems(HorizontalAlign.Start)
 
-            Column() {
-              List({ space: HomeConstants.IMAGES_SCOPE }) {
-                ForEach(SocialCirclePictures, (item: Resource) => {
-                  ListItem() {
-                    Image(item)
-                      .width(Adaptive.ContactPhoneWidth(this.currentBreakpoint))
-                      .aspectRatio(HomeConstants.IMAGE_ASPECT_RATIO)
+            Scroll() {
+              Column() {
+                if (this.contactMomentsLoading && this.contactMoments.length == 0) {
+                  Text('朋友圈加载中...')
+                    .width(BaseConstants.FULL_WIDTH)
+                    .fontSize(BaseConstants.FONT_SIZE_FOURTEEN)
+                    .fontColor('#6B7280')
+                    .padding({ left: 16, right: 16, top: 12, bottom: 12 })
+                } else if (this.contactMoments.length == 0) {
+                  Text('暂无朋友圈内容')
+                    .width(BaseConstants.FULL_WIDTH)
+                    .fontSize(BaseConstants.FONT_SIZE_FOURTEEN)
+                    .fontColor('#9CA3AF')
+                    .padding({ left: 16, right: 16, top: 12, bottom: 12 })
+                } else {
+                  ForEach(this.contactMoments, (moment: Moment) => {
+                    Column() {
+                      Row() {
+                        if (this.getMomentAvatar(moment) != '') {
+                          Image(this.getMomentAvatar(moment))
+                            .width(40)
+                            .height(40)
+                            .borderRadius(20)
+                        } else {
+                          Stack() {
+                            Text(this.getAvatarText(this.getMomentOwnerName(moment)))
+                              .fontSize(18)
+                              .fontColor(Color.White)
+                              .fontWeight(FontWeight.Bold)
+                          }
+                          .width(40)
+                          .height(40)
+                          .borderRadius(20)
+                          .backgroundColor(this.getAvatarColor(this.getMomentOwnerName(moment)))
+                        }
+
+                        Column() {
+                          Text(this.getMomentOwnerName(moment))
+                            .fontSize(15)
+                            .fontWeight(FontWeight.Bold)
+                            .fontColor('#111827')
+                            .maxLines(1)
+                            .textOverflow({ overflow: TextOverflow.Ellipsis })
+                          Text(this.formatTime(moment.createTime))
+                            .fontSize(12)
+                            .fontColor('#98A2B3')
+                            .margin({ top: 4 })
+                        }
+                        .layoutWeight(1)
+                        .margin({ left: 12 })
+                        .alignItems(HorizontalAlign.Start)
+                      }
+                      .width('100%')
+                      .alignItems(VerticalAlign.Top)
+
+                      if (moment.content != '') {
+                        Text(moment.content)
+                          .width('100%')
+                          .fontSize(14)
+                          .fontColor('#1F2937')
+                          .lineHeight(22)
+                          .margin({ top: 12 })
+                      }
+
+                      if (moment.mediaList.length > 0) {
+                        Column() {
+                          ForEach(moment.mediaList, (media: MomentMedia, index: number) => {
+                            if (media.url != '') {
+                              Image(media.url)
+                                .width('100%')
+                                .height(180)
+                                .objectFit(ImageFit.Cover)
+                                .borderRadius(8)
+                                .margin({ top: index == 0 ? 0 : 8 })
+                            }
+                          }, (_media: MomentMedia, index: number) => `${moment.momentId}_media_${index}`)
+                        }
+                        .width('100%')
+                        .margin({ top: 12 })
+                      }
+                    }
+                    .width('100%')
+                    .padding(16)
+                    .backgroundColor('#F8FAFC')
+                    .borderRadius(12)
+                    .margin({ left: 16, right: 16, top: 12 })
+                  }, (moment: Moment) => moment.momentId)
+
+                  if (this.contactMomentsFinished) {
+                    Text('没有更多朋友圈内容')
+                      .width(BaseConstants.FULL_WIDTH)
+                      .fontSize(12)
+                      .fontColor('#9CA3AF')
+                      .textAlign(TextAlign.Center)
+                      .padding({ top: 12, bottom: 12 })
                   }
-                }, (item: Resource, index: number) => index + JSON.stringify(item))
+                }
               }
               .width(BaseConstants.FULL_WIDTH)
-              .height(BaseConstants.FULL_HEIGHT)
-              .listDirection(Axis.Horizontal)
             }
-            .padding({ left: $r('app.float.images_left'), top: $r('app.float.images_top') })
+            .height(280)
+            .scrollBar(BarState.Auto)
+            .padding({ left: 0, right: 0, top: $r('app.float.images_top') })
 
             Column() {
               Row() {
@@ -365,7 +525,7 @@ export struct ContactsDetail {
 
               Divider()
               Row() {
-                Button('发消息')
+                Button('消息')
                   .layoutWeight(1)
                   .height(44)
                   .fontSize(BaseConstants.FONT_SIZE_SIXTEEN)

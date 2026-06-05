@@ -18,29 +18,29 @@ import { MessageBubble } from '../MessageBubble';
 
 @Component
 export struct ConversationDetailItem {
-  private senderName?:string
-  private senderIcon?:string
-  private selfName?:string
-  private selfIcon?:string
-  private msgContent?:MessageContent
-  private referenceText?:string
-  private previewText?:string
-  private msgType?:string
-  private isEdited?:boolean
-  private hasRead?:boolean
-  private readCount?:number
-  private memberCount?:number
-  private sentState?:number
-  private conversationType?:number
-  private downloadState?:number
-  private downloadProgress?:number
-  private reactionSummaries?:string[]
-  private showDownloadAction?:boolean
+  @Prop senderName?:string
+  @Prop senderIcon?:string
+  @Prop selfName?:string
+  @Prop selfIcon?:string
+  @Prop msgContent?:MessageContent
+  @Prop referenceText?:string
+  @Prop previewText?:string
+  @Prop msgType?:string
+  @Prop isEdited?:boolean
+  @Prop hasRead?:boolean
+  @Prop readCount?:number
+  @Prop memberCount?:number
+  @Prop sentState?:number
+  @Prop conversationType?:number
+  @Prop downloadState?:number
+  @Prop downloadProgress?:number
+  @Prop reactionSummaries?:string[]
+  @Prop showDownloadAction?:boolean
   private onDownloadTap?:()=>void
   private onCancelDownloadTap?:()=>void
 
-  private isReceived?: boolean = false;
-  private msgTime:number=0
+  @Prop isReceived?: boolean = false;
+  @Prop msgTime:number=0
 
   build() {
     Flex({ justifyContent: FlexAlign.End, alignItems: ItemAlign.End }) {

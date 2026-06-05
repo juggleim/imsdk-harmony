@@ -87,6 +87,17 @@ class GroupReadMemberItem {
   }
 }
 
+@Observed
+class ConversationDetailMenuItem {
+  value:string
+  action:()=>void
+
+  constructor(value:string, action:()=>void) {
+    this.value = value
+    this.action = action
+  }
+}
+
 const DEMO_REACTION_OPTIONS:string[] = ['👍', '❤️', '😂', '👏']
 
 @Component
@@ -238,8 +249,22 @@ export struct ConversationDetail {
       this.maxMsgIndex = message.msgUnreadIndex
     }
     if(scrollToBottom){
-      this.scroller.scrollEdge(Edge.Bottom)
+      this.scrollToBottomSoon()
     }
+  }
+
+  private scrollToBottomSoon():void{
+    setTimeout(()=>{
+      this.scroller.scrollEdge(Edge.Bottom)
+    }, 50)
+  }
+
+  private bumpConversationListRefreshTick():void{
+    let currentTick = AppStorage.Get('conversationListRefreshTick') as number
+    if (currentTick == undefined || currentTick == null) {
+      currentTick = 0
+    }
+    AppStorage.SetOrCreate('conversationListRefreshTick', currentTick + 1)
   }
 
   private async refreshMessagesByIds(msgIds:string[]):Promise<void>{
@@ -408,6 +433,9 @@ export struct ConversationDetail {
       this.fetchMessageReactions(msgs)
       this.markConversationRead()
       this.sendReadReceiptIfNeeded(msgs)
+      if(options.time == 0){
+        this.scrollToBottomSoon()
+      }
     })
   }
 
@@ -756,6 +784,7 @@ export struct ConversationDetail {
         JuggleIm.instance.getConversationManager().clearDraft(this.getConversation())
         this.editingMessageId = ''
         this.editingOriginalText = ''
+        this.bumpConversationListRefreshTick()
       }else{
         this.text = originalText
         this.showToast(`编辑失败: ${code}`)
@@ -879,6 +908,15 @@ export struct ConversationDetail {
     })
   }
 
+  private getTitleMenus():ConversationDetailMenuItem[]{
+    if(this.conversationType == 3){
+      return []
+    }
+    return [new ConversationDetailMenuItem('查看详情', ()=>{
+      this.openConversationProfile()
+    })]
+  }
+
   private forwardSelectedMessage():void{
     let item = this.getSelectedMessage()
     if(item == undefined){
@@ -905,6 +943,7 @@ export struct ConversationDetail {
     JuggleIm.instance.getMessageManager().sendMessage(forwardMsg, new Conversation(target.converId, target.converType, target.subChannel), (code, msg)=>{
       if(code == 0){
         this.showToast('已转发')
+        this.bumpConversationListRefreshTick()
         this.closePanels()
       }else{
         this.showToast(`转发失败: ${code}`)
@@ -938,7 +977,8 @@ export struct ConversationDetail {
       JuggleIm.instance.getMessageManager().sendMessage(txtMsg, this.getConversation(), options, async (code, msg)=>{
         if(code == 0 && msg != null){
           JuggleIm.instance.getConversationManager().clearDraft(this.getConversation())
-          await this.appendMessage(msg, false)
+          await this.appendMessage(msg, true)
+          this.bumpConversationListRefreshTick()
         }else{
           this.text = draftText
           this.persistDraft()
@@ -956,7 +996,8 @@ export struct ConversationDetail {
       JuggleIm.instance.getMessageManager().sendMessage(txtMsg, this.getConversation(), options, async (code, msg)=>{
         if(code == 0 && msg != null){
           JuggleIm.instance.getConversationManager().clearDraft(this.getConversation())
-          await this.appendMessage(msg, false)
+          await this.appendMessage(msg, true)
+          this.bumpConversationListRefreshTick()
         }else{
           this.text = draftText
           this.persistDraft()
@@ -970,7 +1011,8 @@ export struct ConversationDetail {
     JuggleIm.instance.getMessageManager().sendMessage(txtMsg, this.getConversation(), async (code, msg)=>{
       if(code == 0 && msg != null){
         JuggleIm.instance.getConversationManager().clearDraft(this.getConversation())
-        await this.appendMessage(msg, false)
+        await this.appendMessage(msg, true)
+        this.bumpConversationListRefreshTick()
       }else{
         this.text = draftText
         this.persistDraft()
@@ -1327,7 +1369,8 @@ export struct ConversationDetail {
     JuggleIm.instance.getMessageManager().sendMediaMessage(msg, this.getConversation(), async (code, message)=>{
       if(code == 0 && message != null){
         JuggleIm.instance.getConversationManager().clearDraft(this.getConversation())
-        await this.appendMessage(message, false)
+        await this.appendMessage(message, true)
+        this.bumpConversationListRefreshTick()
         return
       }
       this.showToast(`${fallbackName}发送失败: ${code}`)
@@ -1418,12 +1461,14 @@ export struct ConversationDetail {
         await this.appendMessage(message, true)
         this.markConversationRead()
         this.sendReadReceiptIfNeeded([message])
+        this.bumpConversationListRefreshTick()
       }
     }
     this.msgModifiedListener = async (message)=>{
       let conver = message.conversation
       if(conver?.conversationId===param.conversationId && conver?.conversationType===param.converType && (conver?.subChannel ?? '')===this.conversationSubChannel){
         await this.appendMessage(message, false)
+        this.bumpConversationListRefreshTick()
       }
     }
     this.readReceiptListener = async (conver, msgIds)=>{
@@ -1468,22 +1513,9 @@ export struct ConversationDetail {
   build() {
     NavDestination() {
       Stack({ alignContent: Alignment.Bottom }) {
-        Flex({ direction: FlexDirection.Column }) {
-          if(this.conversationType != 3){
-            Row() {
-              Blank()
-              StandardIcon({ icon: $r('app.media.ic_public_more') })
-                .onClick(()=>{
-                  this.openConversationProfile()
-                })
-            }
-            .width('100%')
-            .height(42)
-            .padding({ left: 12, right: 12 })
-          }
-
-          Refresh({ refreshing: $$this.refreshing, builder: this.refreshContent }) {
-            List({ scroller: this.scroller }) {
+        Column() {
+        Refresh({ refreshing: $$this.refreshing, builder: this.refreshContent }) {
+          List({ scroller: this.scroller }) {
               ForEach(this.msgList, (item: MessageViewItem, index: number) => {
                 ListItem() {
                   ConversationDetailItem({
@@ -1535,15 +1567,21 @@ export struct ConversationDetail {
                   }
                 })
               }, (item: MessageViewItem, index: number) => `${index}_${this.getItemKey(item)}`)
-            }
-          }.onRefreshing(() => {
-            setTimeout(() => {
-              this.loadOlderMsgs()
+          }
+          .layoutWeight(1)
+          .width('100%')
+          .height('100%')
+          .constraintSize({ minHeight: '100%' })
+        }
+        .layoutWeight(1)
+        .width('100%')
+        .height('100%')
+        .onRefreshing(() => {
+          setTimeout(() => {
+            this.loadOlderMsgs()
               this.refreshing = false
             }, 200)
           })
-
-          Blank()
 
           Column() {
             if(this.showMentionPanel){
@@ -2125,5 +2163,6 @@ export struct ConversationDetail {
       }
     }
     .title(this.conversationTitle != '' ? this.conversationTitle : (this.currentConversationUserName != '' ? this.currentConversationUserName : HomeConstants.CONVERSATION_DETAIL_TOP_TITLE))
+    .menus(this.getTitleMenus())
   }
 }

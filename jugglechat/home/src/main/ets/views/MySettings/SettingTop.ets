@@ -23,13 +23,14 @@ export struct SettingTop{
   build() {
     Flex({alignItems:ItemAlign.Center, justifyContent:FlexAlign.SpaceBetween}){
       Row(){
-        Column(){
+        Stack(){
           StandardIcon({icon:$r('app.media.ic_public_back')})
-            .onClick(()=>{
-              this.back()
-            }).height(30)
-            .width(30)
-        }.width(30)
+        }
+        .width(30)
+        .height(30)
+        .onClick(()=>{
+          this.back()
+        })
         Column(){
           Text(this.settingTitle)
             .fontWeight(BaseConstants.FONT_WEIGHT_FIVE)

@@ -1,5 +1,5 @@
-import { StandardIcon } from 'base'
 import { promptAction } from '@kit.ArkUI'
+import { StandardIcon } from 'base'
 import {
   ClearMsgOptions,
   Conversation,
@@ -386,6 +386,18 @@ export struct ConversationProfile {
   }
 
   @Builder
+  private trailingMoreIcon() {
+    Stack() {
+      StandardIcon({ icon: $r('app.media.ic_public_more') })
+        .width(16)
+        .height(16)
+        .opacity(0.55)
+    }
+    .width(20)
+    .height(20)
+  }
+
+  @Builder
   private infoRow(label:string, value:string) {
     Row() {
       Text(label)
@@ -408,10 +420,15 @@ export struct ConversationProfile {
       Text(label)
         .fontSize(15)
         .fontColor('#666666')
+        .maxLines(1)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
+        .constraintSize({ maxWidth: '58%' })
       Text(isOn ? activeText : inactiveText)
         .fontSize(14)
         .fontColor(isOn ? '#4C8DFF' : '#999999')
-        .margin({ left: 12 })
+        .maxLines(1)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
+        .margin({ left: 12, right: 8 })
       Blank()
       if(isOn){
         Toggle({ type: ToggleType.Switch, isOn: true })
@@ -441,7 +458,7 @@ export struct ConversationProfile {
         .fontSize(16)
         .fontColor(color)
       Blank()
-      StandardIcon({ icon: $r('app.media.ic_public_more') })
+      this.trailingMoreIcon()
     }
     .width('100%')
     .padding({ left: 16, right: 16, top: 16, bottom: 16 })
@@ -463,6 +480,9 @@ export struct ConversationProfile {
             Text(this.title != '' ? this.title : this.conversationId)
               .fontSize(20)
               .fontColor('#111111')
+              .maxLines(1)
+              .textOverflow({ overflow: TextOverflow.Ellipsis })
+              .width('100%')
               .margin({ top: 12 })
             Text(`${this.groupMemberCount} 位成员`)
               .fontSize(13)
@@ -501,12 +521,12 @@ export struct ConversationProfile {
         .margin({ top: this.conversationType == 2 ? 12 : 0 })
 
         Column() {
-          Row() {
-            Text('历史消息')
-              .fontSize(16)
-              .fontColor('#111111')
-            Blank()
-            StandardIcon({ icon: $r('app.media.ic_public_more') })
+            Row() {
+              Text('历史消息')
+                .fontSize(16)
+                .fontColor('#111111')
+              Blank()
+              this.trailingMoreIcon()
           }
           .width('100%')
           .padding({ left: 16, right: 16, top: 16, bottom: 16 })
@@ -539,7 +559,7 @@ export struct ConversationProfile {
                 .fontSize(16)
                 .fontColor('#111111')
               Blank()
-              StandardIcon({ icon: $r('app.media.ic_public_more') })
+              this.trailingMoreIcon()
             }
             .width('100%')
             .padding({ left: 16, right: 16, top: 16, bottom: 16 })
@@ -566,7 +586,7 @@ export struct ConversationProfile {
                 .fontSize(16)
                 .fontColor('#111111')
               Blank()
-              StandardIcon({ icon: $r('app.media.ic_public_more') })
+              this.trailingMoreIcon()
             }
             .width('100%')
             .padding({ left: 16, right: 16, top: 16, bottom: 16 })
@@ -579,7 +599,7 @@ export struct ConversationProfile {
                 .fontSize(16)
                 .fontColor('#111111')
               Blank()
-              StandardIcon({ icon: $r('app.media.ic_public_more') })
+              this.trailingMoreIcon()
             }
             .width('100%')
             .padding({ left: 16, right: 16, top: 16, bottom: 16 })
@@ -592,7 +612,7 @@ export struct ConversationProfile {
                 .fontSize(16)
                 .fontColor('#111111')
               Blank()
-              StandardIcon({ icon: $r('app.media.ic_public_more') })
+              this.trailingMoreIcon()
             }
             .width('100%')
             .padding({ left: 16, right: 16, top: 16, bottom: 16 })
@@ -605,7 +625,7 @@ export struct ConversationProfile {
                 .fontSize(16)
                 .fontColor('#111111')
               Blank()
-              StandardIcon({ icon: $r('app.media.ic_public_more') })
+              this.trailingMoreIcon()
             }
             .width('100%')
             .padding({ left: 16, right: 16, top: 16, bottom: 16 })

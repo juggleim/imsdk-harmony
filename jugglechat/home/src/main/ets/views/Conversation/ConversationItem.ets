@@ -20,12 +20,12 @@ import { CommonUtil } from '../../jim/common';
 @Component
 export struct ConversationItem {
   @StorageProp('currentBreakpoint') currentBreakpoint: string = BreakpointConstants.BREAKPOINT_SM;
-  private name?: ResourceStr;
-  private msg?: ResourceStr;
-  private isMute?: boolean;
-  private isDraft?: boolean;
-  private time?: ResourceStr;
-  private icon?: ResourceStr;
+  @Prop name?: ResourceStr;
+  @Prop msg?: ResourceStr;
+  @Prop isMute?: boolean;
+  @Prop isDraft?: boolean;
+  @Prop time?: ResourceStr;
+  @Prop icon?: ResourceStr;
 
   private getDefaultBackgroundColor():string{
     return CommonUtil.getBackgroundColor(this.name as string)
@@ -63,18 +63,25 @@ export struct ConversationItem {
       Flex({ direction: FlexDirection.Column,justifyContent:FlexAlign.Center }) {
         Row() {
           Text(this.name)
+            .layoutWeight(1)
             .fontSize(BaseConstants.FONT_SIZE_SIXTEEN)
             .fontWeight(BaseConstants.FONT_WEIGHT_FIVE)
             .lineHeight($r('app.float.text_line_height_two'))
             .fontFamily(BaseConstants.FONT_FAMILY_MEDIUM)
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis })
+            .constraintSize({ maxWidth: this.isMute ? '84%' : '100%' })
           if(this.isMute){
-            Image($r('app.media.ic_public_sound'))
-              .width(14)
-              .height(14)
-              .margin({ left: 6 })
-              .opacity(0.65)
+            Column() {
+              Image($r('app.media.ic_public_sound'))
+                .width(14)
+                .height(14)
+                .opacity(0.65)
+            }
+            .width(18)
+            .height(18)
+            .margin({ left: 6 })
+            .flexShrink(0)
           }
         }
         .width(BaseConstants.FULL_WIDTH)
@@ -88,7 +95,7 @@ export struct ConversationItem {
           .fontColor(this.isDraft ? '#E24A4A' : Color.Grey)
           .width(BaseConstants.FULL_WIDTH)
       }
-      .flexShrink(BaseConstants.FLEX_SHRINK_ONE)
+      .layoutWeight(1)
       .margin({ left: $r('app.float.icon_margin_one') })
 
       Blank()

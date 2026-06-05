@@ -29,18 +29,23 @@ export struct ConversationDetailTopSearch {
 
   build() {
     Flex({ alignItems: ItemAlign.Center, justifyContent: FlexAlign.SpaceBetween }) {
-      StandardIcon({ icon: $r('app.media.ic_public_back') })
-        .onClick(() => {
-          if (this.currentBreakpoint === BreakpointConstants.BREAKPOINT_SM) {
-            this.pageInfo.clear();
-          } else if (this.pageInfo.size() === 1) {
-            this.pageInfo.clear();
-            this.pageInfo.pushPath({ name: 'ConversationDetailNone' });
-          } else {
-            this.pageInfo.clear();
-            this.pageInfo.pushPath({ name: 'ConversationDetailNone' });
-          }
-        })
+      Stack() {
+        StandardIcon({ icon: $r('app.media.ic_public_back') })
+      }
+      .width(30)
+      .height(30)
+      .backgroundColor(Color.Transparent)
+      .onClick(() => {
+        if (this.currentBreakpoint === BreakpointConstants.BREAKPOINT_SM) {
+          this.pageInfo.clear();
+        } else if (this.pageInfo.size() === 1) {
+          this.pageInfo.clear();
+          this.pageInfo.pushPath({ name: 'ConversationDetailNone' });
+        } else {
+          this.pageInfo.clear();
+          this.pageInfo.pushPath({ name: 'ConversationDetailNone' });
+        }
+      })
       Text(this.currentConversationUserName || HomeConstants.CONVERSATION_DETAIL_TOP_TITLE)
         .fontWeight(BaseConstants.FONT_WEIGHT_FIVE)
         .fontSize(BaseConstants.FONT_SIZE_EIGHTEEN)
@@ -51,6 +56,7 @@ export struct ConversationDetailTopSearch {
         .layoutWeight(1)
       StandardIcon({ icon: $r('app.media.ic_public_more') })
         .visibility(this.showProfile ? Visibility.Visible : Visibility.Hidden)
+        .backgroundColor(Color.Transparent)
         .onClick(()=>{
           if(!this.showProfile){
             return

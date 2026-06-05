@@ -42,9 +42,9 @@ function promiseSyncConvers(mgr:MsgSyncManager):Promise<boolean>{
   })
 }
 
-function  promiseSyncMsgs(mgr:MsgSyncManager):Promise<boolean>{
+function  promiseSyncMsgs(mgr:MsgSyncManager, ntfTime:number = 0):Promise<boolean>{
   return new Promise((resolve)=>{
-    mgr.syncMsgs(0,(isFinish)=>{
+    mgr.syncMsgs(ntfTime,(isFinish)=>{
       resolve(isFinish)
     })
   })
@@ -508,29 +508,39 @@ export class MsgSyncManager{
 
   private completeFirstSync(){
     this.afterFirstSync = true
+    if(!this.startSeqRunner && this.taskQueue.length > 0){
+      void this.doMsgNtfProcess()
+    }
     this.triggerConversationSyncComplete()
   }
 
   private handleMsgNtf(task:MsgNtfTask){
     this.taskQueue.push(task)
     if(this.afterFirstSync&&!this.startSeqRunner){
-      this.doMsgNtfProcess()
+      void this.doMsgNtfProcess()
     }
   }
 
-  private doMsgNtfProcess(){
+  private async doMsgNtfProcess(){
+    if(this.startSeqRunner){
+      return
+    }
     this.startSeqRunner = true
     while(this.taskQueue.length>0){
       let task = this.taskQueue.shift()
       if(task?.taskType == 0){//msg
-        // this.handleMsg(task.msg as immessage.IDownMsg,(isFinish)=>{})
-        promiseHandleMsg(this,task.msg as immessage.IDownMsg).then(()=>{})
+        await promiseHandleMsg(this,task.msg as immessage.IDownMsg)
       }else if(task?.taskType == 1){//ntf
-        // promiseSyncMsgs(this).then(()=>{})
-        this.syncMsgs(task.time,(isFinish)=>{})
+        let isFinish = await promiseSyncMsgs(this, task.time)
+        if(!isFinish){
+          this.taskQueue.unshift(new MsgNtfTask(1, task.time, undefined, ''))
+        }
       }
     }
     this.startSeqRunner = false
+    if(this.afterFirstSync && this.taskQueue.length > 0){
+      void this.doMsgNtfProcess()
+    }
   }
 
   private recordLatestInboxMsgTime(sentTime:number,flags:number){
@@ -569,17 +579,19 @@ export class MsgSyncManager{
     })
     let data = immessage.SyncMsgReq.encode(syncReq).finish()
     this.imclient.query("sync_msgs",JuggleIm.instance.userInfo.userId,data,(code,qryAck)=>{
-      if(code==0){
-        let data = qryAck.data as Uint8Array
-        let downMsgs = immessage.DownMsgSet.decode(data)
-        downMsgs.msgs.forEach((downMsg)=>{
-          this.handleMsg(downMsg,(isFinish)=>{})
-        })
-        if(downMsgs.isFinished){
-          callback(true)
-        }else{
-          callback(false)
-        }
+      if(code!=0){
+        callback(true)
+        return
+      }
+      let data = qryAck.data as Uint8Array
+      let downMsgs = immessage.DownMsgSet.decode(data)
+      downMsgs.msgs.forEach((downMsg)=>{
+        this.handleMsg(downMsg,(isFinish)=>{})
+      })
+      if(downMsgs.isFinished){
+        callback(true)
+      }else{
+        callback(false)
       }
     })
   }
