@@ -16,23 +16,19 @@
 import { BaseConstants, BreakpointConstants } from 'base';
 import { HomeConstants } from '../../constants/HomeConstants';
 import { CommonUtil } from '../../jim/common';
+import { ConversationViewItem } from '../../viewmodel/ConversationViewModel';
 
 @Component
 export struct ConversationItem {
   @StorageProp('currentBreakpoint') currentBreakpoint: string = BreakpointConstants.BREAKPOINT_SM;
-  @Prop name?: ResourceStr;
-  @Prop msg?: ResourceStr;
-  @Prop isMute?: boolean;
-  @Prop isDraft?: boolean;
-  @Prop time?: ResourceStr;
-  @Prop icon?: ResourceStr;
+  @ObjectLink item: ConversationViewItem;
 
   private getDefaultBackgroundColor():string{
-    return CommonUtil.getBackgroundColor(this.name as string)
+    return CommonUtil.getBackgroundColor(this.item.name as string)
   }
 
   private getNameFirstChar():string{
-    let n = this.name as string
+    let n = this.item.name as string
     if(n.length>0){
       return n.charAt(0)
     }else{
@@ -43,8 +39,8 @@ export struct ConversationItem {
   build() {
     Flex({ alignItems: ItemAlign.Center, justifyContent: FlexAlign.SpaceBetween }) {
       Column() {
-        if(this.icon!=''){
-          Image(this.icon)
+        if(this.item.icon!=''){
+          Image(this.item.icon)
             .height(45)
             .width(45)
             .borderRadius(30)
@@ -62,7 +58,7 @@ export struct ConversationItem {
 
       Flex({ direction: FlexDirection.Column,justifyContent:FlexAlign.Center }) {
         Row() {
-          Text(this.name)
+          Text(this.item.name)
             .layoutWeight(1)
             .fontSize(BaseConstants.FONT_SIZE_SIXTEEN)
             .fontWeight(BaseConstants.FONT_WEIGHT_FIVE)
@@ -70,8 +66,8 @@ export struct ConversationItem {
             .fontFamily(BaseConstants.FONT_FAMILY_MEDIUM)
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis })
-            .constraintSize({ maxWidth: this.isMute ? '84%' : '100%' })
-          if(this.isMute){
+            .constraintSize({ maxWidth: this.item.isMute ? '84%' : '100%' })
+          if(this.item.isMute){
             Column() {
               Image($r('app.media.ic_public_sound'))
                 .width(14)
@@ -85,14 +81,14 @@ export struct ConversationItem {
           }
         }
         .width(BaseConstants.FULL_WIDTH)
-        Text(this.msg)
+        Text(this.item.msg)
           .maxLines(HomeConstants.CONVERSATION_DETAIL_MAX_LINE)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
           .fontSize(BaseConstants.FONT_SIZE_FOURTEEN)
           .fontWeight(BaseConstants.FONT_WEIGHT_FOUR)
           .lineHeight($r('app.float.text_line_height_one'))
           .fontFamily(BaseConstants.FONT_FAMILY_NORMAL)
-          .fontColor(this.isDraft ? '#E24A4A' : Color.Grey)
+          .fontColor(this.item.isDraft ? '#E24A4A' : Color.Grey)
           .width(BaseConstants.FULL_WIDTH)
       }
       .layoutWeight(1)
@@ -100,7 +96,7 @@ export struct ConversationItem {
 
       Blank()
       Column() {
-        Text(this.time)
+        Text(this.item.time)
           .fontWeight(BaseConstants.FONT_WEIGHT_FOUR)
           .fontSize(BaseConstants.FONT_SIZE_TEN)
           .fontColor(Color.Grey)

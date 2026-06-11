@@ -73,7 +73,7 @@ export struct ConversationList {
   }
 
   watchConversationListRefreshTick():void{
-    this.reloadConversations()
+    // 已由 converUpdListener → applyConversationItems(原地突变) 覆盖，不再全量重建
   }
 
   private openQuickActionPanel():void{
@@ -119,7 +119,6 @@ export struct ConversationList {
     if(conversation == null || conversation.conversationId == ''){
       return
     }
-    this.scheduleConversationReload()
     JuggleIm.instance.getConversationManager().getConversation(conversation, (code, converInfo)=>{
       if(code == 0 && converInfo != null){
         this.applyConversationItems([converInfo])
@@ -180,7 +179,18 @@ export struct ConversationList {
       return item.getKey() == converViewItem.getKey()
     })
     if(foundIndex >= 0){
-      this.conversationList[foundIndex] = converViewItem
+      let existing = this.conversationList[foundIndex]
+      existing.name = converViewItem.name
+      existing.msg = converViewItem.msg
+      existing.time = converViewItem.time
+      existing.icon = converViewItem.icon
+      existing.isMute = converViewItem.isMute
+      existing.isTop = converViewItem.isTop
+      existing.topTime = converViewItem.topTime
+      existing.isDraft = converViewItem.isDraft
+      existing.converTime = converViewItem.converTime
+      existing.lastMsgTime = converViewItem.lastMsgTime
+      existing.tags = converViewItem.tags
     }else{
       this.conversationList.push(converViewItem)
     }
@@ -325,7 +335,6 @@ export struct ConversationList {
             this.suppressClickKey = ''
             return
           }
-          this.reloadConversations()
           this.closeConversationActionPanel()
         }
       )
@@ -352,7 +361,6 @@ export struct ConversationList {
             this.conversationActionBusy = false
             return
           }
-          this.reloadConversations()
           this.closeConversationActionPanel()
         }
       )
@@ -376,7 +384,6 @@ export struct ConversationList {
           this.conversationActionBusy = false
           return
         }
-        this.reloadConversations()
         this.closeConversationActionPanel()
       })
     })
@@ -399,7 +406,6 @@ export struct ConversationList {
           this.conversationActionBusy = false
           return
         }
-        this.reloadConversations()
         this.closeConversationActionPanel()
       })
     })
@@ -515,7 +521,7 @@ export struct ConversationList {
         List() {
           ForEach(this.conversationList, (item: ConversationViewItem, index: number) => {
             ListItem() {
-              ConversationItem(item)
+              ConversationItem({ item: item })
                 .onClick(() => {
                   this.openConversation(item)
                 })

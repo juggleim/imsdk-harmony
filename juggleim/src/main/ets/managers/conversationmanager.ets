@@ -169,7 +169,7 @@ export class ConversationManager implements IConversationManager{
         converInfo.lastMessage = MsgHandler.downMsg2Message(resp.msg as immessage.DownMsg)
         converInfo.conversation = responseConver
         converInfo.lastMessage.conversation = responseConver
-        converInfo.converTime = resp.sortTime as number
+        converInfo.converTime = JimUtil.toNumber(resp.sortTime as number)
         converInfo.isTop = (resp.isTop as number)>0
         converInfo.topTime = JimUtil.toNumber(resp.topUpdatedTime as number)
         converInfo.isMute = (resp.undisturbType as number)>0
@@ -500,7 +500,7 @@ export class ConversationManager implements IConversationManager{
           let converInfo = new ConversationInfo()
           converInfo.lastMessage = MsgHandler.downMsg2Message(conver.msg as immessage.IDownMsg)
           converInfo.conversation = converInfo.lastMessage.conversation
-          converInfo.converTime = conver.sortTime as number
+          converInfo.converTime = JimUtil.toNumber(conver.sortTime as number)
           converInfo.isTop = (conver.isTop as number)>0
           converInfo.topTime = conver.topUpdatedTime as number
           converInfo.isMute = (conver.undisturbType as number)>0
