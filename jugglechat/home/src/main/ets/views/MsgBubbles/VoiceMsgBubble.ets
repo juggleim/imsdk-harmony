@@ -130,7 +130,7 @@ async function toggleVoicePlayback(key:string, source:string):Promise<void>{
 
 @Component
 export struct VoiceMsgBubble{
-  private isReceived:boolean = true
+  @Prop isReceived:boolean = true
   private voiceMsg?:VoiceMessage
   @State private isPlaying:boolean = false
 

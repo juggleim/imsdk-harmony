@@ -600,7 +600,7 @@ export struct ConversationList {
             Divider().strokeWidth(1).color('#EAEAEA')
 
             Row() {
-              Text('创建群聊')
+              Text('创建群组')
                 .fontSize(16)
                 .fontColor('#111111')
               Blank()
@@ -608,7 +608,7 @@ export struct ConversationList {
             .width('100%')
             .padding({ left: 20, right: 20, top: 16, bottom: 16 })
             .onClick(()=>{
-              this.openQuickActionPage('CreateChatroom')
+              this.openQuickActionPage('CreateGroup')
             })
 
             Divider().strokeWidth(1).color('#EAEAEA')

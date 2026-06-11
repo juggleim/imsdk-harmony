@@ -100,6 +100,10 @@ export struct MeDetail {
     this.mySettingPageInfo.pushPath({ name: 'CreateChatroom', param: new NavSourceParam('settings') })
   }
 
+  private openCreateGroup():void{
+    this.mySettingPageInfo.pushPath({ name: 'CreateGroup', param: new NavSourceParam('settings') })
+  }
+
   private logout() {
     JuggleIm.instance.getConnectionManager().disconnect()
     PreferenceUtil.cleanCacheAuth()
@@ -301,7 +305,7 @@ export struct MeDetail {
                 .padding({ left: 15 })
 
                 Column() {
-                  Text('创建聊天室')
+                  Text('创建群组')
                     .fontSize(18)
                     .fontFamily(BaseConstants.FONT_FAMILY_MEDIUM)
                 }
@@ -331,7 +335,7 @@ export struct MeDetail {
               bottomRight: 6
             })
             .onClick(()=>{
-              this.openCreateChatroom()
+              this.openCreateGroup()
             })
 
             Column() {

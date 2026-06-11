@@ -50,8 +50,8 @@ export struct MessageBubble {
   private conversationType?:number
   private downloadState?:number
   private downloadProgress?:number
-  private reactionSummaries?:string[]
-  private showDownloadAction?:boolean
+  @Prop reactionSummaries?:string[]
+  @Prop showDownloadAction?:boolean
   private onDownloadTap?:()=>void
   private onCancelDownloadTap?:()=>void
   private msgTime?:number

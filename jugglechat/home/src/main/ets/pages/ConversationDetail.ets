@@ -404,20 +404,21 @@ export struct ConversationDetail {
 
   private applyMessageReactionResults(results:MessageReactionResult[]):void{
     let changed = false
+    let newList = this.msgList.slice()
     results.forEach((result)=>{
-      let foundIndex = this.msgList.findIndex((item)=>{
+      let foundIndex = newList.findIndex((item)=>{
         return item.messageId == result.messageId ||
           (result.clientId != '' && item.clientId == result.clientId)
       })
       if(foundIndex < 0){
         return
       }
-      this.msgList[foundIndex].reactionSummaries = this.buildReactionSummaries(result.reactions)
-      this.msgList[foundIndex].selectedReactionIds = this.buildSelectedReactionIds(result.reactions)
+      newList[foundIndex].reactionSummaries = this.buildReactionSummaries(result.reactions)
+      newList[foundIndex].selectedReactionIds = this.buildSelectedReactionIds(result.reactions)
       changed = true
     })
     if(changed){
-      this.msgList = new ObservedArray<MessageViewItem>(this.msgList.slice())
+      this.msgList = new ObservedArray<MessageViewItem>(newList)
     }
   }
 

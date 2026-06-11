@@ -1,12 +1,14 @@
+/*
+ * CreateGroup - 群组创建页面
+ * 调用 GroupManager.CreateGroup 创建真正的群组
+ */
 import { promptAction } from '@kit.ArkUI'
-import { BaseConstants, StandardIcon } from 'base'
-import { deviceInfo } from '@kit.BasicServicesKit'
+import { BaseConstants } from 'base'
 import { ObservedArray } from '../jim/common'
 import { JimServer } from '../jim/jimserver/jimserver'
-import { ChatroomRoomParams } from '../views/MySettings/ChatroomList'
 
 @Observed
-class CreateChatroomFriendItem {
+class CreateGroupFriendItem {
   userId:string = ''
   nickname:string = ''
   avatar:string = ''
@@ -20,20 +22,19 @@ class CreateChatroomFriendItem {
 }
 
 @Component
-export struct CreateChatroom {
+export struct CreateGroup {
   @Consume('pageInfo') pageInfo: NavPathStack
   @Consume('mySettingPageInfo') mySettingPageInfo: NavPathStack
   @Consume('activeNavSource') activeNavSource: string
-  @State private roomName: string = ''
-  @State private roomId: string = ''
+  @State private groupName: string = ''
   @State private searchKeyword: string = ''
   @State private loading: boolean = false
-  @State private friends: ObservedArray<CreateChatroomFriendItem> = new ObservedArray<CreateChatroomFriendItem>([])
+  @State private creating: boolean = false
+  @State private friends: ObservedArray<CreateGroupFriendItem> = new ObservedArray<CreateGroupFriendItem>([])
   @State private activePageInfo: NavPathStack = new NavPathStack()
 
   aboutToAppear(): void {
     this.activePageInfo = this.resolveActivePageInfo()
-    this.roomId = `demo_chat_${new Date().getTime()}`
     this.loadFriends()
   }
 
@@ -63,21 +64,21 @@ export struct CreateChatroom {
       return
     }
     this.loading = true
-    JimServer.instance.getFriendManager().QueryFriends(1, 100, '', (users)=>{
+    JimServer.instance.getFriendManager().QueryFriends(1, 200, '', (users)=>{
       this.loading = false
-      let items:CreateChatroomFriendItem[] = []
+      let items:CreateGroupFriendItem[] = []
       users.items.forEach((user)=>{
-        items.push(new CreateChatroomFriendItem(
+        items.push(new CreateGroupFriendItem(
           user.user_id,
           user.nickname != '' ? user.nickname : user.user_id,
           user.avatar
         ))
       })
-      this.friends = new ObservedArray<CreateChatroomFriendItem>(items)
+      this.friends = new ObservedArray<CreateGroupFriendItem>(items)
     })
   }
 
-  private toggleFriend(item:CreateChatroomFriendItem):void{
+  private toggleFriend(item:CreateGroupFriendItem):void{
     let nextItems = this.friends.slice()
     let foundIndex = nextItems.findIndex((current)=>{
       return current.userId == item.userId
@@ -86,7 +87,7 @@ export struct CreateChatroom {
       return
     }
     nextItems[foundIndex].selected = !nextItems[foundIndex].selected
-    this.friends = new ObservedArray<CreateChatroomFriendItem>(nextItems)
+    this.friends = new ObservedArray<CreateGroupFriendItem>(nextItems)
   }
 
   private clearSelectedFriends():void{
@@ -99,7 +100,7 @@ export struct CreateChatroom {
       }
     }
     if(changed){
-      this.friends = new ObservedArray<CreateChatroomFriendItem>(nextItems)
+      this.friends = new ObservedArray<CreateGroupFriendItem>(nextItems)
     }
   }
 
@@ -109,13 +110,13 @@ export struct CreateChatroom {
     }).length
   }
 
-  private getSelectedFriends():CreateChatroomFriendItem[]{
+  private getSelectedFriends():CreateGroupFriendItem[]{
     return this.friends.filter((item)=>{
       return item.selected
     })
   }
 
-  private getVisibleFriends():CreateChatroomFriendItem[]{
+  private getVisibleFriends():CreateGroupFriendItem[]{
     let keyword = this.searchKeyword.trim().toLowerCase()
     if(keyword == ''){
       return this.friends.slice()
@@ -126,30 +127,47 @@ export struct CreateChatroom {
     })
   }
 
-  private buildRoomTitle():string{
-    let name = this.roomName.trim()
+  private buildGroupName():string{
+    let name = this.groupName.trim()
     if(name != ''){
       return name
     }
     let selected = this.getSelectedFriends()
     if(selected.length == 0){
-      return '新聊天室'
+      return '未命名群组'
     }
     if(selected.length == 1){
-      return `${selected[0].nickname} 的聊天室`
+      return `${selected[0].nickname} 的群组`
     }
-    return `${selected[0].nickname} 等${selected.length}人聊天室`
+    return `${selected[0].nickname} 等${selected.length}人群组`
   }
 
-  private createChatroom():void{
-    if(this.friends.filter((item)=>item.selected).length == 0){
+  private createGroup():void{
+    if(this.creating){
+      return
+    }
+    let selected = this.getSelectedFriends()
+    if(selected.length == 0){
       this.showToast('请至少选择一个联系人')
       return
     }
-    let title = this.buildRoomTitle()
-    this.activePageInfo.pushPath({
-      name: 'ChatroomRoom',
-      param: new ChatroomRoomParams(this.roomId, title, true)
+    let name = this.buildGroupName()
+    let memberIds = selected.map((item)=>item.userId)
+    this.creating = true
+    let groupManager = JimServer.instance.getGroupManager()
+    if(!groupManager){
+      this.showToast('群组服务不可用')
+      this.creating = false
+      return
+    }
+    groupManager.CreateGroup(name, '', memberIds, (success, groupId)=>{
+      this.creating = false
+      if(success && groupId){
+        this.showToast('群组创建成功')
+        this.back()
+      } else {
+        this.showToast('群组创建失败')
+      }
     })
   }
 
@@ -158,12 +176,12 @@ export struct CreateChatroom {
       Column() {
         Scroll() {
           Column() {
-              Column() {
-                Text('聊天室名称')
-                  .fontSize(14)
-                  .fontColor('#6B7280')
-                  .margin({ bottom: 8 })
-              TextInput({ text: this.roomName, placeholder: '输入聊天室名称' })
+            Column() {
+              Text('群组名称')
+                .fontSize(14)
+                .fontColor('#6B7280')
+                .margin({ bottom: 8 })
+              TextInput({ text: this.groupName, placeholder: '输入群组名称（可选）' })
                 .width('100%')
                 .height(44)
                 .fontSize(15)
@@ -171,16 +189,13 @@ export struct CreateChatroom {
                 .backgroundColor('#F3F4F6')
                 .borderRadius(6)
                 .onChange((value:string)=>{
-                  this.roomName = value
+                  this.groupName = value
                 })
               Row() {
                 Text(`已选 ${this.getSelectedCount()} 人`)
                   .fontSize(13)
                   .fontColor('#6B7280')
                 Blank()
-                Text(this.roomId)
-                  .fontSize(12)
-                  .fontColor('#9CA3AF')
               }
               .width('100%')
               .margin({ top: 10 })
@@ -196,9 +211,6 @@ export struct CreateChatroom {
                   .fontSize(14)
                   .fontColor('#6B7280')
                 Blank()
-                Text('点击切换')
-                  .fontSize(12)
-                  .fontColor('#9CA3AF')
               }
               .width('100%')
               .padding({ bottom: 8 })
@@ -232,14 +244,14 @@ export struct CreateChatroom {
               if(this.getSelectedCount() > 0){
                 Scroll() {
                   Row() {
-                    ForEach(this.getSelectedFriends(), (item:CreateChatroomFriendItem)=>{
+                    ForEach(this.getSelectedFriends(), (item:CreateGroupFriendItem)=>{
                       Row() {
                         Text(item.nickname)
                           .fontSize(12)
                           .fontColor('#111827')
                           .maxLines(1)
                           .textOverflow({ overflow: TextOverflow.Ellipsis })
-                        Text('×')
+                        Text('x')
                           .fontSize(12)
                           .fontColor('#4C8DFF')
                           .margin({ left: 6 })
@@ -251,7 +263,7 @@ export struct CreateChatroom {
                       .onClick(()=>{
                         this.toggleFriend(item)
                       })
-                    }, (item:CreateChatroomFriendItem)=>item.userId)
+                    }, (item:CreateGroupFriendItem)=>item.userId)
                   }
                   .alignItems(VerticalAlign.Center)
                 }
@@ -290,7 +302,7 @@ export struct CreateChatroom {
                 .justifyContent(FlexAlign.Center)
               }else{
                 List() {
-                  ForEach(this.getVisibleFriends(), (item:CreateChatroomFriendItem)=>{
+                  ForEach(this.getVisibleFriends(), (item:CreateGroupFriendItem)=>{
                     ListItem() {
                       Row() {
                         if(item.avatar != ''){
@@ -326,7 +338,7 @@ export struct CreateChatroom {
 
                         Stack() {
                           if(item.selected){
-                            Text('✓')
+                            Text('V')
                               .fontSize(14)
                               .fontColor(Color.White)
                           }
@@ -342,7 +354,7 @@ export struct CreateChatroom {
                     .onClick(()=>{
                       this.toggleFriend(item)
                     })
-                  }, (item:CreateChatroomFriendItem)=>item.userId)
+                  }, (item:CreateGroupFriendItem)=>item.userId)
                 }
                 .width('100%')
                 .height(380)
@@ -355,17 +367,18 @@ export struct CreateChatroom {
             .margin({ top: 12 })
             .borderRadius(8)
 
-            Button('创建并进入')
+            Button('创建群组')
               .width('100%')
               .height(44)
               .fontSize(15)
               .fontColor(Color.White)
-              .backgroundColor('#4C8DFF')
+              .backgroundColor(this.creating ? '#A0C4FF' : '#4C8DFF')
               .borderRadius(6)
               .margin({ top: 16 })
               .onClick(()=>{
-                this.createChatroom()
+                this.createGroup()
               })
+              .enabled(!this.creating)
           }
           .width('100%')
           .padding({ left: 16, right: 16, top: 16, bottom: 24 })
@@ -378,6 +391,6 @@ export struct CreateChatroom {
       .height('100%')
       .backgroundColor('#F5F7FA')
     }
-    .title('创建聊天室')
+    .title('创建群组')
   }
 }

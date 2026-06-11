@@ -58,6 +58,16 @@ export interface ProfileDisplay{
   avatarIndex:number
 }
 
+export class StoredChatroom {
+  chatroomId: string
+  title: string
+
+  constructor(chatroomId: string, title: string) {
+    this.chatroomId = chatroomId
+    this.title = title
+  }
+}
+
 function trimRightSlash(url:string):string{
   if(url.endsWith('/')){
     return url.substring(0,url.length - 1)
@@ -237,5 +247,29 @@ export class PreferenceUtil{
     pref.deleteSync(profileDisplayKey)
     pref.flush()
     PreferenceUtil.profileDisplay = undefined
+  }
+
+  static getJoinedChatrooms(): StoredChatroom[] {
+    let ctx = getContext()
+    let optionos:preferences.Options = {name:prefName}
+    let pref = preferences.getPreferencesSync(ctx, optionos)
+    let raw = pref.getSync('joined_chatrooms', '[]')
+    if (raw != '' && raw != '[]') {
+      try {
+        let parsed = JSON.parse(raw.toString()) as StoredChatroom[]
+        return parsed
+      } catch (_e) {
+        return []
+      }
+    }
+    return []
+  }
+
+  static saveJoinedChatrooms(chatrooms: StoredChatroom[]): void {
+    let ctx = getContext()
+    let optionos:preferences.Options = {name:prefName}
+    let pref = preferences.getPreferencesSync(ctx, optionos)
+    pref.putSync('joined_chatrooms', JSON.stringify(chatrooms))
+    pref.flush()
   }
 }

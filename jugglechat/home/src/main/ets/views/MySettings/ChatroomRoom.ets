@@ -14,6 +14,7 @@ import {
 } from 'juggleim'
 import { buildMessagePreview } from '../../viewmodel/MessageViewModel'
 import { ChatroomRoomParams } from './ChatroomList'
+import { PreferenceUtil, StoredChatroom } from '../../jim/preferenceutil'
 
 const TOP_TRACE_TAG:string = 'TOPTRACE'
 
@@ -312,6 +313,19 @@ export default struct ChatroomRoomPage {
     this.joinStatus = '已加入'
     this.loadLocalMessages()
     this.refreshAttributes()
+    // 保存到已加入聊天室列表
+    let param = this.mySettingPageInfo.getParamByIndex(this.mySettingPageInfo.size() - 1) as ChatroomRoomParams
+    if (this.activeNavSource != 'settings') {
+      param = this.pageInfo.getParamByIndex(this.pageInfo.size() - 1) as ChatroomRoomParams
+    }
+    if (param.isAutoCreate) {
+      let saved = PreferenceUtil.getJoinedChatrooms()
+      let exists = saved.find((item: StoredChatroom) => item.chatroomId == chatroomId)
+      if (!exists) {
+        saved.push(new StoredChatroom(chatroomId, param.title || chatroomId))
+        PreferenceUtil.saveJoinedChatrooms(saved)
+      }
+    }
   }
 
   onChatroomQuit(chatroomId:string):void {

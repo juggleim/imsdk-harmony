@@ -100,7 +100,7 @@ export struct ContactsList {
                 if (this.pageInfo.size() > 1) {
                   this.pageInfo.pop();
                 }
-                this.pageInfo.pushPath({ name: 'ChatroomList' })
+                this.pageInfo.pushPath({ name: 'GroupList' })
               })
           }
           .height(Adaptive.ContactItemHeight(this.currentBreakpoint))

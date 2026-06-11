@@ -4,6 +4,7 @@ import http from "@ohos.net.http";
 import { doHttp, JimServerHeaders } from "./httputil";
 import { PreferenceUtil } from "../preferenceutil";
 import { FriendManager } from "./friendmanager";
+import { GroupManager } from "./groupmanager";
 
 /**
  * Defines the Login Callback alias.
@@ -82,10 +83,12 @@ export class JimServer{
 
   private userManager:UserManager
   private friendManager:FriendManager
+  private groupManager:GroupManager
   constructor() {
     this.config = new JimServerConfig()
     this.userManager = new UserManager(this.config)
     this.friendManager = new FriendManager(this.config)
+    this.groupManager = new GroupManager(this.config)
   }
 
   public getUserManager():UserManager{
@@ -94,6 +97,10 @@ export class JimServer{
 
   public getFriendManager():FriendManager{
     return this.friendManager
+  }
+
+  public getGroupManager():GroupManager{
+    return this.groupManager
   }
 
   public clearAuth(){

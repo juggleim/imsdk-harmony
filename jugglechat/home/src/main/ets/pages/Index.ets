@@ -33,8 +33,10 @@ import { ProfileSetting } from './ProfileSetting';
 import { QRCodeDisplay } from './QRCodeDisplay';
 import { ScanPage } from './ScanPage';
 import { CreateChatroom } from './CreateChatroom';
+import { CreateGroup } from './CreateGroup';
 import FriendVerify from '../views/MySettings/FriendVerify';
 import FriendRequestList from '../views/MySettings/FriendRequestList';
+import { GroupList } from '../views/MySettings/GroupList';
 import GroupManagement from '../views/MySettings/GroupManagement';
 import GroupAnnouncement from '../views/MySettings/GroupAnnouncement';
 import GroupNickname from '../views/MySettings/GroupNickname';
@@ -111,10 +113,14 @@ export struct Index {
       ScanPage()
     } else if (name === 'CreateChatroom') {
       CreateChatroom()
+    } else if (name === 'CreateGroup') {
+      CreateGroup()
     } else if (name === 'FriendVerify') {
       FriendVerify()
     } else if (name === 'FriendRequestList') {
       FriendRequestList()
+    } else if (name === 'GroupList') {
+      GroupList()
     } else if (name === 'GroupManagement') {
       GroupManagement()
     } else if (name === 'GroupAnnouncement') {
@@ -178,6 +184,8 @@ export struct Index {
       ScanPage()
     }else if(name === 'CreateChatroom'){
       CreateChatroom()
+    }else if(name === 'CreateGroup'){
+      CreateGroup()
     }
   }
 
