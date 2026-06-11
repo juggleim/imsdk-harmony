@@ -11,7 +11,7 @@ import {
   JuggleIm,
   Message,
   TextMessage
-} from 'juggleim'
+} from '@juggleim/imlib'
 
 const TOP_TRACE_TAG:string = 'TOPTRACE'
 

@@ -1,7 +1,7 @@
 import { BaseConstants, StandardIcon } from 'base'
 import { deviceInfo } from '@kit.BasicServicesKit'
 import { PreferenceUtil } from '../jim/preferenceutil'
-import { JuggleIm } from 'juggleim'
+import { JuggleIm } from '@juggleim/imlib'
 import { NavSourceParam } from '../viewmodel/ConversationViewModel'
 
 @Component

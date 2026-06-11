@@ -1,4 +1,4 @@
-import { FileMessage } from 'juggleim'
+import { FileMessage } from '@juggleim/imlib'
 
 @Component
 export struct FileMsgBubble{

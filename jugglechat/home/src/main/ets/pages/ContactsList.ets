@@ -20,7 +20,7 @@ import { HomeConstants } from '../constants/HomeConstants';
 import { HomeTopSearch } from '../views/common/HomeTopSearch';
 import { ObservedArray } from '../jim/common';
 import { JimServer } from '../jim/jimserver/jimserver';
-import { JuggleIm } from 'juggleim';
+import { JuggleIm } from '@juggleim/imlib';
 
 @Component
 export struct ContactsList {

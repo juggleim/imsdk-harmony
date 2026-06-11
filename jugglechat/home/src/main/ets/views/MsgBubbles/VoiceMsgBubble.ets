@@ -1,7 +1,7 @@
 import { BusinessError } from '@kit.BasicServicesKit'
 import { fileIo } from '@kit.CoreFileKit'
 import { media } from '@kit.MediaKit'
-import { VoiceMessage } from 'juggleim'
+import { VoiceMessage } from '@juggleim/imlib'
 
 type VoicePlayingListener = (isPlaying:boolean) => void
 

@@ -1,6 +1,6 @@
 import { promptAction } from '@kit.ArkUI'
 import { BaseConstants } from 'base'
-import { FriendInfo, JuggleIm } from 'juggleim'
+import { FriendInfo, JuggleIm } from '@juggleim/imlib'
 import { FriendRequestRecord, FriendRequestStore } from '../../jim/friendrequeststore'
 
 @Component

@@ -1,6 +1,6 @@
 import { promptAction } from '@kit.ArkUI'
 import { BaseConstants } from 'base'
-import { GroupInfo, JuggleIm } from 'juggleim'
+import { GroupInfo, JuggleIm } from '@juggleim/imlib'
 import { ConversationRouteParams } from '../../viewmodel/ConversationViewModel'
 import { GroupSettingStore } from '../../jim/groupsettingstore'
 

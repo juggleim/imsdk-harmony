@@ -1,7 +1,7 @@
 import { AbilityConstant, ConfigurationConstant, UIAbility, Want } from '@kit.AbilityKit'
 import { hilog } from '@kit.PerformanceAnalysisKit'
 import { window } from '@kit.ArkUI'
-import { JuggleIm } from 'juggleim'
+import { JuggleIm } from '@juggleim/imlib'
 
 const DOMAIN = 0x0001
 

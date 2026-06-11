@@ -7,6 +7,6 @@
   "license": "Apache-2.0",
   "dependencies": {
     "base": "file:../base",
-    "juggleim": "file:../../juggleim"
+    "@juggleim/imlib": "file:../../juggleim"
   }
 }

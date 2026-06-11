@@ -14,7 +14,7 @@ import {
   JimUtil,
   VideoMessage,
   VoiceMessage
-} from 'juggleim'
+} from '@juggleim/imlib'
 
 class UploadRequestHeaders {
   'Content-Type'?: string

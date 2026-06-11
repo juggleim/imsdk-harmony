@@ -6,7 +6,7 @@ import { deviceInfo } from "@kit.BasicServicesKit";
 import { CommonUtil } from "../jim/common";
 import { PreferenceUtil } from "../jim/preferenceutil";
 import { JimServer } from "../jim/jimserver/jimserver";
-import { JuggleIm } from 'juggleim'
+import { JuggleIm } from '@juggleim/imlib'
 import { NavSourceParam } from '../viewmodel/ConversationViewModel'
 
 const PROFILE_AVATARS: ResourceStr[] = [

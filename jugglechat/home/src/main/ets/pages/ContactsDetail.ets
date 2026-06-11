@@ -18,7 +18,7 @@ import { deviceInfo } from '@kit.BasicServicesKit';
 import { CommonUtil } from '../jim/common';
 import { promptAction } from '@kit.ArkUI';
 import { ConversationDetailParams } from '../viewmodel/ConversationViewModel';
-import { GetMomentDirection, GetMomentOption, JuggleIm, Moment, MomentMedia } from 'juggleim';
+import { GetMomentDirection, GetMomentOption, JuggleIm, Moment, MomentMedia } from '@juggleim/imlib';
 import { FriendRequestStore } from '../jim/friendrequeststore';
 
 @Component

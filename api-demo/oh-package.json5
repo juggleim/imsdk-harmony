@@ -6,7 +6,7 @@
   "author": "",
   "license": "",
   "dependencies": {
-    "juggleim": "file:../juggleim"
+    "@juggleim/imlib": "file:../juggleim"
   },
   "devDependencies": {},
   "dynamicDependencies": {}

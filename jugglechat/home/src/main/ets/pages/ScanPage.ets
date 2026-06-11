@@ -2,7 +2,7 @@ import { promptAction } from '@kit.ArkUI'
 import { BaseConstants, StandardIcon } from 'base'
 import { deviceInfo } from '@kit.BasicServicesKit'
 import { ConversationDetailParams, NavSourceParam } from '../viewmodel/ConversationViewModel'
-import { JuggleIm } from 'juggleim'
+import { JuggleIm } from '@juggleim/imlib'
 
 @Component
 export struct ScanPage {

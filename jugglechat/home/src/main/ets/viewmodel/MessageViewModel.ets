@@ -13,7 +13,7 @@ import {
   TextMessage,
   VideoMessage,
   VoiceMessage
-} from 'juggleim'
+} from '@juggleim/imlib'
 
 export class MediaDownloadState {
   static readonly none:number = 0

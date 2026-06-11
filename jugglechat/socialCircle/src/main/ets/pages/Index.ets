@@ -10,7 +10,7 @@ import {
   MomentComment,
   MomentMedia,
   MomentReaction
-} from 'juggleim'
+} from '@juggleim/imlib'
 
 const MOMENT_REACTION_KEY:string = 'like'
 

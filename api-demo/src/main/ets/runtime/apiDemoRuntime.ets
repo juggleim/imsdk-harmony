@@ -104,7 +104,7 @@ import {
   QryMessagesCallback,
   SearchConversationsResult,
   JimUtil
-} from 'juggleim'
+} from '@juggleim/imlib'
 import { HashMap } from '@kit.ArkTS'
 import { ApiActionConfig, ApiDemoCommonDefaults, ApiDemoInvokeContext, ApiFieldConfig, ApiFieldViewState, ApiListenerConfig, ApiLogItem } from '../models/apiDemoTypes'
 

@@ -64,6 +64,14 @@
     {
       "name": "juggleim",
       "srcPath": "./juggleim",
+      "targets": [
+        {
+          "name": "har",
+          "applyToProducts": [
+            "default"
+          ]
+        }
+      ]
     }
   ]
 }

@@ -1,6 +1,6 @@
 import { promptAction } from '@kit.ArkUI'
 import { CommonUtil, ObservedArray } from '../jim/common'
-import { Conversation, GetMessageDirection, JuggleIm, Message } from 'juggleim'
+import { Conversation, GetMessageDirection, JuggleIm, Message } from '@juggleim/imlib'
 import { isDisplayableMessage, MessageViewItem, toMessageViewItem } from '../viewmodel/MessageViewModel'
 import { ConversationDetailParams, MentionMessagesParams } from '../viewmodel/ConversationViewModel'
 

@@ -1,4 +1,4 @@
-import { VideoMessage } from 'juggleim'
+import { VideoMessage } from '@juggleim/imlib'
 
 @Component
 export struct VideoMsgBubble{

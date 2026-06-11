@@ -2,7 +2,7 @@ import { promptAction } from '@kit.ArkUI'
 import { BaseConstants } from 'base/src/main/ets/constants/BaseConstants'
 import { CommonUtil, ObservedArray } from '../../jim/common'
 import { buildMessagePreview } from '../../viewmodel/MessageViewModel'
-import { FavoriteMessage, GetFavoriteMessageOption, JuggleIm, Message } from 'juggleim'
+import { FavoriteMessage, GetFavoriteMessageOption, JuggleIm, Message } from '@juggleim/imlib'
 
 @Observed
 class FavoriteMessageViewItem {

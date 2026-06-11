@@ -19,7 +19,7 @@ import { FileMessage, ImageMessage, JimMsgType, MergeMessage, MessageContent, Re
   MediaMessageUploadState,
   MessageSentState,
   VideoMessage,
-  VoiceMessage} from 'juggleim';
+  VoiceMessage} from '@juggleim/imlib';
 import { HomeConstants } from '../constants/HomeConstants';
 import { TextMsgBubble } from './MsgBubbles/TextMsgBubble';
 import { ImageMsgBubble } from './MsgBubbles/ImageMsgBubble';

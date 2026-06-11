@@ -2,7 +2,7 @@ import { UIAbility } from '@kit.AbilityKit'
 import type Ability from '@ohos.app.ability.Ability'
 import { AAID, pushService } from '@kit.PushKit'
 import { BusinessError } from '@kit.BasicServicesKit'
-import { JuggleIm, PushChannel } from 'juggleim'
+import { JuggleIm, PushChannel } from '@juggleim/imlib'
 
 const PUSH_TRACE_TAG:string = 'PUSHTRACE'
 const PUSH_CONNECTION_UNAVAILABLE:number = 21005

@@ -2,7 +2,7 @@ import { AbilityConstant, ConfigurationConstant, UIAbility, Want } from '@kit.Ab
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { window } from '@kit.ArkUI';
 import { HarmonyPushManager } from 'home/src/main/ets/jim/harmonypushmanager'
-import { JuggleIm } from 'juggleim'
+import { JuggleIm } from '@juggleim/imlib'
 
 const DOMAIN = 0x0000;
 

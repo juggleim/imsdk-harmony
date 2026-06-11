@@ -1,7 +1,7 @@
 import { BaseConstants } from 'base'
 import { CommonUtil } from '../../jim/common'
 import { ConversationRouteParams } from '../../viewmodel/ConversationViewModel'
-import { GroupMember, JuggleIm } from 'juggleim'
+import { GroupMember, JuggleIm } from '@juggleim/imlib'
 
 @Observed
 class GroupMemberItem {

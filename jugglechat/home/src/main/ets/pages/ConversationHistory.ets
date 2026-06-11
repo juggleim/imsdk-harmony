@@ -8,7 +8,7 @@ import {
   JuggleIm,
   Message,
   SearchParams
-} from 'juggleim'
+} from '@juggleim/imlib'
 import { isDisplayableMessage, MessageViewItem, toMessageViewItem } from '../viewmodel/MessageViewModel'
 import { ConversationDetailParams, ConversationRouteParams } from '../viewmodel/ConversationViewModel'
 

@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 
-import { MessageContent } from 'juggleim';
+import { MessageContent } from '@juggleim/imlib';
 import { MessageBubble } from '../MessageBubble';
 
 @Component

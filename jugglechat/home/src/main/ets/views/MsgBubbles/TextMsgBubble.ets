@@ -1,5 +1,5 @@
 import { BaseConstants } from "base";
-import { TextMessage } from 'juggleim';
+import { TextMessage } from '@juggleim/imlib';
 
 @Component
 export struct TextMsgBubble{

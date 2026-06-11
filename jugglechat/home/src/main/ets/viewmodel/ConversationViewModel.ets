@@ -17,8 +17,8 @@ import { Want, common } from '@kit.AbilityKit';
 import { BusinessError } from '@kit.BasicServicesKit';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { Logger } from 'base';
-import { JuggleIm } from 'juggleim';
-import { ConversationInfo } from 'juggleim';
+import { JuggleIm } from '@juggleim/imlib';
+import { ConversationInfo } from '@juggleim/imlib';
 import { CommonUtil } from '../jim/common';
 import { buildMessagePreview } from './MessageViewModel';
 

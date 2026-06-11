@@ -1,7 +1,7 @@
 import { promptAction } from '@kit.ArkUI'
 import { BaseConstants } from 'base'
 import { JimServer } from '../../jim/jimserver/jimserver'
-import { FriendInfo, JuggleIm } from 'juggleim'
+import { FriendInfo, JuggleIm } from '@juggleim/imlib'
 
 class FriendVerifyItem {
   userId: string = ''

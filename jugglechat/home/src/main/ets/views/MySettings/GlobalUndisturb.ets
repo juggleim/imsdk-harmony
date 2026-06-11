@@ -1,6 +1,6 @@
 import { promptAction } from '@kit.ArkUI'
 import { BaseConstants } from 'base/src/main/ets/constants/BaseConstants'
-import { JuggleIm, TimePeriod } from 'juggleim'
+import { JuggleIm, TimePeriod } from '@juggleim/imlib'
 
 const TOP_TRACE_TAG:string = 'TOPTRACE'
 

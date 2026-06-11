@@ -11,7 +11,7 @@ import {
   MsgModifiedListener,
   MsgReceivedListener,
   TextMessage
-} from 'juggleim'
+} from '@juggleim/imlib'
 import { buildMessagePreview } from '../../viewmodel/MessageViewModel'
 import { ChatroomRoomParams } from './ChatroomList'
 import { PreferenceUtil, StoredChatroom } from '../../jim/preferenceutil'

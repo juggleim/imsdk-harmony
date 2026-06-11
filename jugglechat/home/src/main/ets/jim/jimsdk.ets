@@ -1,4 +1,4 @@
-import { ConnStatus, JuggleIm } from 'juggleim'
+import { ConnStatus, JuggleIm } from '@juggleim/imlib'
 import { PreferenceUtil } from './preferenceutil'
 import { HarmonyPushManager } from './harmonypushmanager'
 
@@ -37,7 +37,6 @@ class HomeConnectStatusListener {
  */
 export async function initJuggleIm(connectCallback:(status:number,code:number)=>void){
   JuggleIm.instance.init(PreferenceUtil.getJImServer(),PreferenceUtil.getAppkey())
-  console.warn('------------------server',PreferenceUtil.getJImServer())
   JuggleIm.instance.setAppServerUrl(PreferenceUtil.getJChatServer())
   JuggleIm.instance.getConnectionManager().addConnectStatusListener(CONNECT_STATUS_LISTENER_KEY, new HomeConnectStatusListener(connectCallback))
   let cacheAuth = PreferenceUtil.getCacheAuth()

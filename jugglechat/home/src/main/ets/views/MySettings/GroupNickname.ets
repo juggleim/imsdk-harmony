@@ -2,7 +2,7 @@ import { promptAction } from '@kit.ArkUI'
 import { BaseConstants } from 'base'
 import { ConversationRouteParams } from '../../viewmodel/ConversationViewModel'
 import { GroupSettingStore } from '../../jim/groupsettingstore'
-import { JuggleIm } from 'juggleim'
+import { JuggleIm } from '@juggleim/imlib'
 
 @Component
 export default struct GroupNickname {

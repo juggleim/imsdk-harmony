@@ -55,7 +55,7 @@ import {
   UserInfo,
   VideoMessage,
   VoiceMessage
-} from 'juggleim';
+} from '@juggleim/imlib';
 import { HomeConstants } from '../constants/HomeConstants';
 import { promptAction } from '@kit.ArkUI'
 

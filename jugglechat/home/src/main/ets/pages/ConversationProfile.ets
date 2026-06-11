@@ -9,7 +9,7 @@ import {
   GetConversationOptions,
   GroupMember,
   JuggleIm
-} from 'juggleim'
+} from '@juggleim/imlib'
 import { CommonUtil, ObservedArray } from '../jim/common'
 import { GroupSettingStore } from '../jim/groupsettingstore'
 import { ConversationRouteParams, MentionMessagesParams } from '../viewmodel/ConversationViewModel'

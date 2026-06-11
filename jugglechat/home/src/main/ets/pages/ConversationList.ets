@@ -34,7 +34,7 @@ import {
   MsgModifiedListener,
   MsgReceivedListener,
   JuggleIm
-} from 'juggleim'
+} from '@juggleim/imlib'
 import { toConverViewItem } from '../viewmodel/ConversationViewModel'
 
 const RECONNECT_RELOAD_LISTENER_KEY:string = 'conversation_list_reconnect_reload'

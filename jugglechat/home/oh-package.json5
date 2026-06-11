@@ -8,6 +8,6 @@
   "dependencies": {
     "base": "file:../base",
     "socialcircle": "file:../socialCircle",
-    "juggleim": "file:../../juggleim"
+    "@juggleim/imlib": "file:../../juggleim"
   }
 }

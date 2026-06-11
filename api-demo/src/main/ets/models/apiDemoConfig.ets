@@ -1,4 +1,4 @@
-import { JimUtil } from 'juggleim'
+import { JimUtil } from '@juggleim/imlib'
 import { ApiDemoConfig } from './apiDemoTypes'
 
 export function loadApiDemoConfig(): ApiDemoConfig {
